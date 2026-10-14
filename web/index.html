@@ -55,6 +55,19 @@
                             <input type="number" id="profile-coins" min="0" step="1" placeholder="optional">
                         </div>
                     </div>
+                    <div class="config-actions">
+                        <button type="button" id="reading-import-btn" class="toggle-button small" title="Loads reading.json made by scripts/read_screenshots.py from your game screenshots. Every difference is shown to confirm before anything is applied.">Load screenshot reading</button>
+                        <input type="file" id="reading-file" accept=".json,application/json" hidden>
+                    </div>
+                    <div id="reading-diff" hidden>
+                        <p id="reading-summary" class="hint"></p>
+                        <ul id="reading-changes" class="history-diff"></ul>
+                        <ul id="reading-notes" class="history-diff hint small"></ul>
+                        <div class="config-actions">
+                            <button type="button" id="reading-apply-btn" class="toggle-button small">Apply ticked changes</button>
+                            <button type="button" id="reading-cancel-btn" class="toggle-button small">Cancel</button>
+                        </div>
+                    </div>
                 </details>
 
                 <div class="tabs" role="radiogroup" aria-label="Input mode">
@@ -636,6 +649,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-reminders-1"></script>
+    <script type="module" src="app.js?v=fork-screens-1"></script>
 </body>
 </html>

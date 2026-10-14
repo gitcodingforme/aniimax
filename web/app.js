@@ -7,23 +7,24 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-reminders-1';
+} from './facility-config.js?v=fork-screens-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-reminders-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-reminders-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-screens-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-screens-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-reminders-1';
+} from './upstream-check.js?v=fork-screens-1';
 import {
     addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-reminders-1';
+} from './history.js?v=fork-screens-1';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
     ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-reminders-1';
+} from './reminders.js?v=fork-screens-1';
+import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-screens-1';
 
 let wasmReady = false;
 
@@ -943,6 +944,78 @@ function attachHistoryHandlers() {
         renderHistoryDiff(readHistory());
     }));
     renderHistory();
+}
+
+// --- Screenshot readings ------------------------------------------------------------------
+// reading.json from scripts/read_screenshots.py (a local vision model's reading of game
+// screenshots) is never applied blindly: every difference from the current setup is listed with a
+// checkbox, and only the ticked ones are applied (see screenshot-import.js).
+let pendingReading = null;
+
+async function importReadingFile(file) {
+    if (!file) return;
+    try {
+        const reading = parseReading(await file.text());
+        const meta = readProfileMeta();
+        const changes = proposeChanges(currentConfig(), { ...reading, currentCoins: Number.isFinite(meta.coins) ? meta.coins : '?' });
+        pendingReading = { changes };
+        const shots = `${reading.screens} screenshot${reading.screens === 1 ? '' : 's'}${reading.failed ? ` (${reading.failed} could not be read)` : ''}`;
+        document.getElementById('reading-summary').textContent = `Read by ${reading.model || 'a local model'} at ${formatProfileTime(reading.readAt)} from ${shots}. `
+            + (changes.length === 0 ? 'Nothing differs from your current setup.' : `${changes.length} difference${changes.length === 1 ? '' : 's'}; untick anything the model got wrong, then apply.`);
+        document.getElementById('reading-changes').innerHTML = changes.map(c =>
+            `<li><label><input type="checkbox" class="reading-change" value="${escapeText(c.id)}" checked> <strong>${escapeText(c.what)}</strong>: ${escapeText(c.before)} → ${escapeText(c.after)}</label></li>`).join('');
+        document.getElementById('reading-notes').innerHTML = reading.notes.map(n => `<li>${escapeText(n)}</li>`).join('');
+        document.getElementById('reading-apply-btn').hidden = changes.length === 0;
+        document.getElementById('reading-diff').hidden = false;
+        showProfileStatus('');
+    } catch (error) {
+        showProfileStatus(`Could not load this reading: ${error.message}.`);
+        console.warn('Could not import screenshot reading:', error);
+    }
+}
+
+function applyReading() {
+    if (!pendingReading) return;
+    const selected = [...document.querySelectorAll('.reading-change:checked')].map(el => el.value);
+    if (selected.length === 0) {
+        showProfileStatus('Nothing ticked, so nothing was applied.');
+        return;
+    }
+    const { setup, meta, applied } = applyChanges(currentConfig(), readProfileMeta(), pendingReading.changes, selected);
+    // Facility and module values only matter in advanced mode; switch so the applied numbers are used.
+    const needsAdvanced = selected.some(id => id.startsWith('facility:') || id.endsWith('-module-level')) && setup['mode-simple'];
+    if (needsAdvanced) {
+        setup['mode-simple'] = false;
+        setup['mode-advanced'] = true;
+    }
+    const ok = window.confirm(`Apply ${applied} change${applied === 1 ? '' : 's'} to your setup?${needsAdvanced ? ' The page switches to Advanced mode so the facility values are used.' : ''} The page reloads with the new values; download a profile first if you want the old ones back.`);
+    if (!ok) return;
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(setup));
+        if (meta) {
+            meta.lastReading = new Date().toISOString();
+            writeProfileMeta(meta);
+        }
+        clearShareHash();
+        window.location.reload();
+    } catch (error) {
+        showProfileStatus(`Could not apply: ${error.message}.`);
+    }
+}
+
+function attachReadingHandlers() {
+    document.getElementById('reading-import-btn').addEventListener('click', () => document.getElementById('reading-file').click());
+    document.getElementById('reading-file').addEventListener('change', async event => {
+        const [file] = event.target.files;
+        event.target.value = '';
+        await importReadingFile(file);
+    });
+    document.getElementById('reading-apply-btn').addEventListener('click', applyReading);
+    document.getElementById('reading-cancel-btn').addEventListener('click', () => {
+        pendingReading = null;
+        document.getElementById('reading-diff').hidden = true;
+        showProfileStatus('Screenshot reading discarded; nothing changed.');
+    });
 }
 
 // --- Batch-done reminders ------------------------------------------------------------------
@@ -4955,6 +5028,7 @@ async function initApp() {
     document.getElementById('clear-saved-btn').addEventListener('click', clearSavedInputs);
     document.getElementById('share-config-btn').addEventListener('click', shareCurrentConfig);
     attachProfileHandlers();
+    attachReadingHandlers();
     attachHistoryHandlers();
     attachReminderHandlers();
     document.getElementById('upstream-recheck').addEventListener('click', event => {
