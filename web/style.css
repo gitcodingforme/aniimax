@@ -2903,3 +2903,17 @@ tr:hover .skip-row,
 .history-delete {
     padding: 0 0.5rem;
 }
+
+/* Fork: Reminders card */
+.reminders-card h3 {
+    font-size: 1rem;
+    margin: 1.25rem 0 0.5rem;
+}
+.reminder-option {
+    display: block;
+    margin: 0.35rem 0;
+}
+.reminders-card input[type="datetime-local"] {
+    font: inherit;
+    padding: 0.2rem 0.4rem;
+}

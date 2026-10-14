@@ -418,6 +418,51 @@
                     <div id="history-list"></div>
                 </div>
             </section>
+
+            <section class="card production-steps reminders-card" id="reminders-card">
+                <div class="card-head">
+                    <h2>Reminders</h2>
+                    <div class="config-actions">
+                        <button type="button" id="reminders-start-btn" class="toggle-button small" title="Starts timers from the plan's batch times, as of right now.">I just set everything up per the plan</button>
+                        <button type="button" id="reminders-clear-btn" class="toggle-button small">Clear reminders</button>
+                    </div>
+                </div>
+                <p id="reminders-status" class="hint small" role="status" aria-live="polite"></p>
+                <p class="hint">The app cannot see the game, so every reminder assumes you did exactly what the plan says at the moment you pressed the button. Untick rows you set up differently, or fix their start time.</p>
+                <details class="explain">
+                    <summary>Assumptions about the game (switch off any that are wrong)</summary>
+                    <label class="reminder-option"><input type="checkbox" id="assume-processors-repeat"> Processors start their next batch by themselves once one finishes <span class="hint small">(assumed, not verified in game)</span></label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-plots-resow"> Staffed plots are re-sown after a harvest, so crops repeat <span class="hint small">(assumed, not verified)</span></label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-watering"> Crops ask for water at about one third and two thirds of their growth <span class="hint small">(approximate)</span></label>
+                </details>
+                <p id="reminders-empty" class="hint">Solve a plan, set up your homeland as it says, then press "I just set everything up per the plan".</p>
+                <div id="reminders-body" hidden>
+                    <p id="reminders-started" class="hint"></p>
+                    <h3>Rows</h3>
+                    <div id="reminders-rows"></div>
+                    <h3>Next up</h3>
+                    <p id="reminders-count" class="hint"></p>
+                    <ul id="reminders-events" class="history-diff"></ul>
+                    <h3>Where to get them</h3>
+                    <label class="reminder-option"><input type="checkbox" id="channel-tab"> In this tab, while it stays open</label>
+                    <p class="hint small"><button type="button" id="notify-permission-btn" class="toggle-button small">Allow browser notifications</button> <span id="notify-permission-state"></span></p>
+                    <div class="input-row">
+                        <div class="input-field">
+                            <label for="ntfy-topic">ntfy.sh topic for your phone (your secret; stays in this browser)</label>
+                            <input type="text" id="ntfy-topic" maxlength="64" placeholder="aniimax-…" autocomplete="off" spellcheck="false">
+                        </div>
+                    </div>
+                    <div class="config-actions">
+                        <button type="button" id="ntfy-generate-btn" class="toggle-button small">Make a random topic</button>
+                        <button type="button" id="ntfy-send-btn" class="toggle-button small" title="Schedules each upcoming reminder on ntfy.sh; the ntfy app on your phone, subscribed to the topic, shows them at the right time even with this page closed.">Send to phone</button>
+                        <button type="button" id="ntfy-cancel-btn" class="toggle-button small">Cancel sent reminders</button>
+                        <button type="button" id="ics-download-btn" class="toggle-button small" title="One calendar event with an alarm per reminder; import it into any calendar app.">Download calendar (.ics)</button>
+                    </div>
+                    <p id="ntfy-sent" class="hint small"></p>
+                    <p id="ntfy-status" class="hint small" role="status" aria-live="polite"></p>
+                    <p class="hint small">Phone pushes: install the ntfy app, subscribe to your topic, then "Send to phone" after each setup. ntfy.sh takes reminders up to 3 days ahead and 250 a day; the texts (facility, item, time) pass through ntfy.sh. Calendar: import the file; a new setup means a new file.</p>
+                </div>
+            </section>
         </main>
 
         <footer>
@@ -591,6 +636,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-history-1"></script>
+    <script type="module" src="app.js?v=fork-reminders-1"></script>
 </body>
 </html>

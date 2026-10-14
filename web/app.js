@@ -7,19 +7,23 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-history-1';
+} from './facility-config.js?v=fork-reminders-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-history-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-history-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-reminders-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-reminders-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-history-1';
+} from './upstream-check.js?v=fork-reminders-1';
 import {
     addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-history-1';
+} from './history.js?v=fork-reminders-1';
+import {
+    DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
+    ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
+} from './reminders.js?v=fork-reminders-1';
 
 let wasmReady = false;
 
@@ -939,6 +943,306 @@ function attachHistoryHandlers() {
         renderHistoryDiff(readHistory());
     }));
     renderHistory();
+}
+
+// --- Batch-done reminders ------------------------------------------------------------------
+// Timers from the plan's batch times (see reminders.js), started when the player presses "I just
+// set everything up per the plan". Settings (channels, ntfy topic, game assumptions) live under
+// SETTINGS_KEY; the running timers (start time, rows, what was sent to ntfy) under TIMERS_KEY. The
+// ntfy topic never leaves this browser except in the publish requests themselves.
+let reminderTimeouts = [];
+let reminderTicker = null;
+
+function readReminderSettings() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        return {
+            tab: !!saved.tab,
+            ntfyTopic: typeof saved.ntfyTopic === 'string' ? saved.ntfyTopic : '',
+            assumptions: { ...DEFAULT_ASSUMPTIONS, ...(saved.assumptions && typeof saved.assumptions === 'object' ? saved.assumptions : {}) },
+        };
+    } catch (e) {
+        return { tab: false, ntfyTopic: '', assumptions: { ...DEFAULT_ASSUMPTIONS } };
+    }
+}
+
+function writeReminderSettings(settings) {
+    try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+        console.warn('Could not save reminder settings:', e);
+    }
+}
+
+function readTimers() {
+    try {
+        const t = JSON.parse(localStorage.getItem(TIMERS_KEY) || 'null');
+        return t && typeof t === 'object' && Array.isArray(t.rows) && Number.isFinite(Date.parse(t.startedAt)) ? t : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function writeTimers(timers) {
+    try {
+        if (timers) localStorage.setItem(TIMERS_KEY, JSON.stringify(timers));
+        else localStorage.removeItem(TIMERS_KEY);
+    } catch (e) {
+        console.warn('Could not save reminders:', e);
+    }
+}
+
+function showReminderStatus(message) {
+    document.getElementById('reminders-status').textContent = message;
+}
+
+function reminderEvents(timers = readTimers()) {
+    if (!timers) return [];
+    const { assumptions } = readReminderSettings();
+    return buildEvents(timers.rows, {
+        startedAt: timers.startedAt, assumptions, levelUpSeconds: timers.levelUpSeconds, levelUpTarget: timers.levelUpTarget,
+    });
+}
+
+function setUpPerPlan() {
+    if (!lastPlan || !lastPlan.success) {
+        showReminderStatus('Solve a plan first; the reminders come from its batch times.');
+        return;
+    }
+    if (lastPlanSetupHash !== setupHash(currentConfig())) {
+        showReminderStatus('Your inputs changed since the last solve. Solve again, set up as that plan says, then press this.');
+        return;
+    }
+    const rows = reminderRows(lastPlan);
+    if (rows.length === 0) {
+        showReminderStatus('This plan has no producing rows to remind you about.');
+        return;
+    }
+    const existing = readTimers();
+    if (existing && !window.confirm('Replace the current reminders with new ones starting now? Reminders already sent to your phone are not cancelled by this (use "Cancel sent reminders" first if you want that).')) return;
+    writeTimers({
+        startedAt: new Date().toISOString(),
+        planHash: lastPlanSetupHash,
+        rows,
+        levelUpSeconds: lastPlan.level_up?.seconds > 0 ? lastPlan.level_up.seconds : null,
+        levelUpTarget: planContext?.levelUp ? planContext.target : null,
+        sent: existing?.sent || [],
+        sentTopic: existing?.sentTopic || null,
+    });
+    renderReminders();
+    showReminderStatus(`Reminders set from ${rows.length} plan rows, starting now. Untick rows you set up differently, or fix their start time.`);
+}
+
+function clearReminders() {
+    const timers = readTimers();
+    if (!timers) return;
+    const pending = (timers.sent || []).filter(s => s.at > Date.now()).length;
+    if (!window.confirm(`Clear the reminders?${pending ? ` ${pending} already sent to your phone will still arrive unless you cancel them first.` : ''}`)) return;
+    writeTimers(null);
+    renderReminders();
+    showReminderStatus('Reminders cleared.');
+}
+
+function toLocalInputValue(iso) {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderReminders() {
+    const timers = readTimers();
+    const settings = readReminderSettings();
+    document.getElementById('reminders-empty').hidden = !!timers;
+    document.getElementById('reminders-body').hidden = !timers;
+    document.getElementById('assume-processors-repeat').checked = settings.assumptions.processorsRepeat;
+    document.getElementById('assume-plots-resow').checked = settings.assumptions.plotsResow;
+    document.getElementById('assume-watering').checked = settings.assumptions.wateringPrompts;
+    document.getElementById('channel-tab').checked = settings.tab;
+    document.getElementById('ntfy-topic').value = settings.ntfyTopic;
+    renderNotificationState();
+    scheduleTabNotifications();
+    if (!timers) return;
+
+    document.getElementById('reminders-started').textContent = `Set up ${formatProfileTime(timers.startedAt)}.`;
+    document.getElementById('reminders-rows').innerHTML = `<table><thead><tr><th>On</th><th>Facility</th><th>Making</th><th>Batch</th><th>Started at</th></tr></thead><tbody>${
+        timers.rows.map((r, i) => `<tr><td><input type="checkbox" data-row="${i}" class="reminder-row-on" ${r.on === false ? '' : 'checked'} aria-label="Remind about ${escapeText(r.facility)}"></td>`
+            + `<td>${r.count}× ${escapeText(r.facility)}</td><td>${escapeText(prettyItem(r.item))}${r.kind === 'processor' && r.leadSeconds > r.cycleSeconds ? ' <span class="hint small">(first batch after ingredients)</span>' : ''}</td>`
+            + `<td>${formatSeconds(r.cycleSeconds)}</td>`
+            + `<td><input type="datetime-local" data-row="${i}" class="reminder-row-start" value="${toLocalInputValue(r.startedAt || timers.startedAt)}"></td></tr>`).join('')
+    }</tbody></table>`;
+
+    const now = Date.now();
+    const events = reminderEvents(timers);
+    const next = upcoming(events, now);
+    document.getElementById('reminders-count').textContent = next.length === 0
+        ? 'Nothing left in the next 24 hours of this setup. Press the button again after your next setup.'
+        : `${next.length} reminder${next.length === 1 ? '' : 's'} still to come in the 24 hours after setup${events.length > next.length ? ` (${events.length - next.length} already passed)` : ''}.`;
+    document.getElementById('reminders-events').innerHTML = next.slice(0, 15).map(e =>
+        `<li><strong>${escapeText(e.title)}</strong> ${formatCountdown(e.at - now)} (${formatProfileTime(e.at)})${e.approximate ? ' <span class="hint small">approx.</span>' : ''}</li>`).join('')
+        + (next.length > 15 ? `<li class="hint">… and ${next.length - 15} more.</li>` : '');
+
+    const sentPending = (timers.sent || []).filter(s => s.at > now).length;
+    document.getElementById('ntfy-sent').textContent = timers.sent?.length
+        ? `${timers.sent.length} sent to ntfy.sh topic "${timers.sentTopic}", ${sentPending} still to arrive.` : '';
+}
+
+function renderNotificationState() {
+    const state = document.getElementById('notify-permission-state');
+    const button = document.getElementById('notify-permission-btn');
+    if (!('Notification' in window)) {
+        state.textContent = 'This browser has no notifications.';
+        button.hidden = true;
+        return;
+    }
+    const permission = Notification.permission;
+    button.hidden = permission !== 'default';
+    state.textContent = permission === 'granted' ? 'Allowed. They fire only while this tab stays open.'
+        : permission === 'denied' ? 'Blocked in this browser; change it in the site settings.' : 'Not allowed yet.';
+}
+
+// In-tab delivery: one timeout per upcoming event, while the page is open.
+function scheduleTabNotifications() {
+    reminderTimeouts.forEach(clearTimeout);
+    reminderTimeouts = [];
+    const settings = readReminderSettings();
+    if (!settings.tab || !('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = Date.now();
+    for (const e of upcoming(reminderEvents(), now)) {
+        const delay = Math.min(e.at - now, 2 ** 31 - 1);
+        reminderTimeouts.push(setTimeout(() => {
+            try {
+                new Notification(e.title, { body: e.body, tag: `${e.key}-${e.at}` });
+            } catch (error) {
+                console.warn('Could not show notification:', error);
+            }
+            renderReminders();
+        }, delay));
+    }
+}
+
+async function sendRemindersToPhone() {
+    const timers = readTimers();
+    const topic = document.getElementById('ntfy-topic').value.trim();
+    if (!timers) {
+        document.getElementById('ntfy-status').textContent = 'No reminders set yet.';
+        return;
+    }
+    if (!isValidTopic(topic)) {
+        document.getElementById('ntfy-status').textContent = 'Enter an ntfy topic first (letters, digits, dashes, underscores), or make a random one.';
+        return;
+    }
+    const { requests, skipped } = ntfyRequests(upcoming(reminderEvents(timers)), topic);
+    const notes = [];
+    if (skipped.tooFar) notes.push(`${skipped.tooFar} beyond ntfy's 3-day limit (send again later)`);
+    if (skipped.tooSoon) notes.push(`${skipped.tooSoon} less than 10 s away`);
+    if (skipped.overLimit) notes.push(`${skipped.overLimit} over the daily cap`);
+    if (requests.length === 0) {
+        document.getElementById('ntfy-status').textContent = `Nothing to send${notes.length ? ` (${notes.join('; ')})` : ''}.`;
+        return;
+    }
+    if (!window.confirm(`Send ${requests.length} scheduled reminders to ntfy.sh topic "${topic}"?${notes.length ? `\nSkipped: ${notes.join('; ')}.` : ''}\n\nThe reminder texts (facility and item names, times) go to ntfy.sh, a third party.`)) return;
+    document.getElementById('ntfy-status').textContent = `Sending ${requests.length}…`;
+    try {
+        const sent = await sendNtfy(requests);
+        timers.sent = [...(timers.sent || []), ...sent];
+        timers.sentTopic = topic;
+        writeTimers(timers);
+        renderReminders();
+        document.getElementById('ntfy-status').textContent = `Sent ${sent.length} to "${topic}"${notes.length ? ` (skipped: ${notes.join('; ')})` : ''}. Subscribe to that topic in the ntfy app to receive them.`;
+    } catch (error) {
+        document.getElementById('ntfy-status').textContent = `Sending stopped: ${error.message}.`;
+        console.warn('Could not send reminders to ntfy:', error);
+    }
+}
+
+async function cancelSentReminders() {
+    const timers = readTimers();
+    const sent = timers?.sent || [];
+    if (sent.length === 0) {
+        document.getElementById('ntfy-status').textContent = 'Nothing has been sent.';
+        return;
+    }
+    document.getElementById('ntfy-status').textContent = `Cancelling ${sent.length}…`;
+    try {
+        const { ok, failed } = await cancelNtfy(sent, timers.sentTopic);
+        timers.sent = [];
+        writeTimers(timers);
+        renderReminders();
+        document.getElementById('ntfy-status').textContent = `Cancelled ${ok}${failed ? `; ${failed} could not be cancelled (already delivered, or expired)` : ''}.`;
+    } catch (error) {
+        document.getElementById('ntfy-status').textContent = `Could not cancel: ${error.message}.`;
+    }
+}
+
+function downloadCalendar() {
+    const events = upcoming(reminderEvents());
+    if (events.length === 0) {
+        showReminderStatus('No upcoming reminders to put in a calendar.');
+        return;
+    }
+    const url = URL.createObjectURL(new Blob([icsCalendar(events)], { type: 'text/calendar' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aniimax-reminders-${new Date().toISOString().slice(0, 10)}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showReminderStatus(`Calendar file with ${events.length} reminders downloaded. Import it into your calendar app; a new setup means a new file (delete the old events).`);
+}
+
+function attachReminderHandlers() {
+    document.getElementById('reminders-start-btn').addEventListener('click', setUpPerPlan);
+    document.getElementById('reminders-clear-btn').addEventListener('click', clearReminders);
+    document.getElementById('reminders-rows').addEventListener('change', event => {
+        const timers = readTimers();
+        const index = Number(event.target.dataset.row);
+        if (!timers || !timers.rows[index]) return;
+        if (event.target.classList.contains('reminder-row-on')) timers.rows[index].on = event.target.checked;
+        if (event.target.classList.contains('reminder-row-start')) {
+            const ms = Date.parse(event.target.value);
+            timers.rows[index].startedAt = Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+        }
+        writeTimers(timers);
+        renderReminders();
+    });
+    [['assume-processors-repeat', 'processorsRepeat'], ['assume-plots-resow', 'plotsResow'], ['assume-watering', 'wateringPrompts']].forEach(([id, key]) => {
+        document.getElementById(id).addEventListener('change', event => {
+            const settings = readReminderSettings();
+            settings.assumptions[key] = event.target.checked;
+            writeReminderSettings(settings);
+            renderReminders();
+        });
+    });
+    document.getElementById('channel-tab').addEventListener('change', async event => {
+        const settings = readReminderSettings();
+        settings.tab = event.target.checked;
+        writeReminderSettings(settings);
+        if (settings.tab && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
+        renderReminders();
+    });
+    document.getElementById('notify-permission-btn').addEventListener('click', async () => {
+        if ('Notification' in window) await Notification.requestPermission();
+        renderReminders();
+    });
+    document.getElementById('ntfy-topic').addEventListener('input', event => {
+        const settings = readReminderSettings();
+        settings.ntfyTopic = event.target.value.trim();
+        writeReminderSettings(settings);
+    });
+    document.getElementById('ntfy-generate-btn').addEventListener('click', () => {
+        const settings = readReminderSettings();
+        settings.ntfyTopic = suggestTopic();
+        writeReminderSettings(settings);
+        document.getElementById('ntfy-topic').value = settings.ntfyTopic;
+        document.getElementById('ntfy-status').textContent = 'Topic made. Subscribe to it in the ntfy app (ntfy.sh) on your phone; anyone who knows the name can read it, so keep it to yourself.';
+    });
+    document.getElementById('ntfy-send-btn').addEventListener('click', sendRemindersToPhone);
+    document.getElementById('ntfy-cancel-btn').addEventListener('click', cancelSentReminders);
+    document.getElementById('ics-download-btn').addEventListener('click', downloadCalendar);
+    renderReminders();
+    // Countdowns tick once a minute while the page is open.
+    reminderTicker = setInterval(() => { if (readTimers()) renderReminders(); }, 60 * 1000);
 }
 
 // --- Staying current with upstream -------------------------------------------------------
@@ -4652,6 +4956,7 @@ async function initApp() {
     document.getElementById('share-config-btn').addEventListener('click', shareCurrentConfig);
     attachProfileHandlers();
     attachHistoryHandlers();
+    attachReminderHandlers();
     document.getElementById('upstream-recheck').addEventListener('click', event => {
         event.preventDefault();
         if (buildStamp) checkUpstream(buildStamp, true);
