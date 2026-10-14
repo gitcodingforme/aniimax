@@ -382,6 +382,42 @@
                     </div>
                 </div>
             </section>
+
+            <section class="card production-steps history-card" id="history-card">
+                <div class="card-head">
+                    <h2>History</h2>
+                    <div class="config-actions">
+                        <button type="button" id="history-save-btn" class="toggle-button small" title="Saves your current setup and what the plan predicts, with today's date.">Save snapshot</button>
+                        <button type="button" id="history-export-btn" class="toggle-button small" title="Saves all snapshots as a file you keep as a backup.">Download history</button>
+                        <button type="button" id="history-import-btn" class="toggle-button small" title="Merges a history backup file into this browser's snapshots.">Restore history</button>
+                        <button type="button" id="history-clear-btn" class="toggle-button small">Clear history</button>
+                        <input type="file" id="history-file" accept=".json,application/json" hidden>
+                    </div>
+                </div>
+                <p id="history-status" class="hint small" role="status" aria-live="polite"></p>
+                <p id="history-hint" class="hint" hidden></p>
+                <p id="history-empty" class="hint">No snapshots yet. Solve a plan, then click "Save snapshot"; do it again after each change in game to see your progress here. Snapshots live in this browser only, so download a backup now and then.</p>
+                <div id="history-body" hidden>
+                    <h3>RV level over time</h3>
+                    <div id="history-chart" class="history-chart"></div>
+                    <h3>Predicted vs actual pace</h3>
+                    <div id="history-pace"></div>
+                    <h3>What changed</h3>
+                    <div class="input-row">
+                        <div class="input-field">
+                            <label for="history-from">From</label>
+                            <select id="history-from"></select>
+                        </div>
+                        <div class="input-field">
+                            <label for="history-to">To</label>
+                            <select id="history-to"></select>
+                        </div>
+                    </div>
+                    <ul id="history-diff" class="history-diff"></ul>
+                    <h3>Snapshots</h3>
+                    <div id="history-list"></div>
+                </div>
+            </section>
         </main>
 
         <footer>
@@ -555,6 +591,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-upstream-1"></script>
+    <script type="module" src="app.js?v=fork-history-1"></script>
 </body>
 </html>

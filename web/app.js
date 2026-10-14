@@ -7,15 +7,19 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-upstream-1';
+} from './facility-config.js?v=fork-history-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-upstream-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-upstream-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-history-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-history-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-upstream-1';
+} from './upstream-check.js?v=fork-history-1';
+import {
+    addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
+    predictionFrom, rvChartSvg, rvSeries, setupHash,
+} from './history.js?v=fork-history-1';
 
 let wasmReady = false;
 
@@ -452,6 +456,7 @@ function saveInputsToStorage() {
         document.getElementById('share-config-status').textContent = imported
             ? 'Your changes are saved in this browser.' : '';
         document.getElementById('share-config-result').hidden = true;
+        updateHistoryHint();
     } catch (e) {
         console.warn('Could not save inputs to localStorage:', e);
     }
@@ -729,6 +734,211 @@ async function showBuildStamp() {
         }
         checkUpstream(stamp);
     } catch (_) { /* no stamp: a local build, or offline */ }
+}
+
+// --- Progress history --------------------------------------------------------------------
+// Dated snapshots of the setup plus what the plan predicted (see history.js), kept in this
+// browser under HISTORY_KEY, with a backup file the player downloads and can restore (merged by
+// snapshot id). The History card below the results renders them.
+const HISTORY_KEY = 'aniimax-history-v1';
+// Fingerprint of the setup the last solve was run on; a snapshot only records a prediction when
+// the inputs have not changed since, so an old plan is never pinned to a new setup.
+let lastPlanSetupHash = null;
+// True once the player picked the two snapshots to compare; until then the newest two are shown.
+let historyRangeChosen = false;
+
+function readHistory() {
+    try {
+        return addSnapshots([], JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'));
+    } catch (e) {
+        console.warn('Could not load history from localStorage:', e);
+        return [];
+    }
+}
+
+function writeHistory(list) {
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+    } catch (e) {
+        console.warn('Could not save history to localStorage:', e);
+        showHistoryStatus('Could not save: this browser refused to store the history (storage full or disabled).');
+    }
+}
+
+function showHistoryStatus(message) {
+    document.getElementById('history-status').textContent = message;
+}
+
+function snapshotNow() {
+    try {
+        const setup = currentConfig();
+        const meta = readProfileMeta();
+        const current = lastPlan && lastPlan.success && lastPlanSetupHash === setupHash(setup);
+        const snapshot = makeSnapshot({
+            setup,
+            actual: { rv: Number(setup['home-level']), coins: meta.coins },
+            predicted: current ? predictionFrom(lastPlan, planContext) : null,
+            site: siteStamp(),
+            note: meta.note,
+        });
+        writeHistory(addSnapshots(readHistory(), snapshot));
+        renderHistory();
+        const why = current ? '' : (lastPlan ? ' Inputs changed since the last solve, so it holds no prediction; solve again first to record one.' : ' No plan yet, so it holds no prediction.');
+        showHistoryStatus(`Snapshot saved ${formatProfileTime(snapshot.id)}.${why}`);
+    } catch (error) {
+        showHistoryStatus(`Could not save a snapshot: ${error.message}.`);
+        console.warn('Could not save snapshot:', error);
+    }
+}
+
+function exportHistory() {
+    try {
+        const list = readHistory();
+        const file = historyFile(list, siteStamp());
+        const filename = historyFilename();
+        const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showHistoryStatus(`History downloaded as ${filename} (${list.length} snapshot${list.length === 1 ? '' : 's'}).`);
+    } catch (error) {
+        showHistoryStatus(`Could not download the history: ${error.message}.`);
+        console.warn('Could not export history:', error);
+    }
+}
+
+async function importHistoryFile(file) {
+    if (!file) return;
+    try {
+        const imported = parseHistoryFile(await file.text());
+        const existing = readHistory();
+        const known = new Set(existing.map(s => s.id));
+        const fresh = imported.filter(s => !known.has(s.id)).length;
+        writeHistory(addSnapshots(existing, imported));
+        renderHistory();
+        showHistoryStatus(`Restored ${imported.length} snapshot${imported.length === 1 ? '' : 's'} from the file, ${fresh} new; the rest were already here.`);
+    } catch (error) {
+        showHistoryStatus(`Could not restore this file: ${error.message}.`);
+        console.warn('Could not import history:', error);
+    }
+}
+
+function clearHistory() {
+    const list = readHistory();
+    if (list.length === 0) return;
+    if (!window.confirm(`Delete all ${list.length} snapshots from this browser? Download the history first if you want to keep them.`)) return;
+    writeHistory([]);
+    renderHistory();
+    showHistoryStatus('History cleared.');
+}
+
+function deleteSnapshot(id) {
+    if (!window.confirm(`Delete the snapshot from ${formatProfileTime(id)}?`)) return;
+    writeHistory(readHistory().filter(s => s.id !== id));
+    renderHistory();
+    showHistoryStatus('Snapshot deleted.');
+}
+
+// "Setup changed since your last snapshot": shown after a solve, so saving one is a habit, not a nag.
+function updateHistoryHint() {
+    const hint = document.getElementById('history-hint');
+    const list = readHistory();
+    const last = list[list.length - 1];
+    if (!last) {
+        hint.hidden = true;
+        return;
+    }
+    const changed = last.setupHash !== setupHash(currentConfig());
+    hint.hidden = !changed;
+    if (changed) hint.textContent = `Your setup changed since the last snapshot (${formatProfileTime(last.id)}). Save a new one to keep the record going.`;
+}
+
+function describePrediction(predicted) {
+    if (!predicted) return 'no plan';
+    const parts = [`${formatNumber(predicted.coinsPerHour)} coins/h`];
+    if (predicted.levelUp) parts.push(`RV ${predicted.levelUp.target ?? '?'} in ${formatSeconds(predicted.levelUp.seconds)}`);
+    if (predicted.fallback) parts.push('backup planner');
+    else if (!predicted.proven) parts.push('not proven best');
+    return parts.join(', ');
+}
+
+function renderHistoryDiff(list) {
+    const from = document.getElementById('history-from');
+    const to = document.getElementById('history-to');
+    const a = list.find(s => s.id === from.value);
+    const b = list.find(s => s.id === to.value);
+    const diff = document.getElementById('history-diff');
+    if (!a || !b) {
+        diff.innerHTML = '';
+        return;
+    }
+    const changes = diffSetups(a.setup, b.setup);
+    diff.innerHTML = changes.length === 0
+        ? '<li>No differences in the setup between these two snapshots.</li>'
+        : changes.map(c => `<li><strong>${escapeText(c.what)}</strong>: ${c.before ? `${escapeText(c.before)} → ` : ''}${escapeText(c.after)}</li>`).join('');
+}
+
+function renderHistory() {
+    const list = readHistory();
+    const empty = list.length === 0;
+    document.getElementById('history-empty').hidden = !empty;
+    document.getElementById('history-body').hidden = empty;
+    updateHistoryHint();
+    if (empty) return;
+
+    const series = rvSeries(list);
+    document.getElementById('history-chart').innerHTML = series.length > 0 ? rvChartSvg(series) : '<p class="hint">No RV levels recorded yet.</p>';
+
+    const pace = paceRows(list);
+    document.getElementById('history-pace').innerHTML = pace.length === 0
+        ? '<p class="hint">Save a snapshot while on a level-up plan, then another once you reach the next RV level, and the plan\'s time gets compared with yours here.</p>'
+        : `<table><thead><tr><th>Snapshot</th><th>From RV</th><th>To RV</th><th>Plan said</th><th>Actually took</th><th>Pace</th></tr></thead><tbody>${
+            pace.map(r => `<tr><td>${formatProfileTime(r.from)}</td><td>${r.rv}</td><td>${r.target}</td><td>${formatSeconds(r.predictedSeconds)}</td>`
+                + `<td>${r.actualSeconds === null ? 'not reached yet' : formatSeconds(r.actualSeconds)}</td>`
+                + `<td>${r.ratio === null ? '' : `${r.ratio.toFixed(2)}× the plan\'s time`}</td></tr>`).join('')
+        }</tbody></table>`;
+
+    const options = list.map(s => `<option value="${s.id}">${formatProfileTime(s.id)} (RV ${s.actual.rv ?? '?'})</option>`).join('');
+    const from = document.getElementById('history-from');
+    const to = document.getElementById('history-to');
+    const keepFrom = from.value, keepTo = to.value;
+    from.innerHTML = options;
+    to.innerHTML = options;
+    const keep = historyRangeChosen && list.some(s => s.id === keepFrom) && list.some(s => s.id === keepTo);
+    from.value = keep ? keepFrom : list[Math.max(0, list.length - 2)].id;
+    to.value = keep ? keepTo : list[list.length - 1].id;
+    renderHistoryDiff(list);
+
+    document.getElementById('history-list').innerHTML = `<table><thead><tr><th>Saved</th><th>RV</th><th>Coins</th><th>Plan predicted</th><th>Note</th><th></th></tr></thead><tbody>${
+        [...list].reverse().map(s => `<tr><td>${formatProfileTime(s.id)}</td><td>${s.actual.rv ?? '?'}</td><td>${s.actual.coins === undefined ? '' : formatNumber(s.actual.coins)}</td>`
+            + `<td>${escapeText(describePrediction(s.predicted))}</td><td>${escapeText(s.note || '')}</td>`
+            + `<td><button type="button" class="toggle-button small history-delete" data-id="${s.id}" title="Delete this snapshot">×</button></td></tr>`).join('')
+    }</tbody></table>`;
+}
+
+function attachHistoryHandlers() {
+    document.getElementById('history-save-btn').addEventListener('click', snapshotNow);
+    document.getElementById('history-export-btn').addEventListener('click', exportHistory);
+    document.getElementById('history-import-btn').addEventListener('click', () => document.getElementById('history-file').click());
+    document.getElementById('history-file').addEventListener('change', async event => {
+        const [file] = event.target.files;
+        event.target.value = '';
+        await importHistoryFile(file);
+    });
+    document.getElementById('history-clear-btn').addEventListener('click', clearHistory);
+    document.getElementById('history-list').addEventListener('click', event => {
+        const button = event.target.closest('.history-delete');
+        if (button) deleteSnapshot(button.dataset.id);
+    });
+    ['history-from', 'history-to'].forEach(id => document.getElementById(id).addEventListener('change', () => {
+        historyRangeChosen = true;
+        renderHistoryDiff(readHistory());
+    }));
+    renderHistory();
 }
 
 // --- Staying current with upstream -------------------------------------------------------
@@ -3962,6 +4172,7 @@ function displayPlan(plan) {
     updateRateDisplay(!rateUnitChosen);
     renderGoalTargets(plan);
     renderHomelandLayout(plan);
+    updateHistoryHint();
 
     // Said only when the plan might not be the best: the solver ran out of time, or the backup
     // planner made it.
@@ -4055,6 +4266,7 @@ async function runFindPlan() {
     try {
         const input = getPlanInputValues();
         lastPlanInput = input;
+        lastPlanSetupHash = setupHash(currentConfig());
         planContext = {
             levelUp: isLevelUpStrategy(),
             target: levelUpTarget(),
@@ -4439,6 +4651,7 @@ async function initApp() {
     document.getElementById('clear-saved-btn').addEventListener('click', clearSavedInputs);
     document.getElementById('share-config-btn').addEventListener('click', shareCurrentConfig);
     attachProfileHandlers();
+    attachHistoryHandlers();
     document.getElementById('upstream-recheck').addEventListener('click', event => {
         event.preventDefault();
         if (buildStamp) checkUpstream(buildStamp, true);

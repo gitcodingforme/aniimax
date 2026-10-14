@@ -2882,3 +2882,24 @@ tr:hover .skip-row,
 .upstream-banner[hidden] {
     display: none;
 }
+
+/* Fork: History card */
+.history-card h3 {
+    font-size: 1rem;
+    margin: 1.25rem 0 0.5rem;
+}
+.history-chart svg {
+    width: 100%;
+    height: auto;
+    max-height: 220px;
+}
+.history-diff {
+    padding-left: 1.2rem;
+    margin: 0.5rem 0;
+}
+.history-diff li {
+    margin: 0.2rem 0;
+}
+.history-delete {
+    padding: 0 0.5rem;
+}
