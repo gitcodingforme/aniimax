@@ -85,6 +85,13 @@ class ReadScreenshotsTest(unittest.TestCase):
         self.assertEqual(rows[0]["wrong"], {"coins": (123000, 123456)})
         self.assertEqual(rows[2]["wrong"], {"aniimo.0.abilities.0.level": (3, 2)})
 
+    def test_known_names_include_facilities_recipes_and_level_up_materials(self):
+        names = rs.known_names(Path(__file__).resolve().parent.parent)
+        self.assertIn("Farmland", names["facilities"])
+        self.assertIn("Carousel Mill", names["facilities"])
+        for item in ["wheat", "milled_rice", "wood_block", "mineral_sand", "rough_lumber"]:
+            self.assertIn(item, names["items"])
+
     def test_check_server_explains_what_is_missing(self):
         original = rs.get_json
         try:

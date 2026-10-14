@@ -85,13 +85,24 @@ def screen_kind(path: Path) -> str:
 # --- names known to the site, for mapping what the model read ----------------------------------
 
 def known_names(root: Path) -> dict:
-    facilities = re.findall(r"name: '([^']+)'", (root / "web" / "facility-config.js").read_text(encoding="utf-8")) if (root / "web" / "facility-config.js").exists() else []
-    items = set()
+    config = (root / "web" / "facility-config.js").read_text(encoding="utf-8") if (root / "web" / "facility-config.js").exists() else ""
+    facilities = re.findall(r"name: '([^']+)'", config)
+    # Items: every recipe and ingredient in the CSVs, plus the level-up materials (byproducts such
+    # as wood_block appear only as ingredients and in LEVEL_UP_COSTS).
+    items = set(re.findall(r"\['([a-z0-9_]+)', \d+\]", config))
     for csv in (root / "data").glob("*.csv"):
-        for line in csv.read_text(encoding="utf-8").splitlines()[1:]:
-            name = line.split(",")[0].strip()
-            if name and re.fullmatch(r"[a-z0-9_]+", name):
-                items.add(name)
+        lines = csv.read_text(encoding="utf-8").splitlines()
+        if not lines:
+            continue
+        header = [h.strip() for h in lines[0].split(",")]
+        columns = [i for i, h in enumerate(header) if h in ("name", "raw_materials")]
+        for line in lines[1:]:
+            cells = [c.strip() for c in line.split(",")]
+            for i in columns:
+                if i < len(cells):
+                    for token in re.split(r"[;+|& ]+", cells[i]):
+                        if token and re.fullmatch(r"[a-z0-9_]+", token):
+                            items.add(token)
     return {"facilities": sorted(set(facilities)), "items": sorted(items)}
 
 
