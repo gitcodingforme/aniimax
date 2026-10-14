@@ -21,3 +21,11 @@ target
 #.idea/
 # WASM build output
 web/pkg/
+
+# Personal data for this fork: profiles, progress history, screenshots (kept out of the public repo)
+profiles/
+*.profile.json
+*.history.json
+screenshots/
+# Build stamp written by the deploy workflow
+web/version.json

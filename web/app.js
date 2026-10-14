@@ -545,6 +545,7 @@ async function initWasm() {
         wasmReady = true;
 
         document.getElementById('version').textContent = version;
+        showBuildStamp();
         loadRecipeIndex();
 
         console.log(`Aniimax v${version} loaded successfully`);
@@ -552,6 +553,21 @@ async function initWasm() {
         console.error('Failed to initialize WASM:', error);
         showError('Failed to load the optimizer. Please refresh the page.');
     }
+}
+
+// Shows which upstream (ae-bii/aniimax) commit this build's game data comes from, read from
+// `web/version.json`, which the deploy workflow writes. A local build has no stamp; the footer
+// then keeps its dash.
+async function showBuildStamp() {
+    try {
+        const response = await fetch(new URL('./version.json', import.meta.url), { cache: 'no-cache' });
+        if (!response.ok) return;
+        const stamp = await response.json();
+        const el = document.getElementById('data-version');
+        if (el && stamp.upstream && stamp.upstream.commit) {
+            el.textContent = `${stamp.upstream.commit} (${String(stamp.upstream.date).slice(0, 10)})`;
+        }
+    } catch (_) { /* no stamp: a local build, or offline */ }
 }
 
 // --- Simple / advanced mode -----------------------------------------------------------

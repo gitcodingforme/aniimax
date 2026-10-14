@@ -21,18 +21,40 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history, so the build stamp below can find the last upstream commit included.
+          fetch-depth: 0
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
         run: cargo install wasm-pack
 
       - name: Build WASM
         run: wasm-pack build --target web --out-dir web/pkg
+
+      # Records which build this is and which upstream (ae-bii/aniimax) commit its game data
+      # comes from. The page shows it in the footer, and the out-of-date check compares it with
+      # upstream's latest data change.
+      - name: Stamp the build
+        run: |
+          git fetch --quiet https://github.com/ae-bii/aniimax main
+          UPSTREAM=$(git merge-base HEAD FETCH_HEAD)
+          cat > web/version.json <<EOF
+          {
+            "appVersion": "$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)"/\1/')",
+            "commit": "$(git rev-parse --short HEAD)",
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "upstream": {
+              "commit": "$(git rev-parse --short "$UPSTREAM")",
+              "date": "$(git log -1 --format=%cI "$UPSTREAM")"
+            }
+          }
+          EOF
+          cat web/version.json
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

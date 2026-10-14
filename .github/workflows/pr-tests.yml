@@ -13,6 +13,7 @@ on:
       - 'web/**/*.html'
       - 'web/**/*.css'
       - 'build-wasm.sh'
+      - 'data/**'
 
 permissions:
   contents: read

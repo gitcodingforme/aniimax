@@ -1,3 +1,15 @@
+# Aniimax (personal fork)
+
+This is [gitcodingforme](https://github.com/gitcodingforme)'s personal fork of **[Aniimax by ae-bii](https://github.com/ae-bii/aniimax)**, an Aniimo Homeland production optimizer. All credit for the optimizer, the web app and the game data goes to ae-bii and the contributors of the original project; it is used here under its [MIT license](LICENSE), which is kept unchanged.
+
+- Original site: https://ae-bii.github.io/aniimax/
+- This fork's site: https://gitcodingforme.github.io/aniimax/
+- What this fork adds: a build stamp (`web/version.json`) showing which upstream game data a deployment carries, CI that also runs on game-data changes, and (planned) a personal homeland profile, progress tracking, batch reminders and upstream game-data alerts. Game data fixes found along the way are offered back upstream.
+
+The original README follows.
+
+---
+
 # Aniimax
 
 A command-line tool, Rust library, and **web application** for optimizing production paths in Aniimo Homeland. Calculate the fastest way to produce your target amount of Homeland currency, and see what every facility you own should be doing at once.
