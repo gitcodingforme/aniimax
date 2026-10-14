@@ -2877,3 +2877,8 @@ tr:hover .skip-row,
         animation: none;
     }
 }
+
+/* Fork: out-of-date banner (the .disclaimer flex display would otherwise override `hidden`). */
+.upstream-banner[hidden] {
+    display: none;
+}

@@ -1,0 +1,6 @@
+{
+  "_comment": "Game structure I verified in game, applied over web/facility-config.js when the page loads. facilities: counts (one per RV level, index 0 = RV 1) and unlocks (facility level -> RV level). levelUpCosts: by RV level, coins and items. moduleMaxLevels: by module id (ecological_module, kitchen_module, resource_detector, crafting_module), one max level per RV level. Empty objects mean no override. Examples: \"facilities\": { \"Well\": { \"counts\": [0, 0, 0, 1, 1, 2], \"unlocks\": { \"1\": 4 } } }, \"levelUpCosts\": { \"8\": { \"coins\": 180000, \"items\": [[\"rough_lumber\", 500]] } }, \"moduleMaxLevels\": { \"kitchen_module\": [0, 1, 1, 2] }",
+  "facilities": {},
+  "levelUpCosts": {},
+  "moduleMaxLevels": {}
+}

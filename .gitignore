@@ -29,3 +29,5 @@ profiles/
 screenshots/
 # Build stamp written by the deploy workflow
 web/version.json
+# Copy of data/overrides/structure.json made by scripts/apply_overrides.py
+web/structure-overrides.json

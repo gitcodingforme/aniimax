@@ -33,6 +33,10 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack
 
+      # My in-game verified values (data/overrides/) go on top of upstream's files before the build.
+      - name: Apply overrides
+        run: python3 scripts/apply_overrides.py
+
       - name: Build WASM
         run: wasm-pack build --target web --out-dir web/pkg
 

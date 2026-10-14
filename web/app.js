@@ -5,12 +5,17 @@ import './math-translation.js';
 
 import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
-    MAX_HOME_LEVEL, ANIIMO_MAX, simpleSetup,
+    MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-profile-1';
+} from './facility-config.js?v=fork-upstream-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-profile-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-upstream-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-upstream-1';
+import {
+    bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
+    readCache as readUpstreamCache, writeCache as writeUpstreamCache,
+} from './upstream-check.js?v=fork-upstream-1';
 
 let wasmReady = false;
 
@@ -722,7 +727,49 @@ async function showBuildStamp() {
         if (el && stamp.upstream && stamp.upstream.commit) {
             el.textContent = `${stamp.upstream.commit} (${String(stamp.upstream.date).slice(0, 10)})`;
         }
+        checkUpstream(stamp);
     } catch (_) { /* no stamp: a local build, or offline */ }
+}
+
+// --- Staying current with upstream -------------------------------------------------------
+// Applies data/overrides/structure.json (served as web/structure-overrides.json, copied there by
+// scripts/apply_overrides.py) over the facility-config constants before anything reads them. A
+// missing file means no overrides.
+async function loadStructureOverrides() {
+    try {
+        const response = await fetch(new URL('./structure-overrides.json', import.meta.url), { cache: 'no-cache' });
+        if (!response.ok) return;
+        const { applied, problems } = applyStructureOverrides(await response.json(), { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS });
+        if (applied.length > 0) console.log(`Structure overrides applied: ${applied.join(', ')}`);
+        problems.forEach(problem => console.warn(`Structure override ignored: ${problem}`));
+    } catch (error) {
+        console.warn('Could not load structure overrides:', error);
+    }
+}
+
+// Shows the out-of-date banner when ae-bii/aniimax changed game data after the upstream commit
+// this build was made from. Results are cached for six hours; `force` checks again now.
+async function checkUpstream(stamp, force = false) {
+    const banner = document.getElementById('upstream-banner');
+    try {
+        if (force) clearUpstreamCache(localStorage);
+        let results = readUpstreamCache(localStorage);
+        if (!results) {
+            try {
+                results = await fetchUpstreamChanges();
+                writeUpstreamCache(localStorage, results);
+            } catch (error) {
+                writeUpstreamCache(localStorage, null);
+                throw error;
+            }
+        }
+        const newer = newerUpstreamChanges(stamp, results);
+        if (newer.length > 0) document.getElementById('upstream-banner-text').textContent = bannerText(stamp, newer);
+        banner.hidden = newer.length === 0;
+    } catch (error) {
+        banner.hidden = true;
+        console.warn('Could not check upstream for game data changes:', error);
+    }
 }
 
 // --- Simple / advanced mode -----------------------------------------------------------
@@ -4358,6 +4405,7 @@ window.closeFacilitiesOnBackdrop = function(event) {
 
 // Event listeners
 async function initApp() {
+    await loadStructureOverrides();
     let sharedData = null;
     try {
         sharedData = await readShareHash(window.location.hash);
@@ -4391,6 +4439,10 @@ async function initApp() {
     document.getElementById('clear-saved-btn').addEventListener('click', clearSavedInputs);
     document.getElementById('share-config-btn').addEventListener('click', shareCurrentConfig);
     attachProfileHandlers();
+    document.getElementById('upstream-recheck').addEventListener('click', event => {
+        event.preventDefault();
+        if (buildStamp) checkUpstream(buildStamp, true);
+    });
     if (sharedData) document.getElementById('share-config-status').textContent = 'Shared setup loaded. Your saved setup is kept until you edit this one.';
     document.getElementById('rate-unit').addEventListener('change', () => {
         rateUnitChosen = true;

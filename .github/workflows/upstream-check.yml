@@ -1,0 +1,120 @@
+name: Upstream check
+
+# Looks for game-data changes in ae-bii/aniimax (weekly, or by hand) and opens a pull request that
+# merges them into this fork, with the test result and any conflicts with my overrides in the PR
+# body. GitHub e-mails the PR. Note: GitHub stops scheduled runs on a public repository after 60
+# days without commits; a manual run from the Actions tab starts them again.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'  # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream and look for game data changes
+        id: diff
+        run: |
+          git fetch --quiet https://github.com/ae-bii/aniimax main
+          SYNCED=$(git merge-base HEAD FETCH_HEAD)
+          WATCH="data web/facility-config.js src/models.rs src/coverage.rs src/exact.rs Cargo.toml"
+          CHANGED=$(git diff --name-only "$SYNCED" FETCH_HEAD -- $WATCH)
+          echo "synced=$(git rev-parse --short "$SYNCED")" >> "$GITHUB_OUTPUT"
+          echo "upstream=$(git rev-parse --short FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -z "$CHANGED" ]; then
+            echo "No game data changes upstream since $(git rev-parse --short "$SYNCED")." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Upstream game data changed"
+            echo
+            echo "Files changed between \`$(git rev-parse --short "$SYNCED")\` (last synced) and \`$(git rev-parse --short FETCH_HEAD)\` (upstream main):"
+            echo
+            echo '```'
+            git diff --stat "$SYNCED" FETCH_HEAD -- $WATCH
+            echo '```'
+            echo
+            echo "Upstream commits touching those paths:"
+            echo
+            git log --format='- %h %ad %s' --date=short "$SYNCED"..FETCH_HEAD -- $WATCH
+            echo
+            echo "Merging this PR does not deploy: tag a \`v*\` release or run the Deploy workflow afterwards (see docs/runbooks/game-patched.md in the workspace)."
+            echo
+          } > /tmp/pr-body.md
+          cat /tmp/pr-body.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Merge upstream main
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git merge --no-edit FETCH_HEAD; then
+            echo "Merge conflict with upstream; merge it by hand (git fetch upstream && git merge upstream/main)." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Apply overrides and write the conflict report
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          python3 scripts/apply_overrides.py --report docs/sync-conflicts.md
+          {
+            echo "## Overrides"
+            echo
+            cat docs/sync-conflicts.md
+            echo
+          } >> /tmp/pr-body.md
+
+      - name: Setup Rust
+        if: steps.diff.outputs.changed == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test with overrides applied
+        if: steps.diff.outputs.changed == 'true'
+        id: tests
+        continue-on-error: true
+        run: cargo test --release --locked 2>&1 | tail -n 40 | tee /tmp/test-tail.txt
+
+      - name: Add the test result to the PR body
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          {
+            echo "## Tests (cargo test --release, overrides applied)"
+            echo
+            echo "Result: **${{ steps.tests.outcome }}**"
+            echo
+            echo '```'
+            cat /tmp/test-tail.txt
+            echo '```'
+          } >> /tmp/pr-body.md
+
+      # Overrides are applied at build time only; the repository keeps upstream's files untouched.
+      - name: Restore upstream data files
+        if: steps.diff.outputs.changed == 'true'
+        run: git restore data
+
+      - name: Open or update the sync pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: sync/upstream
+          title: "Upstream game data changed (${{ steps.diff.outputs.synced }} -> ${{ steps.diff.outputs.upstream }})"
+          body-path: /tmp/pr-body.md
+          commit-message: "Record override conflicts for upstream ${{ steps.diff.outputs.upstream }}"

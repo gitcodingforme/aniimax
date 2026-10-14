@@ -1,0 +1,4 @@
+file, match, column, value, upstream_value, verified_on, note
+# One line per game value I checked myself. See scripts/apply_overrides.py for the columns.
+# Example (remove the # to activate):
+# farmland.csv, rose, production_time, 2400, 2400, 2026-10-14, timed twice with a stopwatch
