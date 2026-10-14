@@ -4,7 +4,7 @@ This is [gitcodingforme](https://github.com/gitcodingforme)'s personal fork of *
 
 - Original site: https://ae-bii.github.io/aniimax/
 - This fork's site: https://gitcodingforme.github.io/aniimax/
-- What this fork adds: a build stamp (`web/version.json`) showing which upstream game data a deployment carries, CI that also runs on game-data changes, and (planned) a personal homeland profile, progress tracking, batch reminders and upstream game-data alerts. Game data fixes found along the way are offered back upstream.
+- What this fork adds: a homeland profile ("Download profile" / "Load profile" save your whole setup as a JSON file you keep yourself, so it survives a cleared browser and moves between devices), a build stamp (`web/version.json`) showing which upstream game data a deployment carries, CI that also runs on game-data changes, and (planned) progress tracking, batch reminders and upstream game-data alerts. Game data fixes found along the way are offered back upstream.
 
 The original README follows.
 

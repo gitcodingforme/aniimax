@@ -30,6 +30,9 @@
                     <div class="config-actions">
                         <button type="button" id="share-config-btn" class="toggle-button small">Share setup</button>
                         <button type="button" id="clear-saved-btn" class="toggle-button small" title="Your inputs are saved in this browser automatically.">Clear saved values</button>
+                        <button type="button" id="profile-export-btn" class="toggle-button small" title="Saves your whole setup as a file you can keep as a backup or load on another device.">Download profile</button>
+                        <button type="button" id="profile-import-btn" class="toggle-button small" title="Loads a profile file downloaded from this site. It replaces the setup saved in this browser.">Load profile</button>
+                        <input type="file" id="profile-file" accept=".json,application/json" hidden>
                     </div>
                 </div>
                 <div id="share-config-result" class="share-config-result" hidden>
@@ -37,6 +40,21 @@
                     <input type="text" id="share-config-link" readonly>
                 </div>
                 <p id="share-config-status" class="hint small" role="status" aria-live="polite"></p>
+                <p id="profile-status" class="hint small" role="status" aria-live="polite"></p>
+                <details class="explain profile-details">
+                    <summary>Profile details</summary>
+                    <p class="hint">A profile is your whole setup as one file. Download one to keep a backup or move it to another device; load one to replace the setup saved in this browser. These two fields go into the file too.</p>
+                    <div class="input-row">
+                        <div class="input-field">
+                            <label for="profile-note">Note</label>
+                            <input type="text" id="profile-note" maxlength="500" placeholder="e.g. after RV 7 upgrade">
+                        </div>
+                        <div class="input-field">
+                            <label for="profile-coins">Coins on hand</label>
+                            <input type="number" id="profile-coins" min="0" step="1" placeholder="optional">
+                        </div>
+                    </div>
+                </details>
 
                 <div class="tabs" role="radiogroup" aria-label="Input mode">
                     <label><input type="radio" name="config-mode" id="mode-simple" value="simple" checked> Simple</label>
@@ -536,6 +554,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-build-stamp-1"></script>
+    <script type="module" src="app.js?v=fork-profile-1"></script>
 </body>
 </html>

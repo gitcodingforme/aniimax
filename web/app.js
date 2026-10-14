@@ -7,9 +7,10 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-build-stamp-1';
+} from './facility-config.js?v=fork-profile-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-profile-1';
 
 let wasmReady = false;
 
@@ -350,6 +351,8 @@ function attachFacilityTierHandlers() {
 // client-side (no account, no server); works identically on localhost and once this is
 // hosted on GitHub Pages, since localStorage is scoped to the page's own origin.
 const STORAGE_KEY = 'aniimax-config-v1';
+// The deploy workflow's build stamp (web/version.json), once loaded; null for a local build.
+let buildStamp = null;
 
 // True once the player has picked a rate unit themselves this visit. Until then a fresh plan
 // picks the unit it reads best at; after it, their choice stands.
@@ -537,6 +540,157 @@ function clearSavedInputs() {
     window.location.reload();
 }
 
+// --- Homeland profile ------------------------------------------------------------------
+// The setup above, wrapped with a note, the build that wrote it and a few "actual" game numbers,
+// as a JSON file the player keeps (see profile.js). Download builds it from the live inputs; load
+// writes the file's setup into the same storage key and reloads, so a loaded profile goes through
+// exactly the startup path a saved or shared setup takes. The note, coins and toolkit list live
+// in their own key so they survive "Clear saved values" only as far as the player wants.
+const PROFILE_META_KEY = 'aniimax-profile-meta-v1';
+
+function readProfileMeta() {
+    try {
+        const raw = localStorage.getItem(PROFILE_META_KEY);
+        const meta = raw ? JSON.parse(raw) : null;
+        return meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {};
+    } catch (e) {
+        console.warn('Could not load profile details from localStorage:', e);
+        return {};
+    }
+}
+
+function writeProfileMeta(meta) {
+    try {
+        localStorage.setItem(PROFILE_META_KEY, JSON.stringify(meta));
+    } catch (e) {
+        console.warn('Could not save profile details to localStorage:', e);
+    }
+}
+
+// Which build wrote the profile: the app version from the footer and the upstream data stamp.
+function siteStamp() {
+    const upstream = buildStamp?.upstream;
+    return {
+        appVersion: document.getElementById('version').textContent.trim(),
+        dataVersion: upstream?.commit ? `ae-bii@${upstream.commit} ${String(upstream.date).slice(0, 10)}` : '',
+    };
+}
+
+function formatProfileTime(iso) {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return 'an unknown time';
+    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+// With a message: shows it. Without: shows when a profile was last loaded and downloaded.
+function showProfileStatus(message) {
+    const el = document.getElementById('profile-status');
+    if (message !== undefined) {
+        el.textContent = message;
+        return;
+    }
+    const meta = readProfileMeta();
+    const parts = [];
+    if (meta.lastImport?.savedAt) {
+        const note = meta.lastImport.note ? ` ("${meta.lastImport.note}")` : '';
+        parts.push(`Profile loaded from a file saved ${formatProfileTime(meta.lastImport.savedAt)}${note}.`);
+    }
+    if (meta.lastExport) parts.push(`Last downloaded ${formatProfileTime(meta.lastExport)}.`);
+    el.textContent = parts.join(' ');
+}
+
+function loadProfileDetails() {
+    const meta = readProfileMeta();
+    document.getElementById('profile-note').value = typeof meta.note === 'string' ? meta.note : '';
+    document.getElementById('profile-coins').value = Number.isFinite(meta.coins) ? meta.coins : '';
+}
+
+function saveProfileDetails() {
+    const meta = readProfileMeta();
+    meta.note = document.getElementById('profile-note').value;
+    const coins = document.getElementById('profile-coins').value;
+    meta.coins = coins === '' ? undefined : Number(coins);
+    writeProfileMeta(meta);
+}
+
+function exportProfile() {
+    try {
+        const meta = readProfileMeta();
+        const setup = currentConfig();
+        const profile = buildProfile({
+            setup,
+            note: meta.note,
+            site: siteStamp(),
+            toolkits: meta.toolkits,
+            actual: { rv: Number(setup['home-level']), coins: meta.coins },
+        });
+        const filename = profileFilename(profile.savedAt);
+        const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        meta.lastExport = profile.savedAt;
+        writeProfileMeta(meta);
+        showProfileStatus();
+        document.getElementById('share-config-status').textContent =
+            `Profile downloaded as ${filename}. It holds your whole setup; keep it with your own files.`;
+    } catch (error) {
+        showProfileStatus(`Could not download the profile: ${error.message}.`);
+        console.warn('Could not export profile:', error);
+    }
+}
+
+async function importProfileFile(file) {
+    if (!file) return;
+    try {
+        const profile = parseProfile(await file.text());
+        const summary = summarizeProfile(profile);
+        const note = profile.note ? ` ("${profile.note}")` : '';
+        const ok = window.confirm(
+            `Load the profile saved ${formatProfileTime(profile.savedAt)}${note}?\n\n`
+            + `It has RV level ${summary.rv}, ${summary.facilities} facilities and ${summary.aniimo} Aniimo.\n\n`
+            + 'The setup saved in this browser will be replaced. Download it first if you want to keep it.'
+        );
+        if (!ok) {
+            showProfileStatus('Profile not loaded; your setup is unchanged.');
+            return;
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(profile.setup));
+        const meta = readProfileMeta();
+        meta.note = profile.note;
+        meta.coins = profile.actual.coins;
+        meta.toolkits = profile.toolkits;
+        meta.lastImport = { savedAt: profile.savedAt, note: profile.note, at: new Date().toISOString() };
+        writeProfileMeta(meta);
+        clearShareHash();
+        window.location.reload();
+    } catch (error) {
+        showProfileStatus(`Could not load this file: ${error.message}.`);
+        console.warn('Could not import profile:', error);
+    }
+}
+
+function attachProfileHandlers() {
+    document.getElementById('profile-export-btn').addEventListener('click', exportProfile);
+    document.getElementById('profile-import-btn').addEventListener('click', () => {
+        document.getElementById('profile-file').click();
+    });
+    document.getElementById('profile-file').addEventListener('change', async event => {
+        const [file] = event.target.files;
+        event.target.value = '';
+        await importProfileFile(file);
+    });
+    ['profile-note', 'profile-coins'].forEach(id =>
+        document.getElementById(id).addEventListener('input', saveProfileDetails));
+    loadProfileDetails();
+    showProfileStatus();
+}
+
 // Initialize the worker and its wasm module.
 async function initWasm() {
     try {
@@ -563,6 +717,7 @@ async function showBuildStamp() {
         const response = await fetch(new URL('./version.json', import.meta.url), { cache: 'no-cache' });
         if (!response.ok) return;
         const stamp = await response.json();
+        buildStamp = stamp;
         const el = document.getElementById('data-version');
         if (el && stamp.upstream && stamp.upstream.commit) {
             el.textContent = `${stamp.upstream.commit} (${String(stamp.upstream.date).slice(0, 10)})`;
@@ -4235,6 +4390,7 @@ async function initApp() {
     document.getElementById('optimize-btn').addEventListener('click', runFindPlan);
     document.getElementById('clear-saved-btn').addEventListener('click', clearSavedInputs);
     document.getElementById('share-config-btn').addEventListener('click', shareCurrentConfig);
+    attachProfileHandlers();
     if (sharedData) document.getElementById('share-config-status').textContent = 'Shared setup loaded. Your saved setup is kept until you edit this one.';
     document.getElementById('rate-unit').addEventListener('change', () => {
         rateUnitChosen = true;
