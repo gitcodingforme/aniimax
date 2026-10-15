@@ -33,3 +33,4 @@ web/version.json
 web/structure-overrides.json
 # Latest screenshot reading written by scripts/watch_game.py for the local site (personal data)
 web/reading.json
+__pycache__/

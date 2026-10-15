@@ -47,11 +47,15 @@ ABILITIES = ["Grass", "Fire", "Water", "Earth", "Wind", "Light", "Dark", "Ice", 
 
 SCREEN_KINDS = {
     "rv": {
-        "prompt": "This is a screenshot of the Homeland (RV) screen of the game Aniimo. Read the RV level and the Home Coins amount shown. Answer only with the numbers you can read; use null for anything not visible.",
-        "schema": {"type": "object", "properties": {"rv": {"type": ["integer", "null"]}, "coins": {"type": ["integer", "null"]}}, "required": ["rv", "coins"]},
+        "prompt": "This is a screenshot from the game Aniimo that states the RV level as text (for example 'RV Lv.12' or 'RV Level 12'). Read the RV level, and the Home Coins amount if a coin icon with a number is shown: copy that number exactly as written, keeping its spaces (for example '220 724'). Use null for anything not written on screen; never guess.",
+        "schema": {"type": "object", "properties": {"rv": {"type": ["integer", "null"]}, "coins": {"type": ["string", "null"]}}, "required": ["rv", "coins"]},
+    },
+    "home": {
+        "prompt": "This is the Home Management screen of the game Aniimo: a green grid of white plot tiles with facility icons. Read only the Home Coins amount shown at the top right next to a coin icon: copy that number exactly as written, keeping its spaces (for example '220 724'). Use null if no such number is visible.",
+        "schema": {"type": "object", "properties": {"coins": {"type": ["string", "null"]}}, "required": ["coins"]},
     },
     "facility": {
-        "prompt": "This is a screenshot of one facility's panel in the game Aniimo. Read the facility's name exactly as written, how many of it the player owns (count), and the facility level shown. Use null for anything not visible.",
+        "prompt": "This is the Home Management screen of the game Aniimo with a facility's side panel open on the right. The panel's heading is the facility name followed by its level in brackets, for example 'Chimney Kiln (Level 2)'. Read the name exactly as written and the level from that heading only. The game does not show how many of the facility are owned, so count is always null. If no such heading is visible, answer null for everything.",
         "schema": {"type": "object", "properties": {"facility": {"type": ["string", "null"]}, "count": {"type": ["integer", "null"]}, "level": {"type": ["integer", "null"]}}, "required": ["facility", "count", "level"]},
     },
     "modules": {
@@ -59,7 +63,7 @@ SCREEN_KINDS = {
         "schema": {"type": "object", "properties": {m: {"type": ["integer", "null"]} for m in MODULES}, "required": MODULES},
     },
     "aniimo": {
-        "prompt": "This is a screenshot of the Aniimo roster in the game Aniimo. For every Aniimo visible, read its name, its abilities with their levels (ability names are among: " + ", ".join(ABILITIES) + "), and its personality words if shown. Use an empty list if none are visible.",
+        "prompt": "This is a screenshot from the game Aniimo that may show the Aniimo roster: a list of the player's Aniimo with each name written as text. For every Aniimo whose name is written, read the name, the abilities whose names and levels are written next to it (ability names are among: " + ", ".join(ABILITIES) + "), and its personality words if written. Copy only what is written on screen; never invent an Aniimo, an ability or a level. If no list of named Aniimo is visible, answer with an empty list.",
         "schema": {"type": "object", "properties": {"aniimo": {"type": "array", "items": {"type": "object", "properties": {
             "name": {"type": "string"},
             "abilities": {"type": "array", "items": {"type": "object", "properties": {"ability": {"type": "string"}, "level": {"type": "integer"}}, "required": ["ability", "level"]}},
@@ -67,8 +71,10 @@ SCREEN_KINDS = {
         }, "required": ["name", "abilities", "personalities"]}}}, "required": ["aniimo"]},
     },
     "stock": {
-        "prompt": "This is a screenshot of the storage or inventory in the game Aniimo. For every item whose amount is visible, read the item name exactly as written and the amount. Use an empty list if none are visible.",
-        "schema": {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "amount": {"type": "integer"}}, "required": ["name", "amount"]}}}, "required": ["items"]},
+        "prompt": "Look for an item information card in this screenshot from the game Aniimo. If there is one, give the item name shown as the card's title and the numbers shown after 'Inventory:' and 'Homeland:' (or after 'Owned' in a shop); use null for a number that is not shown. Icons with numbers but no written name are not items. If there is no such card, answer with an empty list.",
+        "schema": {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {
+            "name": {"type": "string"}, "inventory": {"type": ["integer", "null"]}, "homeland": {"type": ["integer", "null"]}, "owned": {"type": ["integer", "null"]}},
+            "required": ["name", "inventory", "homeland", "owned"]}}}, "required": ["items"]},
     },
     "unknown": {
         "prompt": "This is a screenshot from the game Aniimo. In one sentence, say what screen it shows and list any numbers with their labels.",
@@ -160,7 +166,7 @@ def ask_model(host: str, model: str, prompt: str, schema: dict, image_b64: str, 
         "messages": [{"role": "user", "content": prompt, "images": [image_b64]}],
         "format": schema,
         "stream": False,
-        "options": {"temperature": 0},
+        "options": {"temperature": 0, "num_predict": 4096},  # enough tokens for a long roster or storage list
     }
     if keep_alive:
         body["keep_alive"] = keep_alive  # how long Ollama keeps the model loaded after this call
@@ -169,7 +175,9 @@ def ask_model(host: str, model: str, prompt: str, schema: dict, image_b64: str, 
     try:
         return json.loads(content)
     except json.JSONDecodeError:
-        raise ValueError(f"the model did not answer with JSON: {content[:200]!r}") from None
+        error = ValueError(f"the model did not answer with JSON: {content[:200]!r}")
+        error.content = content  # the whole answer, for a debugging file
+        raise error from None
 
 
 def check_server(host: str, model: str) -> str:
@@ -185,6 +193,18 @@ def check_server(host: str, model: str) -> str:
 
 # --- merging what was read into a partial setup --------------------------------------------------
 
+def count_from(value) -> int | None:
+    """A whole number from what the model read: an int, or a string such as '220 724' or '29,698,282'."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        digits = re.sub(r"[^0-9]", "", value)
+        return int(digits) if digits else None
+    return None
+
+
 def merge_screens(screens: list[dict], names: dict) -> tuple[dict, dict, list[str]]:
     setup: dict = {}
     actual: dict = {}
@@ -194,16 +214,18 @@ def merge_screens(screens: list[dict], names: dict) -> tuple[dict, dict, list[st
         kind = screen.get("kind")
         if screen.get("error"):
             continue
-        if kind == "rv":
+        if kind in ("rv", "home"):
             if isinstance(fields.get("rv"), int) and fields["rv"] >= 1:
                 setup["home-level"] = str(fields["rv"])
                 actual["rv"] = fields["rv"]
-            if isinstance(fields.get("coins"), int) and fields["coins"] >= 0:
-                actual["coins"] = fields["coins"]
+            coins = count_from(fields.get("coins"))
+            if coins is not None and coins >= 0:
+                actual["coins"] = coins
         elif kind == "facility":
             facility = match_name(fields.get("facility"), names["facilities"], notes, f"{screen['file']} facility")
             count, level = fields.get("count"), fields.get("level")
-            if facility and isinstance(count, int) and count >= 0:
+            if facility and (count is None or (isinstance(count, int) and count >= 0)):
+                # count None: the game's panel shows the level only; the site keeps the count it already has
                 tiers = setup.setdefault("facilityTiers", {}).setdefault(facility, [])
                 tiers.append({"count": count, "level": level if isinstance(level, int) and level >= 1 else 1})
         elif kind == "modules":
@@ -226,8 +248,11 @@ def merge_screens(screens: list[dict], names: dict) -> tuple[dict, dict, list[st
             stock = setup.setdefault("levelUpStock", {})
             for item in fields.get("items") or []:
                 name = match_name(item.get("name"), names["items"], notes, f"{screen['file']} item")
-                if name and isinstance(item.get("amount"), int) and item["amount"] >= 0:
-                    stock[name] = item["amount"]
+                amount = item.get("amount")
+                if amount is None:  # the detail card's Homeland count first (what the homeland can use), else the others
+                    amount = next((item.get(k) for k in ("homeland", "inventory", "owned") if isinstance(item.get(k), int)), None)
+                if name and isinstance(amount, int) and amount >= 0:
+                    stock[name] = amount
     return setup, actual, notes
 
 

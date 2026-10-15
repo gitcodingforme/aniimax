@@ -84,3 +84,15 @@ test('test_apply_changes_applies_only_the_ticked_ones_without_mutating_inputs', 
     assert.deepEqual(all.setup.roster, reading.setup.roster);
     assert.equal(applyChanges(current, meta, changes, []).applied, 0);
 });
+
+test('test_a_facility_read_from_its_panel_keeps_the_count_the_setup_has', () => {
+    const panelReading = { setup: { facilityTiers: { Farmland: [{ count: null, level: 3 }], Mine: [{ count: null, level: 1 }], Well: [{ count: null, level: 2 }] } } };
+    const changes = proposeChanges(current, panelReading);
+    const byId = Object.fromEntries(changes.map(c => [c.id, c]));
+    assert.equal(`${byId['facility:Farmland'].before} -> ${byId['facility:Farmland'].after}`, '4×Lv.2 -> 4×Lv.3');
+    assert.match(byId['facility:Farmland'].what, /does not show the count/);
+    assert.equal(byId['facility:Mine'], undefined, 'same level, no change');
+    assert.equal(`${byId['facility:Well'].before} -> ${byId['facility:Well'].after}`, 'none -> 1×Lv.2');
+    const { setup } = applyChanges(current, {}, changes, ['facility:Farmland', 'facility:Well']);
+    assert.deepEqual(setup.facilityTiers, { Farmland: [{ count: 4, level: 3 }], Mine: [{ count: 1, level: 1 }], Well: [{ count: 1, level: 2 }] });
+});

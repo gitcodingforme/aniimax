@@ -19,6 +19,8 @@ Usage (from the repository root):
   python scripts/watch_game.py                    watch until Ctrl+C
   python scripts/watch_game.py --once             grab one frame, read it, exit (good for a test)
   python scripts/watch_game.py --replay DIR       treat the images in DIR as frames, then exit
+  python scripts/watch_game.py --fresh --replay screenshots/auto
+                                                  rebuild the reading from the saved frames (after a prompt change)
   python scripts/watch_game.py --check            confirm the window and the model can be found
 Needs Pillow (present on this PC). Starts Ollama if it is installed but not running (--no-start to never do that).
 """
@@ -39,16 +41,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import read_screenshots as rs  # noqa: E402  (prompts, model calls, merging)
 
-KINDS = ["rv", "facility", "modules", "aniimo", "stock"]
+KINDS = ["rv", "home", "facility", "modules", "aniimo", "stock"]
 CLASSIFY_PROMPT = (
     "This is a screenshot from the game Aniimo. Which screen is it? Answer with exactly one of: "
-    "rv (the Homeland screen showing the RV level and Home Coins), "
-    "facility (one facility's panel with its name, how many are owned and their level), "
-    "modules (the upgrade modules screen with Ecological Module, Kitchen Module, Resource Detector, Crafting Module), "
-    "aniimo (the Aniimo roster listing Aniimo with abilities and personalities), "
-    "stock (storage or inventory with item names and amounts), "
-    "or other (anything else: the map, a battle, a loading screen, a dialog, an egg hatching, "
-    "or a shop with prices and a Buy button, even if it says how many of an item are owned)."
+    "home (the Home Management screen: a green grid of white plot tiles with facility icons and 'Lv.' badges, with NO side panel open on the right), "
+    "facility (the same Home Management grid WITH a side panel open on the right whose heading is a facility name followed by '(Level N)', e.g. 'Chimney Kiln (Level 2)'), "
+    "rv (a screen that writes the RV level as text, e.g. 'RV Lv.12'), "
+    "modules (a screen listing Ecological Module, Kitchen Module, Resource Detector and Crafting Module with their levels), "
+    "aniimo (the Aniimo roster: a list of Aniimo with their names and ability levels written as text), "
+    "stock (an item's detail card: an item name as a title with 'Inventory:' and 'Homeland:' counts, or a shop item with 'Owned N'), "
+    "or other (anything else: the open world, a battle, a loading screen, a dialog, an egg hatching, daily orders, mail, "
+    "or the Warehouse grid of item icons with numbers but no names). "
+    "Choose 'aniimo' or 'stock' only when the names are written as text."
 )
 CLASSIFY_SCHEMA = {"type": "object", "properties": {"kind": {"type": "string", "enum": KINDS + ["other"]}}, "required": ["kind"]}
 CLASSIFY_SIDE = 1000  # px; a smaller image is enough to tell screens apart and is faster
@@ -58,6 +62,7 @@ CHANGED = 0.004   # above which it is a new picture compared with the last one r
 REREAD_SECONDS = 60  # a still picture is looked at again this often, in case an animated background hid a change
 FP_SIZE = (96, 54)
 FP_LEVEL = 24     # a pixel counts as changed when its grey value moved by more than this (0-255)
+OTHER_KEEP = 10   # how many frames the model called "other" to keep, so a wrong "other" can be checked
 NOT_GAME = {"chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "windowsterminal.exe", "conhost.exe",
             "cmd.exe", "powershell.exe", "pwsh.exe", "python.exe", "code.exe", "claude.exe", "explorer.exe", "mintty.exe"}
 
@@ -130,8 +135,54 @@ def pick_window(windows: list[dict], title: str, exe: str | None = None) -> dict
 
 
 def grab_window(window: dict):
+    """The window's own picture, even when another window (this app, a browser) lies on top of it.
+    PrintWindow with PW_RENDERFULLCONTENT asks Windows for the composed frame of just that window;
+    if that comes back empty (some programs refuse), fall back to a plain screen grab of its area."""
+    image = print_window(window["hwnd"])
+    if image is not None and not is_blank(image):
+        return image
     from PIL import ImageGrab
     return ImageGrab.grab(bbox=window["rect"], all_screens=True).convert("RGB")
+
+
+def print_window(hwnd):
+    import ctypes.wintypes as wt
+    from PIL import Image
+    user32, gdi32 = ctypes.windll.user32, ctypes.windll.gdi32
+    rect = wt.RECT()
+    user32.GetClientRect(hwnd, ctypes.byref(rect))
+    width, height = rect.right - rect.left, rect.bottom - rect.top
+    if width < 2 or height < 2:
+        return None
+
+    class BitmapInfoHeader(ctypes.Structure):
+        _fields_ = [("biSize", wt.DWORD), ("biWidth", wt.LONG), ("biHeight", wt.LONG), ("biPlanes", wt.WORD), ("biBitCount", wt.WORD),
+                    ("biCompression", wt.DWORD), ("biSizeImage", wt.DWORD), ("biXPelsPerMeter", wt.LONG), ("biYPelsPerMeter", wt.LONG),
+                    ("biClrUsed", wt.DWORD), ("biClrImportant", wt.DWORD)]
+
+    hdc = user32.GetWindowDC(hwnd)
+    mdc = gdi32.CreateCompatibleDC(hdc)
+    bmp = gdi32.CreateCompatibleBitmap(hdc, width, height)
+    try:
+        gdi32.SelectObject(mdc, bmp)
+        if not user32.PrintWindow(hwnd, mdc, 2):  # 2 = PW_RENDERFULLCONTENT
+            return None
+        info = BitmapInfoHeader()
+        info.biSize, info.biWidth, info.biHeight, info.biPlanes, info.biBitCount = ctypes.sizeof(info), width, -height, 1, 32
+        buffer = ctypes.create_string_buffer(width * height * 4)
+        if gdi32.GetDIBits(mdc, bmp, 0, height, buffer, ctypes.byref(info), 0) != height:
+            return None
+        return Image.frombuffer("RGB", (width, height), buffer, "raw", "BGRX", 0, 1).copy()
+    finally:
+        gdi32.DeleteObject(bmp)
+        gdi32.DeleteDC(mdc)
+        user32.ReleaseDC(hwnd, hdc)
+
+
+def is_blank(image) -> bool:
+    """All black (or all one shade): what a window gives when it refuses to be printed."""
+    extrema = image.convert("L").resize(FP_SIZE).getextrema()
+    return extrema[1] - extrema[0] < 8
 
 
 # --- telling frames apart -----------------------------------------------------------------------------
@@ -153,7 +204,7 @@ def supersedes(new: dict, old: dict) -> bool:
     or a roster/storage page that shows everything the older page showed."""
     if new["kind"] != old["kind"]:
         return False
-    if new["kind"] in ("rv", "modules"):
+    if new["kind"] in ("rv", "home", "modules"):
         return True
     nf, of = new.get("fields") or {}, old.get("fields") or {}
     if new["kind"] == "facility":
@@ -224,12 +275,14 @@ class Watcher:
         try:
             kind = (self.ask(CLASSIFY_PROMPT, CLASSIFY_SCHEMA, encode(image, CLASSIFY_SIDE)) or {}).get("kind")
             if kind not in KINDS:
+                print(f"{time.strftime('%H:%M:%S')} other screen (not read)")
                 return None
             spec = rs.SCREEN_KINDS[kind]
             entry["kind"] = kind
             entry["fields"] = self.ask(spec["prompt"], spec["schema"], encode(image, rs.MAX_SIDE))
         except (urllib.error.URLError, OSError, ValueError) as e:
             entry["error"] = str(e)
+            entry["raw"] = getattr(e, "content", "")  # the model's whole answer, saved beside the frame
         entry["seconds"] = round(self.now() - started, 1)
         if entry.get("error"):
             print(f"{time.strftime('%H:%M:%S')} {entry['kind']}: error: {entry['error']}")
@@ -238,14 +291,23 @@ class Watcher:
         print(f"{time.strftime('%H:%M:%S')} {entry['kind']} in {entry['seconds']}s: {json.dumps(entry['fields'])[:110]}")
         return entry
 
-    def save_frame(self, image, entry: dict) -> Path:
+    def save_frame(self, image, entry: dict | None, keep: int | None = None) -> Path:
+        """Keep the frame on disk: known screens as <kind>-<time>.png, failed reads with -error and the
+        model's raw answer beside them, and the last few 'other' frames so a wrong 'other' can be seen."""
         self.out_dir.mkdir(parents=True, exist_ok=True)
-        path = self.out_dir / f"{entry['kind']}-{time.strftime('%Y%m%d-%H%M%S')}.png"
+        kind = entry["kind"] if entry else "other"
+        suffix = "-error" if entry and entry.get("error") else ""
+        path = self.out_dir / f"{kind}-{time.strftime('%Y%m%d-%H%M%S')}{suffix}.png"
         image.save(path)
-        entry["file"] = path.name
-        if self.keep:
-            for stale in sorted(self.out_dir.glob(f"{entry['kind']}-*.png"))[:-self.keep]:
+        if entry:
+            entry["file"] = path.name
+            if entry.get("error") and entry.get("raw"):
+                path.with_suffix(".txt").write_text(entry["raw"], encoding="utf-8")
+        keep = self.keep if keep is None else keep
+        if keep:
+            for stale in sorted(self.out_dir.glob(f"{kind}-*.png"))[:-keep]:
                 stale.unlink(missing_ok=True)
+                stale.with_suffix(".txt").unlink(missing_ok=True)
         return path
 
     def reading(self) -> dict:
@@ -273,9 +335,9 @@ class Watcher:
         if not self.consider(image):
             return None
         entry = self.read(image, source)
+        if save:
+            self.save_frame(image, entry, keep=OTHER_KEEP if entry is None else None)
         if entry and not entry.get("error"):
-            if save:
-                self.save_frame(image, entry)
             self.write()
         return entry
 
@@ -329,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--once", action="store_true", help="grab and read one frame, then exit")
     parser.add_argument("--replay", type=Path, help="read the images in this folder as if they were frames, then exit")
     parser.add_argument("--check", action="store_true", help="only report the window and the model")
+    parser.add_argument("--fresh", action="store_true", help="start from an empty reading instead of continuing the previous one")
     args = parser.parse_args(argv)
 
     out_dir = args.dir or (args.root / "screenshots" / "auto")
@@ -343,6 +406,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     watcher = Watcher(args.root, args.host, args.model, out_dir, web_dir, keep=args.keep)
+    if args.fresh:
+        watcher.screens = []
     if watcher.screens:
         print(f"Continuing from {out_dir.parent / 'reading.json'}: {len(watcher.screens)} screens already read.")
     if args.replay:

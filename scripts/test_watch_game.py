@@ -81,6 +81,10 @@ class FrameLogicTest(unittest.TestCase):
     def test_supersedes_same_screen_same_facility_or_superset_page(self):
         rv1, rv2 = {"kind": "rv", "fields": {"rv": 5}}, {"kind": "rv", "fields": {"rv": 6}}
         self.assertTrue(wg.supersedes(rv2, rv1))
+        self.assertTrue(wg.supersedes({"kind": "home", "fields": {"coins": 2}}, {"kind": "home", "fields": {"coins": 1}}))
+        farm_panel_a = {"kind": "facility", "fields": {"facility": "Farmland", "count": None, "level": 1}}
+        farm_panel_b = {"kind": "facility", "fields": {"facility": "Farmland", "count": None, "level": 2}}
+        self.assertTrue(wg.supersedes(farm_panel_b, farm_panel_a))
         farm_a = {"kind": "facility", "fields": {"facility": "Farmland", "count": 4, "level": 1}}
         farm_b = {"kind": "facility", "fields": {"facility": "farmland ", "count": 6, "level": 2}}
         mill = {"kind": "facility", "fields": {"facility": "Carousel Mill", "count": 1, "level": 1}}
@@ -109,7 +113,7 @@ class PipelineTest(unittest.TestCase):
         calls = []
 
         def fake_ask(prompt, schema, image_b64):
-            calls.append(prompt[:30])
+            calls.append(prompt[:60])
             classify, fields = answers[current["text"]]
             return classify if schema is wg.CLASSIFY_SCHEMA else fields
 
@@ -124,7 +128,7 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual([s["kind"] for s in w.screens], ["rv", "facility"], "the second Farmland reading replaced the first")
             self.assertEqual(w.screens[1]["fields"]["count"], 6)
             self.assertEqual(w.looked, 4, "each settled new picture was classified once")
-            self.assertEqual(calls.count(wg.CLASSIFY_PROMPT[:30]), 4)
+            self.assertEqual(calls.count(wg.CLASSIFY_PROMPT[:60]), 4)
             self.assertEqual(len(calls), 7, "four classifications and three readings (the map was not read)")
             reading = json.loads((Path(d) / "reading.json").read_text(encoding="utf-8"))
             self.assertEqual(reading["format"], "aniimax-screenshot-reading")
@@ -136,7 +140,7 @@ class PipelineTest(unittest.TestCase):
             saved = sorted(p.name for p in out_dir.glob("*.png"))
             self.assertEqual(len([n for n in saved if n.startswith("facility-")]), 1, "keep=1 pruned the older Farmland frame")
             self.assertEqual(len([n for n in saved if n.startswith("rv-")]), 1)
-            self.assertFalse(any(n.startswith("other") for n in saved), "unknown screens are not saved")
+            self.assertEqual(len([n for n in saved if n.startswith("other-")]), 1, "the map frame is kept as 'other' for checking")
 
     def test_a_new_session_continues_from_the_previous_reading(self):
         with tempfile.TemporaryDirectory() as d:
@@ -156,9 +160,13 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(reading["setup"]["levelUpStock"], {"wood_block": 3})
             self.assertEqual(reading["actual"], {"rv": 7, "coins": 2})
 
-    def test_a_model_error_is_kept_out_of_the_reading(self):
+    def test_a_model_error_is_kept_out_of_the_reading_but_saved_for_debugging(self):
         def failing_ask(prompt, schema, image_b64):
-            raise ValueError("the model did not answer with JSON")
+            if schema is wg.CLASSIFY_SCHEMA:
+                return {"kind": "aniimo"}
+            error = ValueError("the model did not answer with JSON")
+            error.content = '{"aniimo": [{"name": "Pinkie", "abilities": ['
+            raise error
         with tempfile.TemporaryDirectory() as d:
             w = wg.Watcher(ROOT, "http://fake", "m", Path(d) / "auto", None, ask=failing_ask)
             w.last_fp = wg.fingerprint(frame((5, 5, 5)))
@@ -166,6 +174,15 @@ class PipelineTest(unittest.TestCase):
             self.assertIn("did not answer", entry["error"])
             self.assertEqual(w.screens, [])
             self.assertFalse((Path(d) / "reading.json").exists())
+            saved = sorted(p.name for p in (Path(d) / "auto").iterdir())
+            self.assertEqual(len(saved), 2)
+            self.assertTrue(saved[0].startswith("aniimo-") and saved[0].endswith("-error.png"), saved)
+            self.assertTrue(saved[1].endswith("-error.txt"), saved)
+            self.assertIn("Pinkie", (Path(d) / "auto" / saved[1]).read_text(encoding="utf-8"))
+
+    def test_blank_frames_are_recognised(self):
+        self.assertTrue(wg.is_blank(frame((0, 0, 0))))
+        self.assertFalse(wg.is_blank(frame((0, 0, 0), "Farmland")))
 
 
 if __name__ == "__main__":

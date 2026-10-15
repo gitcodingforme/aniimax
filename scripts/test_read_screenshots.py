@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import read_screenshots as rs  # noqa: E402
 
-NAMES = {"facilities": ["Farmland", "Carousel Mill", "Tidewhisper Sandcastle"], "items": ["wood_block", "mineral_sand", "rough_lumber"]}
+NAMES = {"facilities": ["Farmland", "Carousel Mill", "Tidewhisper Sandcastle", "Chimney Kiln"], "items": ["wood_block", "mineral_sand", "rough_lumber"]}
 
 
 class ReadScreenshotsTest(unittest.TestCase):
@@ -26,25 +26,29 @@ class ReadScreenshotsTest(unittest.TestCase):
             {"file": "facility-a.png", "kind": "facility", "fields": {"facility": "Carousel mill", "count": 2, "level": 3}},
             {"file": "facility-b.png", "kind": "facility", "fields": {"facility": "Tidewisper Sandcastle", "count": 1, "level": None}},
             {"file": "facility-c.png", "kind": "facility", "fields": {"facility": "Moon Base", "count": 1, "level": 1}},
+            {"file": "facility-d.png", "kind": "facility", "fields": {"facility": "Chimney Kiln", "count": None, "level": 2}},
+            {"file": "home-1.png", "kind": "home", "fields": {"coins": "220 724"}},
             {"file": "modules-1.png", "kind": "modules", "fields": {"ecological_module": 2, "kitchen_module": None, "resource_detector": 0, "crafting_module": 1}},
             {"file": "aniimo-1.png", "kind": "aniimo", "fields": {"aniimo": [
                 {"name": "Spark", "abilities": [{"ability": "fire", "level": 3}, {"ability": "Laser", "level": 2}], "personalities": ["Playful"]},
                 {"name": "Nobody", "abilities": [{"ability": "Water", "level": 9}], "personalities": []},
             ]}},
             {"file": "stock-1.png", "kind": "stock", "fields": {"items": [{"name": "Wood Blocks", "amount": 40}, {"name": "Mineral Sand", "amount": 12}, {"name": "Golden Egg", "amount": 1}]}},
+            {"file": "stock-2.png", "kind": "stock", "fields": {"items": [{"name": "Rough Lumber", "inventory": 3, "homeland": 7, "owned": None}]}},
             {"file": "shot.png", "kind": "unknown", "fields": {"description": "a map"}},
             {"file": "facility-broken.png", "kind": "facility", "fields": None, "error": "timeout"},
         ]
         setup, actual, notes = rs.merge_screens(screens, NAMES)
         self.assertEqual(setup["home-level"], "7")
-        self.assertEqual(actual, {"rv": 7, "coins": 123456})
-        self.assertEqual(setup["facilityTiers"], {"Carousel Mill": [{"count": 2, "level": 3}], "Tidewhisper Sandcastle": [{"count": 1, "level": 1}]})
+        self.assertEqual(actual, {"rv": 7, "coins": 220724}, "the later Home Management frame updates the coins")
+        self.assertEqual(setup["facilityTiers"], {"Carousel Mill": [{"count": 2, "level": 3}], "Tidewhisper Sandcastle": [{"count": 1, "level": 1}],
+                                                  "Chimney Kiln": [{"count": None, "level": 2}]})
         self.assertEqual(setup["ecological-module-level"], "2")
         self.assertEqual(setup["resource-detector-level"], "0")
         self.assertEqual(setup["crafting-module-level"], "1")
         self.assertNotIn("kitchen-module-level", setup)
         self.assertEqual(setup["roster"], [{"name": "Spark", "count": 1, "abilities": {"Fire": 3}, "personalities": ["Playful"]}])
-        self.assertEqual(setup["levelUpStock"], {"wood_block": 40, "mineral_sand": 12})
+        self.assertEqual(setup["levelUpStock"], {"wood_block": 40, "mineral_sand": 12, "rough_lumber": 7})
         joined = "\n".join(notes)
         self.assertIn("Tidewisper Sandcastle', taken as 'Tidewhisper Sandcastle'", joined)
         self.assertIn("Moon Base', which matches nothing", joined)
@@ -61,9 +65,9 @@ class ReadScreenshotsTest(unittest.TestCase):
 
             def fake_ask(host, model, prompt, schema, image_b64):
                 asked.append((prompt[:40], sorted(schema["properties"])))
-                if "storage" in prompt:
+                if "information card" in prompt:
                     raise ValueError("the model did not answer with JSON")
-                return {"rv": 3, "coins": 10} if "Homeland" in prompt else {"description": "x"}
+                return {"rv": 3, "coins": 10} if "RV level" in prompt else {"description": "x"}
 
             screens = rs.read_all(sorted(folder.glob("*.png")), "http://fake", "model", ask=fake_ask)
         self.assertEqual([s["kind"] for s in screens], ["rv", "stock", "unknown"])
@@ -84,6 +88,14 @@ class ReadScreenshotsTest(unittest.TestCase):
         self.assertEqual([(r["file"], r["correct"], r["total"]) for r in rows], [("rv-1.png", 1, 2), ("facility-a.png", 3, 3), ("aniimo-1.png", 2, 3)])
         self.assertEqual(rows[0]["wrong"], {"coins": (123000, 123456)})
         self.assertEqual(rows[2]["wrong"], {"aniimo.0.abilities.0.level": (3, 2)})
+
+    def test_count_from_reads_numbers_written_with_spaces_or_commas(self):
+        self.assertEqual(rs.count_from("220 724"), 220724)
+        self.assertEqual(rs.count_from("29,698,282"), 29698282)
+        self.assertEqual(rs.count_from(42), 42)
+        self.assertIsNone(rs.count_from(None))
+        self.assertIsNone(rs.count_from("none"))
+        self.assertIsNone(rs.count_from(True))
 
     def test_known_names_include_facilities_recipes_and_level_up_materials(self):
         names = rs.known_names(Path(__file__).resolve().parent.parent)
@@ -120,10 +132,11 @@ class ReadScreenshotsTest(unittest.TestCase):
             self.assertEqual(sent["url"], "http://fake/api/chat")
             self.assertEqual(sent["body"]["messages"][0]["images"], ["AAAA"])
             self.assertEqual(sent["body"]["format"], {"type": "object"})
-            self.assertEqual(sent["body"]["options"], {"temperature": 0})
+            self.assertEqual(sent["body"]["options"], {"temperature": 0, "num_predict": 4096})
             rs.post_json = lambda url, body, timeout: {"message": {"content": "I cannot read this"}}
-            with self.assertRaisesRegex(ValueError, "did not answer with JSON"):
+            with self.assertRaisesRegex(ValueError, "did not answer with JSON") as caught:
                 rs.ask_model("http://fake", "m", "prompt", {}, "AAAA")
+            self.assertEqual(caught.exception.content, "I cannot read this")
         finally:
             rs.post_json = original
 

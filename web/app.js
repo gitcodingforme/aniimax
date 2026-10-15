@@ -7,24 +7,24 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-watch-1';
+} from './facility-config.js?v=fork-watch-2';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-watch-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-watch-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-watch-2';
+import { applyStructureOverrides } from './overrides.js?v=fork-watch-2';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-watch-1';
+} from './upstream-check.js?v=fork-watch-2';
 import {
     addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-watch-1';
+} from './history.js?v=fork-watch-2';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
     ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-watch-1';
-import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-watch-1';
+} from './reminders.js?v=fork-watch-2';
+import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-watch-2';
 
 let wasmReady = false;
 

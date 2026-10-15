@@ -67,9 +67,17 @@ export function proposeChanges(current, reading) {
     for (const [key, label] of MODULES) {
         if (key in read) add(key, label, current[key] ?? '0', read[key], setup => { setup[key] = String(read[key]); });
     }
-    for (const [facility, tiers] of Object.entries(read.facilityTiers || {})) {
-        add(`facility:${facility}`, facility, tiersText(current.facilityTiers?.[facility]), tiersText(tiers), setup => {
-            setup.facilityTiers = { ...(setup.facilityTiers || {}), [facility]: tiers.map(t => ({ count: Number(t.count) || 0, level: Number(t.level) || 1 })) };
+    for (const [facility, readTiers] of Object.entries(read.facilityTiers || {})) {
+        // The game's facility panel shows the level but never how many are owned (count null): keep the
+        // count the setup already has (all of them together), or 1 for a facility not in the setup yet.
+        const have = current.facilityTiers?.[facility] || [];
+        const levelOnly = readTiers.length > 0 && readTiers.every(t => t.count === null || t.count === undefined);
+        const tiers = levelOnly
+            ? [{ count: have.reduce((n, t) => n + (Number(t.count) || 0), 0) || 1, level: Number(readTiers[readTiers.length - 1].level) || 1 }]
+            : readTiers.map(t => ({ count: Number(t.count) || 0, level: Number(t.level) || 1 }));
+        const what = levelOnly ? `${facility} (level read from its panel; the game does not show the count)` : facility;
+        add(`facility:${facility}`, what, tiersText(have), tiersText(tiers), setup => {
+            setup.facilityTiers = { ...(setup.facilityTiers || {}), [facility]: tiers };
         });
     }
     for (const [item, amount] of Object.entries(read.levelUpStock || {})) {

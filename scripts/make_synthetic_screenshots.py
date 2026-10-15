@@ -17,16 +17,19 @@ from PIL import Image, ImageDraw, ImageFont
 OUT = Path(__file__).resolve().parent.parent / "screenshots" / "synthetic"
 
 SCREENS = {
-    "rv-home.png": (["Homeland", "RV Level 7", "Home Coins 123,456"], {"rv": 7, "coins": 123456}),
-    "facility-farmland.png": (["Farmland", "Owned: 12", "Level 3"], {"facility": "Farmland", "count": 12, "level": 3}),
-    "facility-carousel-mill.png": (["Carousel Mill", "Owned: 2", "Level 4"], {"facility": "Carousel Mill", "count": 2, "level": 4}),
+    "rv-home.png": (["Homeland", "RV Lv.7", "Home Coins 123 456"], {"rv": 7, "coins": "123 456"}),
+    "home-management.png": (["Home Management", "Plot 4   Lv.2   Lv.5   Lv.1", "220 724"], {"coins": "220 724"}),
+    "facility-farmland.png": (["Home Management", "Farmland (Level 3)", "Formula   Manage   Level Up"], {"facility": "Farmland", "count": None, "level": 3}),
+    "facility-carousel-mill.png": (["Home Management", "Carousel Mill (Level 4)", "Formula   Manage   Level Up"], {"facility": "Carousel Mill", "count": None, "level": 4}),
     "modules-all.png": (["Upgrade Modules", "Ecological Module  Lv. 2", "Kitchen Module  Lv. 3", "Resource Detector  Lv. 1", "Crafting Module  Lv. 1"],
                         {"ecological_module": 2, "kitchen_module": 3, "resource_detector": 1, "crafting_module": 1}),
     "aniimo-page1.png": (["Aniimo", "Spark   Fire Lv.3   Playful", "Pebble   Earth Lv.2   Calm"],
                          {"aniimo": [{"name": "Spark", "abilities": [{"ability": "Fire", "level": 3}], "personalities": ["Playful"]},
                                      {"name": "Pebble", "abilities": [{"ability": "Earth", "level": 2}], "personalities": ["Calm"]}]}),
-    "stock-materials.png": (["Storage", "Wood Block  x40", "Mineral Sand  x120", "Rough Lumber  x5"],
-                            {"items": [{"name": "Wood Block", "amount": 40}, {"name": "Mineral Sand", "amount": 120}, {"name": "Rough Lumber", "amount": 5}]}),
+    "stock-wood-block.png": (["Wood Block", "Home materials", "Inventory: 3", "Homeland: 40"],
+                             {"items": [{"name": "Wood Block", "inventory": 3, "homeland": 40, "owned": None}]}),
+    "stock-shop.png": (["Shop", "Psyche Fruit", "Owned 24", "Buy  140.0 K"],
+                       {"items": [{"name": "Psyche Fruit", "inventory": None, "homeland": None, "owned": 24}]}),
 }
 
 
