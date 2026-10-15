@@ -225,6 +225,113 @@ export function rvChartSvg(points, { width = 600, height = 160 } = {}) {
         + `<text x="${width - pad.right}" y="${height - 6}" font-size="10" text-anchor="end" fill="var(--text-muted)">${day(t1)}</text></svg>`;
 }
 
+// --- Home Coins over time (points logged by scripts/watch_game.py into coins.json) -------------
+
+// The watcher's points as [{t: ms, coins}], oldest first, one per time (the later reading wins),
+// bad entries dropped.
+export function coinSeries(points) {
+    const byTime = new Map();
+    for (const p of Array.isArray(points) ? points : []) {
+        const t = typeof p?.t === 'string' ? Date.parse(p.t) : NaN;
+        if (!Number.isFinite(t) || !Number.isInteger(p.coins) || p.coins < 0) continue;
+        byTime.set(t, p.coins);
+    }
+    return [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([t, coins]) => ({ t, coins }));
+}
+
+// The straight line the latest snapshot with a coins/hour prediction implies: it starts where that
+// snapshot was taken, at the coins the snapshot recorded, or else at the last logged point before
+// the snapshot (the balance as last seen), or else the first logged point after it, and rises by
+// coinsPerHour. Null when there is no such snapshot or no anchor at all.
+export function predictedCoinLine(snapshots, series) {
+    const list = (Array.isArray(snapshots) ? snapshots : []).filter(s => Number.isFinite(s?.predicted?.coinsPerHour));
+    if (list.length === 0) return null;
+    const latest = [...list].sort((a, b) => a.id.localeCompare(b.id))[list.length - 1];
+    const from = Date.parse(latest.id);
+    if (!Number.isFinite(from)) return null;
+    const perHour = latest.predicted.coinsPerHour;
+    if (Number.isFinite(latest.actual?.coins)) return { from, coins: latest.actual.coins, perHour };
+    const points = series || [];
+    const before = [...points].reverse().find(p => p.t <= from);
+    if (before) return { from: before.t, coins: before.coins, perHour };
+    const next = points.find(p => p.t >= from);
+    return next ? { from: next.t, coins: next.coins, perHour } : null;
+}
+
+// 220000 -> "220k", 1250000 -> "1.25M", 950 -> "950".
+export function compactNumber(n) {
+    const trim = (value, digits) => String(Number(value.toFixed(digits)));
+    const abs = Math.abs(n);
+    if (abs >= 1e9) return `${trim(n / 1e9, 2)}B`;
+    if (abs >= 1e6) return `${trim(n / 1e6, 2)}M`;
+    if (abs >= 1e3) return `${trim(n / 1e3, 1)}k`;
+    return String(Math.round(n));
+}
+
+// Round-number axis ticks: 1, 2 or 5 times a power of ten, 3 to 5 of them, covering [min, max].
+export function niceTicks(min, max) {
+    if (!(max > min)) { const widen = Math.max(1, Math.abs(min) * 0.01); min -= widen; max += widen; }
+    min = Math.max(0, min);
+    const raw = (max - min) / 3;
+    const magnitude = 10 ** Math.floor(Math.log10(raw));
+    let step = magnitude;
+    for (const factor of [1, 2, 5, 10]) {
+        step = factor * magnitude;
+        if (Math.ceil(max / step) - Math.floor(min / step) <= 4) break;
+    }
+    const ticks = [];
+    for (let v = Math.floor(min / step) * step; v <= Math.ceil(max / step) * step + step / 1e6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+    return ticks;
+}
+
+// Actual coins as a line with dots, and the prediction as a dashed line from its anchor to the
+// right edge. A single series needs no legend; with the prediction there are two, so a key shows.
+// Colours are the page's own tokens: the accent for what happened, the muted ink for the plan.
+export function coinChartSvg(series, line, { width = 600, height = 160 } = {}) {
+    if (!Array.isArray(series) || series.length === 0) return '';
+    const legend = !!line;
+    const pad = { left: 46, right: 12, top: legend ? 26 : 12, bottom: 24 };
+    const t0 = Math.min(series[0].t, line ? line.from : Infinity);
+    // The right edge reaches an hour past the last point and past the plan line's anchor, so a
+    // snapshot taken after the watcher's last reading still gets a visible dashed line.
+    const t1 = Math.max(series[series.length - 1].t, line ? line.from : -Infinity, t0) + 3_600_000;
+    const predictedAt = t => line.coins + line.perHour * (t - line.from) / 3_600_000;
+    const values = series.map(p => p.coins);
+    if (line) values.push(line.coins, predictedAt(t1));
+    const ticks = niceTicks(Math.min(...values), Math.max(...values));
+    const lo = ticks[0], hi = ticks[ticks.length - 1];
+    const x = t => pad.left + (t - t0) / (t1 - t0) * (width - pad.left - pad.right);
+    const y = v => pad.top + (hi - v) / (hi - lo) * (height - pad.top - pad.bottom);
+    const f = n => n.toFixed(1);
+    const grid = ticks.map(v => `<line x1="${pad.left}" x2="${width - pad.right}" y1="${f(y(v))}" y2="${f(y(v))}" stroke="var(--border)" stroke-width="1" />`
+        + `<text x="${pad.left - 6}" y="${f(y(v) + 3)}" text-anchor="end" font-size="10" fill="var(--text-muted)">${compactNumber(v)}</text>`).join('');
+    const pad2 = n => String(n).padStart(2, '0');
+    const spanShort = t1 - t0 < 2 * 86_400_000;
+    const label = t => {
+        const d = new Date(t);
+        const date = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        return spanShort ? `${date} ${pad2(d.getHours())}:${pad2(d.getMinutes())}` : date;
+    };
+    const path = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${f(x(p.t))},${f(y(p.coins))}`).join(' ');
+    // Dots on every reading while there are few; with many only the latest, so the line stays readable.
+    const dotted = series.length <= 40 ? series : [series[series.length - 1]];
+    const dots = dotted.map(p => `<g><circle cx="${f(x(p.t))}" cy="${f(y(p.coins))}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" />`
+        + `<circle cx="${f(x(p.t))}" cy="${f(y(p.coins))}" r="10" fill="transparent"><title>${p.coins.toLocaleString('en-US')} coins, ${label(p.t)}</title></circle></g>`).join('');
+    const dashed = line
+        ? `<path d="M${f(x(line.from))},${f(y(line.coins))} L${f(x(t1))},${f(y(predictedAt(t1)))}" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-dasharray="6 5" />`
+        : '';
+    const key = legend
+        ? `<line x1="${pad.left}" x2="${pad.left + 18}" y1="10" y2="10" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />`
+            + `<text x="${pad.left + 24}" y="13" font-size="10" fill="var(--text-muted)">Actual (watcher)</text>`
+            + `<line x1="${pad.left + 118}" x2="${pad.left + 136}" y1="10" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-dasharray="6 5" />`
+            + `<text x="${pad.left + 142}" y="13" font-size="10" fill="var(--text-muted)">Plan predicted (${compactNumber(line.perHour)}/h)</text>`
+        : '';
+    return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Home Coins over time" class="history-chart-svg">${grid}${key}`
+        + `${dashed}<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />${dots}`
+        + `<text x="${pad.left}" y="${height - 6}" font-size="10" fill="var(--text-muted)">${label(t0)}</text>`
+        + `<text x="${width - pad.right}" y="${height - 6}" font-size="10" text-anchor="end" fill="var(--text-muted)">${label(t1)}</text></svg>`;
+}
+
 // --- backup file ---------------------------------------------------------------------------
 
 export function historyFile(snapshots, site = {}, now = new Date()) {

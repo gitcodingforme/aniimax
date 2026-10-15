@@ -415,6 +415,11 @@
                 <p id="history-status" class="hint small" role="status" aria-live="polite"></p>
                 <p id="history-hint" class="hint" hidden></p>
                 <p id="history-empty" class="hint">No snapshots yet. Solve a plan, then click "Save snapshot"; do it again after each change in game to see your progress here. Snapshots live in this browser only, so download a backup now and then.</p>
+                <div id="coins-section" hidden>
+                    <h3>Home Coins over time</h3>
+                    <p class="hint small">Logged by the watcher while you play; the dashed line is what the latest snapshot's plan predicted.</p>
+                    <div id="coins-chart" class="history-chart"></div>
+                </div>
                 <div id="history-body" hidden>
                     <h3>RV level over time</h3>
                     <div id="history-chart" class="history-chart"></div>
@@ -670,6 +675,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-check-2"></script>
+    <script type="module" src="app.js?v=fork-coins-1"></script>
 </body>
 </html>

@@ -13,7 +13,10 @@ How it works, every --interval seconds:
   3. ask the vision model which screen it is (RV, facility, modules, Aniimo roster, storage, other);
   4. for a known screen, read it with the same prompts as read_screenshots.py, save the frame to
      screenshots/auto/<kind>-<time>.png, and rewrite screenshots/reading.json (and web/reading.json
-     for the local site). Newer readings of the same screen replace older ones.
+     for the local site). Newer readings of the same screen replace older ones;
+  5. whenever a reading carries the Home Coins number and it changed, append it with the time to
+     screenshots/coins.jsonl (kept across --fresh) and rewrite coins.json (and web/coins.json) for
+     the History chart on the local site.
 
 Usage (from the repository root):
   python scripts/watch_game.py                    watch until Ctrl+C
@@ -32,10 +35,12 @@ import ctypes
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import urllib.error
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -62,6 +67,15 @@ CHANGED = 0.004   # above which it is a new picture compared with the last one r
 REREAD_SECONDS = 60  # a still picture is looked at again this often, in case an animated background hid a change
 FP_SIZE = (96, 54)
 FP_LEVEL = 24     # a pixel counts as changed when its grey value moved by more than this (0-255)
+COIN_KINDS = ("rv", "home", "facility")  # screens whose reading can carry the Home Coins number
+COIN_POINTS = 2000  # how many points coins.json keeps for the chart
+FILE_TIME = re.compile(r"^[a-z]+-(\d{8})-(\d{6})")  # <kind>-YYYYMMDD-HHMMSS, local time, as save_frame names frames
+
+
+def frame_time(name: str) -> str:
+    """'YYYYMMDDHHMMSS' from a saved frame's name, or '' for any other file (sorts first)."""
+    match = FILE_TIME.match(name)
+    return (match.group(1) + match.group(2)) if match else ""
 OTHER_KEEP = 10   # how many frames the model called "other" to keep, so a wrong "other" can be checked
 NOT_GAME = {"chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "windowsterminal.exe", "conhost.exe",
             "cmd.exe", "powershell.exe", "pwsh.exe", "python.exe", "code.exe", "claude.exe", "explorer.exe", "mintty.exe"}
@@ -241,7 +255,10 @@ class Watcher:
         self.started = self.now()
         self.frames = self.looked = 0
         self.window_title = ""
+        self.coins_path = out_dir.parent / "coins.jsonl"
+        self.coin_points: list[dict] = []
         self.load()
+        self.load_coins()
 
     def load(self) -> int:
         """Continue from the previous reading, so a short session adds to it instead of replacing it."""
@@ -253,6 +270,68 @@ class Watcher:
         screens = data.get("screens") if data.get("format") == rs.READING_FORMAT else None
         self.screens = [s for s in screens or [] if isinstance(s, dict) and s.get("kind") in KINDS and not s.get("error")]
         return len(self.screens)
+
+    def load_coins(self) -> int:
+        """The coin log from earlier sessions (one JSON object per line; bad lines are skipped)."""
+        self.coin_points = []
+        try:
+            lines = self.coins_path.read_text(encoding="utf-8").splitlines() if self.coins_path.is_file() else []
+        except (OSError, ValueError):  # unreadable or not UTF-8: start the log afresh in memory
+            lines = []
+        for line in lines:
+            try:
+                point = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(point, dict) and isinstance(point.get("t"), str) and isinstance(point.get("coins"), int):
+                self.coin_points.append(point)
+        return len(self.coin_points)
+
+    def point_time(self, source: str) -> str:
+        """UTC time for a coin reading: the time in a saved frame's name (local time) when replaying, else now."""
+        match = FILE_TIME.match(source)
+        if match:
+            try:
+                local = datetime.strptime(match.group(1) + match.group(2), "%Y%m%d%H%M%S")
+                return local.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            except ValueError:
+                pass
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.now()))
+
+    def log_coins(self, entry: dict, source: str) -> bool:
+        """Append the Home Coins number to the coin log when this reading has one that differs from the last logged."""
+        if entry.get("kind") not in COIN_KINDS:
+            return False
+        coins = rs.count_from((entry.get("fields") or {}).get("coins"))
+        if coins is None or coins < 0:
+            return False
+        t = self.point_time(source)
+        if self.coin_points and self.coin_points[-1]["coins"] == coins:
+            return False
+        if any(p["t"] == t and p["coins"] == coins for p in self.coin_points):  # replaying the same frames again
+            return False
+        point = {"t": t, "coins": coins, "screen": entry["kind"], "file": entry.get("file") or source}
+        self.coins_path.parent.mkdir(parents=True, exist_ok=True)
+        # A last line without its newline (an interrupted write, or an editor) must not swallow this one.
+        needs_newline = self.coins_path.is_file() and self.coins_path.stat().st_size > 0 and not self.coins_path.read_bytes().endswith(b"\n")
+        with self.coins_path.open("a", encoding="utf-8") as f:
+            f.write(("\n" if needs_newline else "") + json.dumps(point) + "\n")
+        self.coin_points.append(point)
+        self.write_coins()
+        print(f"{time.strftime('%H:%M:%S')} coins {coins} logged")
+        return True
+
+    def write_coins(self) -> list[Path]:
+        """coins.json for the History chart: the newest points in time order, as {t, coins}."""
+        points = sorted(({"t": p["t"], "coins": p["coins"]} for p in self.coin_points), key=lambda p: p["t"])[-COIN_POINTS:]
+        text = json.dumps({"format": "aniimax-coin-log", "version": 1, "points": points})
+        targets = [self.out_dir.parent / "coins.json"]
+        if self.web_dir and self.web_dir.is_dir():
+            targets.append(self.web_dir / "coins.json")
+        for target in targets:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        return targets
 
     def consider(self, image) -> bool:
         """Is this frame worth reading? Settled (same as the previous frame) and new (differs from the last one read)."""
@@ -331,7 +410,8 @@ class Watcher:
         return targets
 
     def handle(self, image, source: str, save: bool = True) -> dict | None:
-        """One frame through the whole pipeline: consider, read, save, write."""
+        """One frame through the whole pipeline: consider, read, save, write, log coins. A source that
+        looks like a saved frame name (replay) stamps the coin point with the time in the name, not the clock."""
         if not self.consider(image):
             return None
         entry = self.read(image, source)
@@ -339,6 +419,7 @@ class Watcher:
             self.save_frame(image, entry, keep=OTHER_KEEP if entry is None else None)
         if entry and not entry.get("error"):
             self.write()
+            self.log_coins(entry, source)
         return entry
 
 
@@ -412,7 +493,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Continuing from {out_dir.parent / 'reading.json'}: {len(watcher.screens)} screens already read.")
     if args.replay:
         from PIL import Image
-        paths = sorted(p for p in args.replay.glob("*") if p.suffix.lower() in rs.IMAGE_SUFFIXES)
+        # In time order, not name order: names start with the screen kind, and the coin log keeps the
+        # first time each value was seen.
+        paths = sorted((p for p in args.replay.glob("*") if p.suffix.lower() in rs.IMAGE_SUFFIXES), key=lambda p: (frame_time(p.name), p.name))
         for path in paths:
             with Image.open(path) as im:
                 frame = im.convert("RGB")

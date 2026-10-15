@@ -180,6 +180,82 @@ class PipelineTest(unittest.TestCase):
             self.assertTrue(saved[1].endswith("-error.txt"), saved)
             self.assertIn("Pinkie", (Path(d) / "auto" / saved[1]).read_text(encoding="utf-8"))
 
+    def _coin_watcher(self, d, reads, clock=None):
+        """A Watcher in temp dir d whose model answers with the next of `reads` ((kind, fields)) per frame."""
+        queue = list(reads)
+        state = {"current": None}
+
+        def fake_ask(prompt, schema, image_b64):
+            if schema is wg.CLASSIFY_SCHEMA:
+                state["current"] = queue.pop(0)
+                return {"kind": state["current"][0]}
+            return state["current"][1]
+        w = wg.Watcher(ROOT, "http://fake", "m", Path(d) / "auto", Path(d) / "web", ask=fake_ask, now=clock)
+        (Path(d) / "web").mkdir(exist_ok=True)
+        return w
+
+    def _feed(self, w, shades, source="frame.png"):
+        for shade in shades:
+            w.last_fp = wg.fingerprint(frame(shade))
+            w.handle(frame(shade), source, save=False)
+
+    def test_coins_are_logged_when_they_change_and_written_for_the_site(self):
+        with tempfile.TemporaryDirectory() as d:
+            clock = iter([1_700_000_000 + 100 * i for i in range(100)])
+            w = self._coin_watcher(d, [
+                ("facility", {"facility": "Farmland", "count": None, "level": 2, "coins": "182 204"}),
+                ("home", {"coins": "220 724"}),
+                ("home", {"coins": "220 724"}),
+            ], clock=lambda: next(clock))
+            self._feed(w, [(30, 30, 30), (120, 120, 120), (200, 200, 200)])
+            lines = (Path(d) / "coins.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 2, "the repeated 220 724 was not logged twice")
+            logged = [json.loads(line) for line in lines]
+            self.assertEqual([p["coins"] for p in logged], [182204, 220724])
+            self.assertEqual([p["screen"] for p in logged], ["facility", "home"])
+            self.assertTrue(logged[0]["t"].endswith("Z") and "T" in logged[0]["t"])
+            for target in (Path(d) / "coins.json", Path(d) / "web" / "coins.json"):
+                data = json.loads(target.read_text(encoding="utf-8"))
+                self.assertEqual(data["format"], "aniimax-coin-log")
+                self.assertEqual(data["version"], 1)
+                self.assertEqual([p["coins"] for p in data["points"]], [182204, 220724])
+                self.assertEqual(sorted(data["points"][0]), ["coins", "t"])
+            # a new session continues from the log: the same value as the last line is not logged again
+            w2 = self._coin_watcher(d, [("rv", {"rv": 9, "coins": "220 724"})])
+            self._feed(w2, [(5, 5, 5)])
+            self.assertEqual(len((Path(d) / "coins.jsonl").read_text(encoding="utf-8").splitlines()), 2)
+
+    def test_a_damaged_coin_log_is_not_made_worse(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "coins.jsonl"
+            # A last line that lost its newline (an interrupted write) must not swallow the next point.
+            log.write_text('{"t": "2026-10-15T15:00:00Z", "coins": 1}', encoding="utf-8")
+            w = self._coin_watcher(d, [("home", {"coins": "5"})])
+            self.assertEqual(w.load_coins(), 1)
+            self._feed(w, [(30, 30, 30)])
+            logged = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([p["coins"] for p in logged], [1, 5])
+            # A log that is not UTF-8 is skipped, not a crash.
+            log.write_bytes(bytes([255, 254]) + b" not text")
+            w2 = self._coin_watcher(d, [("home", {"coins": "7"})])
+            self.assertEqual(w2.load_coins(), 0)
+
+    def test_replay_order_is_by_frame_time_not_name(self):
+        names = ["home-20261015-110000.png", "facility-20261015-120000.png", "facility-20261015-100000.png", "once.png"]
+        self.assertEqual(sorted(names, key=lambda n: (wg.frame_time(n), n)), ["once.png", "facility-20261015-100000.png", "home-20261015-110000.png", "facility-20261015-120000.png"])
+
+    def test_a_replayed_frame_is_stamped_with_the_time_in_its_file_name(self):
+        from datetime import datetime, timezone
+        with tempfile.TemporaryDirectory() as d:
+            w = self._coin_watcher(d, [("facility", {"facility": "Farmland", "count": None, "level": 2, "coins": "182 204"})],
+                                   clock=lambda: 1_700_000_000)
+            self._feed(w, [(30, 30, 30)], source="facility-20261015-104746.png")
+            point = json.loads((Path(d) / "coins.jsonl").read_text(encoding="utf-8").splitlines()[0])
+            expected = datetime(2026, 10, 15, 10, 47, 46).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.assertEqual(point["t"], expected)
+            self.assertEqual(point["file"], "facility-20261015-104746.png")
+            self.assertNotEqual(point["t"], "2023-11-14T22:13:20Z", "not the clock's time")
+
     def test_blank_frames_are_recognised(self):
         self.assertTrue(wg.is_blank(frame((0, 0, 0))))
         self.assertFalse(wg.is_blank(frame((0, 0, 0), "Farmland")))

@@ -7,28 +7,28 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-check-2';
+} from './facility-config.js?v=fork-coins-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-check-2';
-import { applyStructureOverrides } from './overrides.js?v=fork-check-2';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-coins-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-coins-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-check-2';
+} from './upstream-check.js?v=fork-coins-1';
 import {
-    addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
-    predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-check-2';
+    addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
+    predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
+} from './history.js?v=fork-coins-1';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
     ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-check-2';
-import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-check-2';
+} from './reminders.js?v=fork-coins-1';
+import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-coins-1';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-check-2';
+} from './checklist.js?v=fork-coins-1';
 
 let wasmReady = false;
 
@@ -892,12 +892,21 @@ function renderHistoryDiff(list) {
         : changes.map(c => `<li><strong>${escapeText(c.what)}</strong>: ${c.before ? `${escapeText(c.before)} → ` : ''}${escapeText(c.after)}</li>`).join('');
 }
 
+function renderCoinChart() {
+    const box = document.getElementById('coins-section');
+    if (!box) return;
+    const svg = coinSeriesPoints.length > 0 ? coinChartSvg(coinSeriesPoints, predictedCoinLine(readHistory(), coinSeriesPoints)) : '';
+    box.hidden = svg === '';
+    document.getElementById('coins-chart').innerHTML = svg;
+}
+
 function renderHistory() {
     const list = readHistory();
     const empty = list.length === 0;
     document.getElementById('history-empty').hidden = !empty;
     document.getElementById('history-body').hidden = empty;
     updateHistoryHint();
+    renderCoinChart();
     if (empty) return;
 
     const series = rvSeries(list);
@@ -965,23 +974,54 @@ async function importReadingFile(file) {
 // The watcher (scripts/watch_game.py) keeps web/reading.json current next to the local site. The
 // page looks for it on load and every minute; GitHub Pages has no such file, so nothing shows there.
 const LOCAL_READING_URL = './reading.json';
+const LOCAL_COINS_URL = './coins.json';
 const LOCAL_READING_POLL_MS = 60000;
 let localReading = null;
+let coinSeriesPoints = [];
+let localPollTimer = null;
+
+// GitHub Pages has neither file. When a round finds both answered 404, the polling stops, so the
+// console does not fill with a 404 a minute. Each check returns whether to keep polling: a file
+// that exists, a bad file, or a network blip all keep it going; only a plain 404 says "not here".
+// If only one file exists (the watcher has not logged coins yet) the polling goes on too.
+function stopLocalPolls() {
+    if (localPollTimer !== null) clearInterval(localPollTimer);
+    localPollTimer = null;
+}
+
+async function checkLocalCoins() {
+    try {
+        const response = await fetch(LOCAL_COINS_URL, { cache: 'no-store' });
+        if (!response.ok) return response.status !== 404;
+        const data = await response.json();
+        const series = coinSeries(data && data.format === 'aniimax-coin-log' ? data.points : []);
+        const last = series.at(-1), shown = coinSeriesPoints.at(-1);
+        if (series.length !== coinSeriesPoints.length || last?.t !== shown?.t || last?.coins !== shown?.coins) {
+            coinSeriesPoints = series;
+            renderCoinChart();
+        }
+        return true;
+    } catch (error) {
+        return true; // a bad file, or a network blip: keep looking
+    }
+}
 
 async function checkLocalReading() {
     try {
         const response = await fetch(LOCAL_READING_URL, { cache: 'no-store' });
-        if (!response.ok) return;
+        if (!response.ok) return response.status !== 404;
         const text = await response.text();
         const reading = parseReading(text);
         const seen = readProfileMeta().seenReading;
-        if (!reading.readAt || reading.readAt === seen || (localReading && localReading.readAt === reading.readAt)) return;
+        if (!reading.readAt || reading.readAt === seen || (localReading && localReading.readAt === reading.readAt)) return true;
         localReading = { text, readAt: reading.readAt };
-        if (pendingReading) return; // a diff is open; the hint waits for the next poll
+        if (pendingReading) return true; // a diff is open; the hint waits for the next poll
         document.getElementById('reading-auto-text').textContent = `The watcher read ${reading.screens} screen${reading.screens === 1 ? '' : 's'} (latest ${formatProfileTime(reading.readAt)}).`;
         document.getElementById('reading-auto').hidden = false;
+        return true;
     } catch (error) {
-        // No local reading, or not a valid one: the hint simply stays hidden.
+        // Not a valid reading, or a network blip: the hint stays hidden and the poll goes on.
+        return true;
     }
 }
 
@@ -1064,8 +1104,12 @@ function attachReadingHandlers() {
         if (localReading) showReading(localReading.text, 'watcher');
     });
     document.getElementById('reading-auto-dismiss').addEventListener('click', () => markReadingSeen(localReading?.readAt));
-    checkLocalReading();
-    setInterval(checkLocalReading, LOCAL_READING_POLL_MS);
+    const checkLocalFiles = async () => {
+        const found = await Promise.all([checkLocalReading(), checkLocalCoins()]);
+        if (!found.some(Boolean)) stopLocalPolls();
+    };
+    checkLocalFiles();
+    localPollTimer = setInterval(checkLocalFiles, LOCAL_READING_POLL_MS);
 }
 
 // --- Batch-done reminders ------------------------------------------------------------------

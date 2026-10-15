@@ -55,8 +55,8 @@ SCREEN_KINDS = {
         "schema": {"type": "object", "properties": {"coins": {"type": ["string", "null"]}}, "required": ["coins"]},
     },
     "facility": {
-        "prompt": "This is the Home Management screen of the game Aniimo with a facility's side panel open on the right. The panel's heading is the facility name followed by its level in brackets, for example 'Chimney Kiln (Level 2)'. Read the name exactly as written and the level from that heading only. The game does not show how many of the facility are owned, so count is always null. If no such heading is visible, answer null for everything.",
-        "schema": {"type": "object", "properties": {"facility": {"type": ["string", "null"]}, "count": {"type": ["integer", "null"]}, "level": {"type": ["integer", "null"]}}, "required": ["facility", "count", "level"]},
+        "prompt": "This is the Home Management screen of the game Aniimo with a facility's side panel open on the right. The panel's heading is the facility name followed by its level in brackets, for example 'Chimney Kiln (Level 2)'. Read the name exactly as written and the level from that heading only. The game does not show how many of the facility are owned, so count is always null. Also read the Home Coins amount at the top right next to a coin icon, copied exactly as written, keeping its spaces; null if not visible. If no such heading is visible, answer null for the facility, count and level.",
+        "schema": {"type": "object", "properties": {"facility": {"type": ["string", "null"]}, "count": {"type": ["integer", "null"]}, "level": {"type": ["integer", "null"]}, "coins": {"type": ["string", "null"]}}, "required": ["facility", "count", "level", "coins"]},
     },
     "modules": {
         "prompt": "This is a screenshot of the upgrade modules screen in the game Aniimo. Read the level of each module: Ecological Module, Kitchen Module, Resource Detector, Crafting Module. Use null for a module not visible.",
@@ -214,14 +214,14 @@ def merge_screens(screens: list[dict], names: dict) -> tuple[dict, dict, list[st
         kind = screen.get("kind")
         if screen.get("error"):
             continue
-        if kind in ("rv", "home"):
+        if kind in ("rv", "home", "facility"):
             if isinstance(fields.get("rv"), int) and fields["rv"] >= 1:
                 setup["home-level"] = str(fields["rv"])
                 actual["rv"] = fields["rv"]
             coins = count_from(fields.get("coins"))
             if coins is not None and coins >= 0:
                 actual["coins"] = coins
-        elif kind == "facility":
+        if kind == "facility":
             facility = match_name(fields.get("facility"), names["facilities"], notes, f"{screen['file']} facility")
             count, level = fields.get("count"), fields.get("level")
             if facility and (count is None or (isinstance(count, int) and count >= 0)):

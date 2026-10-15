@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
     MAX_SNAPSHOTS, addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot,
-    paceRows, parseHistoryFile, predictionFrom, rvChartSvg, rvSeries, setupHash,
+    coinChartSvg, coinSeries, compactNumber, niceTicks, paceRows, parseHistoryFile, predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
 } from '../web/history.js';
 
 const setup = {
@@ -164,4 +164,96 @@ test('test_backup_file_round_trips_and_rejects_other_files', () => {
     assert.throws(() => parseHistoryFile(JSON.stringify({ format: 'aniimax-history', version: 1, snapshots: [{ id: 'x' }] })), /none of the snapshots/);
     assert.deepEqual(parseHistoryFile(JSON.stringify({ format: 'aniimax-history', version: 1, snapshots: [] })), []);
     assert.equal(historyFilename(new Date(2026, 9, 14, 9, 5)), 'aniimax-2026-10-14_0905.history.json');
+});
+
+// --- Home Coins over time ---
+
+test('coinSeries sorts by time, keeps the later of equal times and drops bad entries', () => {
+    const series = coinSeries([
+        { t: '2026-10-15T12:00:00Z', coins: 300 },
+        { t: '2026-10-15T10:00:00Z', coins: 100 },
+        { t: '2026-10-15T10:00:00Z', coins: 150 },
+        { t: 'yesterday', coins: 5 },
+        { t: '2026-10-15T11:00:00Z', coins: -4 },
+        { t: '2026-10-15T11:30:00Z', coins: '200' },
+        { t: '2026-10-15T11:45:00Z', coins: 2.5 },
+        null,
+        { coins: 9 },
+    ]);
+    assert.deepEqual(series, [
+        { t: Date.parse('2026-10-15T10:00:00Z'), coins: 150 },
+        { t: Date.parse('2026-10-15T12:00:00Z'), coins: 300 },
+    ]);
+    assert.deepEqual(coinSeries(undefined), []);
+    assert.deepEqual(coinSeries({ points: [] }), []);
+});
+
+test('predictedCoinLine anchors the latest prediction at its coins or the nearest logged point', () => {
+    const series = coinSeries([
+        { t: '2026-10-15T09:00:00Z', coins: 1000 },
+        { t: '2026-10-15T11:00:00Z', coins: 5000 },
+    ]);
+    const snap = (id, predicted, actual = {}) => ({ id, predicted, actual });
+    assert.equal(predictedCoinLine([], series), null);
+    assert.equal(predictedCoinLine([snap('2026-10-15T10:00:00.000Z', null)], series), null);
+    const old = snap('2026-10-14T10:00:00.000Z', { coinsPerHour: 99 }, { coins: 7 });
+    const latest = snap('2026-10-15T10:00:00.000Z', { coinsPerHour: 2000 });
+    // the latest snapshot has no coins: anchor at the last point before it (the balance as last seen)
+    assert.deepEqual(predictedCoinLine([old, latest], series), { from: Date.parse('2026-10-15T09:00:00Z'), coins: 1000, perHour: 2000 });
+    // nothing logged before it: the first point after it
+    assert.deepEqual(predictedCoinLine([old, latest], series.slice(1)), { from: Date.parse('2026-10-15T11:00:00Z'), coins: 5000, perHour: 2000 });
+    // with coins recorded, anchor at the snapshot itself
+    const withCoins = snap('2026-10-15T10:00:00.000Z', { coinsPerHour: 2000 }, { coins: 3000 });
+    assert.deepEqual(predictedCoinLine([old, withCoins], series), { from: Date.parse('2026-10-15T10:00:00.000Z'), coins: 3000, perHour: 2000 });
+    // nothing logged at all and no coins on it: no anchor
+    assert.equal(predictedCoinLine([latest], []), null);
+});
+
+test('compactNumber and niceTicks give short labels and round ticks', () => {
+    assert.equal(compactNumber(220000), '220k');
+    assert.equal(compactNumber(1250000), '1.25M');
+    assert.equal(compactNumber(950), '950');
+    assert.equal(compactNumber(0), '0');
+    const ticks = niceTicks(182204, 220724);
+    assert.ok(ticks.length >= 3 && ticks.length <= 5, ticks.join());
+    assert.ok(ticks[0] <= 182204 && ticks[ticks.length - 1] >= 220724);
+    assert.ok(ticks.every(v => v % 5000 === 0), ticks.join());
+    assert.ok(niceTicks(5, 5).length >= 2, 'a flat series still gets an axis');
+});
+
+test('coinChartSvg draws the dashed prediction only when a line is given', () => {
+    const series = coinSeries([
+        { t: '2026-10-15T09:00:00Z', coins: 182204 },
+        { t: '2026-10-15T11:00:00Z', coins: 220724 },
+    ]);
+    assert.equal(coinChartSvg([], null), '');
+    const plain = coinChartSvg(series, null);
+    assert.match(plain, /^<svg viewBox="0 0 600 160"/);
+    assert.match(plain, /class="history-chart-svg"/);
+    assert.ok(!plain.includes('stroke-dasharray'), 'no dashed line without a prediction');
+    assert.ok(!plain.includes('Plan predicted'), 'a single series needs no legend');
+    assert.match(plain, /220k/);
+    assert.equal((plain.match(/<circle[^>]*r="4"/g) || []).length, 2);
+    const withLine = coinChartSvg(series, { from: series[0].t, coins: 182204, perHour: 20000 });
+    assert.equal((withLine.match(/<path[^>]*stroke-dasharray/g) || []).length, 1);
+    assert.match(withLine, /Plan predicted/);
+    assert.match(withLine, /Actual/);
+    const many = coinSeries(Array.from({ length: 100 }, (_, i) => ({ t: new Date(Date.UTC(2026, 9, 15, 0, i)).toISOString(), coins: 1000 + i * 10 })));
+    assert.equal((coinChartSvg(many, null).match(/<circle[^>]*r="4"/g) || []).length, 1, 'many points: only the latest gets a dot');
+});
+
+test('test_coin_chart_shows_the_plan_line_for_a_snapshot_after_the_last_point_and_a_flat_series', () => {
+    const t = Date.parse('2026-10-15T10:00:00Z');
+    const series = [{ t: t - 3_600_000, coins: 100_000 }, { t, coins: 120_000 }];
+    // A snapshot taken five minutes after the watcher's last reading still gets a visible dashed line.
+    const svg = coinChartSvg(series, { from: t + 300_000, coins: 121_000, perHour: 30_000 });
+    const dashed = svg.match(/<path d="M([\d.]+),[\d.]+ L([\d.]+),[\d.]+"[^>]*stroke-dasharray/);
+    assert.ok(dashed, 'a dashed path is drawn');
+    assert.ok(Number(dashed[2]) - Number(dashed[1]) > 100, `the dashed line spans the chart, got ${dashed[0]}`);
+    // One point, or all points equal, still gets distinct axis labels and no negative axis.
+    const flat = coinChartSvg([{ t, coins: 182_204 }], null);
+    const labels = [...flat.matchAll(/font-size="10"[^>]*>([^<]+)<\/text>/g)].map(m => m[1]).filter(l => /k|M|^\d+$/.test(l));
+    assert.equal(new Set(labels).size, labels.length, `axis labels are distinct: ${labels}`);
+    const zero = coinChartSvg([{ t, coins: 0 }], null);
+    assert.ok(!/>-\d/.test(zero), 'no negative tick');
 });
