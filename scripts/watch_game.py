@@ -16,7 +16,11 @@ How it works, every --interval seconds:
      for the local site). Newer readings of the same screen replace older ones;
   5. whenever a reading carries the Home Coins number and it changed, append it with the time to
      screenshots/coins.jsonl (kept across --fresh) and rewrite coins.json (and web/coins.json) for
-     the History chart on the local site.
+     the History chart on the local site;
+  6. for a facility panel, also note what the game shows about that facility (the RV level its next
+     level needs, the recipe that is running and its time) in screenshots/observations.jsonl
+     (kept across --fresh), compare those facts with the fork's data (scripts/verify_data.py) and
+     rewrite screenshots/verification.md (and web/verification.json).
 
 Usage (from the repository root):
   python scripts/watch_game.py                    watch until Ctrl+C
@@ -50,7 +54,7 @@ KINDS = ["rv", "home", "facility", "modules", "aniimo", "stock"]
 CLASSIFY_PROMPT = (
     "This is a screenshot from the game Aniimo. Which screen is it? Answer with exactly one of: "
     "home (the Home Management screen: a green grid of white plot tiles with facility icons and 'Lv.' badges, with NO side panel open on the right), "
-    "facility (the same Home Management grid WITH a side panel open on the right whose heading is a facility name followed by '(Level N)', e.g. 'Chimney Kiln (Level 2)'), "
+    "facility (the Home Management grid WITH a side panel open on the right whose heading is a facility name followed by '(Level N)', e.g. 'Chimney Kiln (Level 2)'; answer facility whenever such a panel is open, even if an item card or other window is also on screen), "
     "rv (a screen that writes the RV level as text, e.g. 'RV Lv.12'), "
     "modules (a screen listing Ecological Module, Kitchen Module, Resource Detector and Crafting Module with their levels), "
     "aniimo (the Aniimo roster: a list of Aniimo with their names and ability levels written as text), "
@@ -68,6 +72,7 @@ REREAD_SECONDS = 60  # a still picture is looked at again this often, in case an
 FP_SIZE = (96, 54)
 FP_LEVEL = 24     # a pixel counts as changed when its grey value moved by more than this (0-255)
 COIN_KINDS = ("rv", "home", "facility")  # screens whose reading can carry the Home Coins number
+OBSERVATION_FORMAT = "aniimax-observations"
 COIN_POINTS = 2000  # how many points coins.json keeps for the chart
 FILE_TIME = re.compile(r"^[a-z]+-(\d{8})-(\d{6})")  # <kind>-YYYYMMDD-HHMMSS, local time, as save_frame names frames
 
@@ -229,9 +234,14 @@ def supersedes(new: dict, old: dict) -> bool:
     return bool(old_names) and old_names <= new_names
 
 
-def encode(image, max_side: int) -> str:
+def encode(image, max_side: int, crop=None) -> str:
+    """The frame as base64 PNG, shrunk to max_side. `crop` (fractions of the frame, or a function of
+    its size; see read_screenshots.crop_box) is cut out before shrinking so a panel's small text
+    keeps its detail."""
     im = image
-    if max(im.size) > max_side:
+    if crop:
+        im = im.crop(rs.crop_box(im.size, crop))
+    if crop or max(im.size) > max_side:
         im = im.copy()
         im.thumbnail((max_side, max_side))
     out = io.BytesIO()
@@ -257,8 +267,14 @@ class Watcher:
         self.window_title = ""
         self.coins_path = out_dir.parent / "coins.jsonl"
         self.coin_points: list[dict] = []
+        self.observations_path = out_dir.parent / "observations.jsonl"
+        self.observations: list[dict] = []
+        self.observation_notes: list[str] = []  # why a facility frame contributed nothing
         self.load()
         self.load_coins()
+        self.load_observations()
+        if self.web_dir and self.observations:
+            self.verify()  # the report reflects today's data and overrides, not the last fact's
 
     def load(self) -> int:
         """Continue from the previous reading, so a short session adds to it instead of replacing it."""
@@ -286,6 +302,22 @@ class Watcher:
             if isinstance(point, dict) and isinstance(point.get("t"), str) and isinstance(point.get("coins"), int):
                 self.coin_points.append(point)
         return len(self.coin_points)
+
+    def load_observations(self) -> int:
+        """The observation log from earlier sessions (one JSON object per line; bad lines are skipped)."""
+        self.observations = []
+        try:
+            lines = self.observations_path.read_text(encoding="utf-8").splitlines() if self.observations_path.is_file() else []
+        except (OSError, ValueError):
+            lines = []
+        for line in lines:
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(item, dict) and isinstance(item.get("t"), str) and isinstance(item.get("facility"), str) and item.get("fact") in ("unlock", "recipe"):
+                self.observations.append(item)
+        return len(self.observations)
 
     def point_time(self, source: str) -> str:
         """UTC time for a coin reading: the time in a saved frame's name (local time) when replaying, else now."""
@@ -333,6 +365,80 @@ class Watcher:
             target.write_text(text, encoding="utf-8")
         return targets
 
+    @staticmethod
+    def observation_key(item: dict) -> tuple:
+        if item["fact"] == "unlock":
+            return (item["facility"], "unlock", item.get("facility_level"), item.get("rv_level"))
+        # not the time: it may be a countdown, and a new value every frame would swell the counts
+        return (item["facility"], "recipe", item.get("recipe"))
+
+    def log_observations(self, entry: dict, source: str) -> int:
+        """Append what a facility panel shows to the observation log, then refresh the verification.
+        The model sometimes invents a panel (a facility that does not exist, a recipe that is not an
+        item), so a frame only counts when its facility is a known facility and, if a recipe is set,
+        the recipe is a known item; otherwise nothing is logged and a note says why. Facts already
+        in the log (same facility, fact and values) are not added again. Returns how many were added."""
+        if entry.get("kind") != "facility" or not isinstance(entry.get("fields"), dict):
+            return 0
+        fields, frame = entry["fields"], entry.get("file") or source
+        notes: list[str] = []
+        facility = rs.match_name(fields.get("facility"), self.names["facilities"], notes, f"{frame} facility")
+        recipe = None
+        if facility and fields.get("recipe_status") == "set":
+            recipe = rs.match_name(fields.get("recipe"), self.names["items"], notes, f"{frame} recipe")
+            if not recipe:
+                if fields.get("recipe") in (None, ""):
+                    notes.append(f"{frame}: a recipe is set but its name could not be read")
+                facility = None  # a real facility name with a made-up recipe: probably no panel at all
+        if not facility:
+            if not notes:
+                notes.append(f"{frame}: no facility name in the panel")
+            self.observation_notes.extend(notes + [f"{frame}: nothing logged (the panel was not trusted)"])
+            print(f"{time.strftime('%H:%M:%S')} observations skipped: {'; '.join(notes)}")
+            self.write_observations()
+            return 0
+        level = fields.get("level") if isinstance(fields.get("level"), int) and not isinstance(fields.get("level"), bool) else None
+        base = {"t": self.point_time(source), "frame": frame, "facility": facility, "level": level}
+        found = []
+        note = fields.get("upgrade_note")
+        if isinstance(note, dict):
+            fl, rv = note.get("facility_level"), note.get("rv_level")
+            if all(isinstance(n, int) and not isinstance(n, bool) and n > 0 for n in (fl, rv)):
+                found.append({**base, "fact": "unlock", "facility_level": fl, "rv_level": rv})
+        if recipe:
+            found.append({**base, "fact": "recipe", "recipe": recipe, "time": str(fields.get("recipe_time") or "").strip() or None})
+        seen = {self.observation_key(o) for o in self.observations}
+        added = [o for o in found if self.observation_key(o) not in seen]
+        if not added:
+            return 0
+        self.observations_path.parent.mkdir(parents=True, exist_ok=True)
+        needs_newline = self.observations_path.is_file() and self.observations_path.stat().st_size > 0 and not self.observations_path.read_bytes().endswith(b"\n")
+        with self.observations_path.open("a", encoding="utf-8") as f:
+            f.write(("\n" if needs_newline else "") + "".join(json.dumps(o) + "\n" for o in added))
+        self.observations.extend(added)
+        print(f"{time.strftime('%H:%M:%S')} observed {len(added)} fact{'s' if len(added) != 1 else ''} about {facility}")
+        self.write_observations()
+        self.verify()
+        return len(added)
+
+    def write_observations(self) -> Path:
+        path = self.out_dir.parent / "observations.json"
+        path.write_text(json.dumps({"format": OBSERVATION_FORMAT, "version": 1, "observations": self.observations,
+                                    "notes": self.observation_notes[-50:]}), encoding="utf-8")
+        return path
+
+    def verify(self) -> dict | None:
+        """Compare the observations with the data (verify_data.py) and write verification.md/.json.
+        Any problem here is printed, never raised: a bug in the check must not stop the watcher."""
+        try:
+            import verify_data
+            web_json = self.web_dir / "verification.json" if self.web_dir and self.web_dir.is_dir() else None
+            return verify_data.run(self.root, self.observations_path, self.out_dir.parent / "verification.md",
+                                   self.out_dir.parent / "verification.json", web_json)
+        except Exception as e:  # noqa: BLE001
+            print(f"{time.strftime('%H:%M:%S')} verification skipped: {e}")
+            return None
+
     def consider(self, image) -> bool:
         """Is this frame worth reading? Settled (same as the previous frame) and new (differs from the last one read)."""
         self.frames += 1
@@ -356,9 +462,20 @@ class Watcher:
             if kind not in KINDS:
                 print(f"{time.strftime('%H:%M:%S')} other screen (not read)")
                 return None
-            spec = rs.SCREEN_KINDS[kind]
             entry["kind"] = kind
-            entry["fields"] = self.ask(spec["prompt"], spec["schema"], encode(image, rs.MAX_SIDE))
+            # A facility panel is read with the detailed prompt on a full-detail crop of the panel (and a
+            # second, smaller question for its grey upgrade line), but stays a "facility" screen so the
+            # merge and the site's diff work unchanged.
+            spec = rs.SCREEN_KINDS["facility_detail" if kind == "facility" else kind]
+            entry["fields"] = self.ask(spec["prompt"], spec["schema"], encode(image, rs.MAX_SIDE, spec.get("crop")))
+            follow = spec.get("follow_up")
+            if follow and isinstance(entry["fields"], dict):
+                try:  # a failed second question costs only its field, not the coins, level and reading
+                    answer = self.ask(follow["prompt"], follow["schema"], encode(image, rs.MAX_SIDE, follow.get("crop")))
+                except (urllib.error.URLError, OSError, ValueError) as e:
+                    answer, entry["follow_up_error"] = None, str(e)
+                    print(f"{time.strftime('%H:%M:%S')} {kind}: the upgrade-line question failed: {e}")
+                rs.attach_follow_up(entry["fields"], follow, answer)
         except (urllib.error.URLError, OSError, ValueError) as e:
             entry["error"] = str(e)
             entry["raw"] = getattr(e, "content", "")  # the model's whole answer, saved beside the frame
@@ -420,6 +537,7 @@ class Watcher:
         if entry and not entry.get("error"):
             self.write()
             self.log_coins(entry, source)
+            self.log_observations(entry, source)
         return entry
 
 

@@ -113,3 +113,15 @@ export function applyChanges(current, meta, changes, selectedIds) {
     }
     return { setup, meta: nextMeta, applied };
 }
+
+// One line for Profile details from verification.json, which scripts/verify_data.py writes next to
+// the local site: how many facts the watcher saw on facility panels and how they compare with this
+// site's data. '' when the file is not a usable summary, so nothing is shown.
+export function verificationSummary(data) {
+    if (!data || data.format !== 'aniimax-verification') return '';
+    const counts = ['observations', 'agree', 'disagree', 'unknown'].map(key => data[key]);
+    if (!counts.every(n => Number.isInteger(n) && n >= 0) || counts[0] === 0) return '';
+    const [observations, agree, disagree, unknown] = counts;
+    const report = typeof data.report === 'string' && data.report ? data.report : 'screenshots/verification.md';
+    return `Verified against ${observations} observation${observations === 1 ? '' : 's'} from the watcher: ${agree} agree, ${disagree} disagree, ${unknown} unknown (report: ${report})`;
+}

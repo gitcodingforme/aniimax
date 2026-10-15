@@ -36,3 +36,5 @@ web/reading.json
 __pycache__/
 # Coin curve written by scripts/watch_game.py for the local site (personal data)
 web/coins.json
+# Data-check summary written by scripts/verify_data.py for the local site (personal data)
+web/verification.json

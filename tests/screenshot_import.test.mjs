@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { applyChanges, parseReading, proposeChanges } from '../web/screenshot-import.js';
+import { applyChanges, parseReading, proposeChanges, verificationSummary } from '../web/screenshot-import.js';
 
 const current = {
     facilityTiers: { Farmland: [{ count: 4, level: 2 }], Mine: [{ count: 1, level: 1 }] },
@@ -95,4 +95,20 @@ test('test_a_facility_read_from_its_panel_keeps_the_count_the_setup_has', () => 
     assert.equal(`${byId['facility:Well'].before} -> ${byId['facility:Well'].after}`, 'none -> 1×Lv.2');
     const { setup } = applyChanges(current, {}, changes, ['facility:Farmland', 'facility:Well']);
     assert.deepEqual(setup.facilityTiers, { Farmland: [{ count: 4, level: 3 }], Mine: [{ count: 1, level: 1 }], Well: [{ count: 1, level: 2 }] });
+});
+
+test('test_verification_summary_is_one_line_with_the_counts_and_the_report', () => {
+    const data = { format: 'aniimax-verification', version: 1, updatedAt: '2026-10-15T12:00:00Z', observations: 9, agree: 7, disagree: 1, unknown: 1, report: 'screenshots/verification.md' };
+    assert.equal(verificationSummary(data), 'Verified against 9 observations from the watcher: 7 agree, 1 disagree, 1 unknown (report: screenshots/verification.md)');
+    assert.match(verificationSummary({ ...data, observations: 1, agree: 1, disagree: 0, unknown: 0, report: undefined }), /^Verified against 1 observation from the watcher: 1 agree, 0 disagree, 0 unknown \(report: screenshots\/verification\.md\)$/);
+});
+
+test('test_verification_summary_ignores_bad_data', () => {
+    for (const bad of [null, undefined, 'text', 5, {}, { format: 'other', observations: 3, agree: 3, disagree: 0, unknown: 0 },
+        { format: 'aniimax-verification', observations: '3', agree: 3, disagree: 0, unknown: 0 },
+        { format: 'aniimax-verification', observations: 3, agree: -1, disagree: 0, unknown: 0 },
+        { format: 'aniimax-verification', observations: 0, agree: 0, disagree: 0, unknown: 0 },
+        { format: 'aniimax-verification', observations: 3, agree: 3 }]) {
+        assert.equal(verificationSummary(bad), '');
+    }
 });

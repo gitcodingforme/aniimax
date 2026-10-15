@@ -7,28 +7,28 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-coins-1';
+} from './facility-config.js?v=fork-verify-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-coins-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-coins-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-verify-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-verify-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-coins-1';
+} from './upstream-check.js?v=fork-verify-1';
 import {
     addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-coins-1';
+} from './history.js?v=fork-verify-1';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
     ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-coins-1';
-import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-coins-1';
+} from './reminders.js?v=fork-verify-1';
+import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-verify-1';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-coins-1';
+} from './checklist.js?v=fork-verify-1';
 
 let wasmReady = false;
 
@@ -975,12 +975,13 @@ async function importReadingFile(file) {
 // page looks for it on load and every minute; GitHub Pages has no such file, so nothing shows there.
 const LOCAL_READING_URL = './reading.json';
 const LOCAL_COINS_URL = './coins.json';
+const LOCAL_VERIFICATION_URL = './verification.json';
 const LOCAL_READING_POLL_MS = 60000;
 let localReading = null;
 let coinSeriesPoints = [];
 let localPollTimer = null;
 
-// GitHub Pages has neither file. When a round finds both answered 404, the polling stops, so the
+// GitHub Pages has none of these files. When a round finds all of them answered 404, the polling stops, so the
 // console does not fill with a 404 a minute. Each check returns whether to keep polling: a file
 // that exists, a bad file, or a network blip all keep it going; only a plain 404 says "not here".
 // If only one file exists (the watcher has not logged coins yet) the polling goes on too.
@@ -1000,6 +1001,25 @@ async function checkLocalCoins() {
             coinSeriesPoints = series;
             renderCoinChart();
         }
+        return true;
+    } catch (error) {
+        return true; // a bad file, or a network blip: keep looking
+    }
+}
+
+// verification.json (scripts/verify_data.py, refreshed by the watcher) becomes one line in Profile
+// details: how the facts seen on facility panels compare with this site's data.
+async function checkLocalVerification() {
+    try {
+        const response = await fetch(LOCAL_VERIFICATION_URL, { cache: 'no-store' });
+        if (!response.ok) {
+            if (response.status === 404) document.getElementById('verification-line').hidden = true;
+            return response.status !== 404;
+        }
+        const line = verificationSummary(await response.json());
+        const el = document.getElementById('verification-line');
+        el.textContent = line;
+        el.hidden = line === '';
         return true;
     } catch (error) {
         return true; // a bad file, or a network blip: keep looking
@@ -1105,7 +1125,7 @@ function attachReadingHandlers() {
     });
     document.getElementById('reading-auto-dismiss').addEventListener('click', () => markReadingSeen(localReading?.readAt));
     const checkLocalFiles = async () => {
-        const found = await Promise.all([checkLocalReading(), checkLocalCoins()]);
+        const found = await Promise.all([checkLocalReading(), checkLocalCoins(), checkLocalVerification()]);
         if (!found.some(Boolean)) stopLocalPolls();
     };
     checkLocalFiles();

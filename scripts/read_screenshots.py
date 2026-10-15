@@ -42,6 +42,23 @@ READING_VERSION = 1
 MAX_SIDE = 1600  # px; game screenshots are 4K-ish, the model does not need that
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 
+
+def crop_box(size: tuple, crop) -> tuple:
+    """Pixel box for a crop given as (left, top, right, bottom) fractions of the frame, or as a function
+    of (width, height) returning a pixel box."""
+    w, h = size
+    if callable(crop):
+        return tuple(int(v) for v in crop(w, h))
+    return (int(w * crop[0]), int(h * crop[1]), int(w * crop[2]), int(h * crop[3]))
+
+
+def panel_crop(w: int, h: int) -> tuple:
+    """The facility side panel: anchored to the right edge and sized with the window height (about
+    0.52 of it wide at 3440x1440), so the crop is measured from the height, not the width, and keeps
+    the heading on a 16:9 window too. The coins at the top right come with it."""
+    return (max(0, w - int(0.72 * h)), 0, w, h)
+
+
 MODULES = ["ecological_module", "kitchen_module", "resource_detector", "crafting_module"]
 ABILITIES = ["Grass", "Fire", "Water", "Earth", "Wind", "Light", "Dark", "Ice", "Electric"]
 
@@ -57,6 +74,27 @@ SCREEN_KINDS = {
     "facility": {
         "prompt": "This is the Home Management screen of the game Aniimo with a facility's side panel open on the right. The panel's heading is the facility name followed by its level in brackets, for example 'Chimney Kiln (Level 2)'. Read the name exactly as written and the level from that heading only. The game does not show how many of the facility are owned, so count is always null. Also read the Home Coins amount at the top right next to a coin icon, copied exactly as written, keeping its spaces; null if not visible. If no such heading is visible, answer null for the facility, count and level.",
         "schema": {"type": "object", "properties": {"facility": {"type": ["string", "null"]}, "count": {"type": ["integer", "null"]}, "level": {"type": ["integer", "null"]}, "coins": {"type": ["string", "null"]}}, "required": ["facility", "count", "level", "coins"]},
+    },
+    "facility_detail": {
+        "prompt": "This is the Home Management screen of the game Aniimo with a facility's side panel open on the right. Read only text that is written in that panel; never guess. facility: the name in the panel heading, written before the level in brackets (for example 'Chimney Kiln (Level 2)'), and level: the number after 'Level' in that heading. tab: the selected tab at the top of the panel, one of 'Formula', 'Details', 'Manage', 'Level Up'. recipe_status: what the large box at the top of the panel says: 'set' when a recipe name and a clock time are written there, 'not set' when it says 'Recipe not set', 'power' when it says 'Provides Power', 'none' when there is no such box. recipe: only when recipe_status is 'set', the recipe name written in that box; otherwise null. recipe_time: only when recipe_status is 'set', the time written next to the clock icon in that box, exactly as written (for example '2s' or '1m 19s'); otherwise null. The 'Season Recipe' bar with a countdown is not the recipe box. recipes_per_level: for every blue heading 'Level N Facility' visible in the panel, the number of recipe icons shown directly under it (count the icons, do not name them; leave out a heading whose icons are cut off). coins: the Home Coins number at the top right of the screen next to a coin icon, copied exactly as written keeping its spaces, or null. If no facility panel is open, answer 'none' for recipe_status, null for facility, level, tab, recipe and recipe_time, and an empty list for recipes_per_level.",
+        "schema": {"type": "object", "properties": {
+            "facility": {"type": ["string", "null"]}, "level": {"type": ["integer", "null"]}, "tab": {"type": ["string", "null"]},
+            "recipe_status": {"type": "string", "enum": ["set", "not set", "power", "none"]},
+            "recipe": {"type": ["string", "null"]}, "recipe_time": {"type": ["string", "null"]},
+            "recipes_per_level": {"type": "array", "items": {"type": "object", "properties": {"level": {"type": "integer"}, "count": {"type": "integer"}}, "required": ["level", "count"]}},
+            "coins": {"type": ["string", "null"]},
+        }, "required": ["facility", "level", "tab", "recipe_status", "recipe", "recipe_time", "recipes_per_level", "coins"]},
+        "crop": panel_crop,  # the side panel and the coins, at full detail
+        # A second, smaller question for the same frame: asked together with the rest, the model
+        # skipped the grey upgrade line every time (0 of 13 on real frames); asked alone it read it
+        # every time. Its answer is merged into the fields under `upgrade_notes`.
+        "follow_up": {
+            "field": "upgrade_note",
+            # One object, not a list: asked for a list, the 7b model answers an empty one every time.
+            "prompt": "Somewhere in this part of a game screen there may be a grey line of small text that reads 'Facilities can be upgraded to Lv.N once the RV reaches Lv.M' with two numbers. Give N as facility_level and M as rv_level, or null for a number that is not visible or cut off. Both null if there is no such line.",
+            "schema": {"type": "object", "properties": {"facility_level": {"type": ["integer", "null"]}, "rv_level": {"type": ["integer", "null"]}}, "required": ["facility_level", "rv_level"]},
+            "crop": panel_crop,
+        },
     },
     "modules": {
         "prompt": "This is a screenshot of the upgrade modules screen in the game Aniimo. Read the level of each module: Ecological Module, Kitchen Module, Resource Detector, Crafting Module. Use null for a module not visible.",
@@ -82,6 +120,11 @@ SCREEN_KINDS = {
     },
 }
 
+# A facility panel is always read the detailed way (crop, status, second question for the grey line);
+# the plain "facility" prompt it replaces lives on only as this alias, so file names and the merge
+# keep working.
+SCREEN_KINDS["facility"] = SCREEN_KINDS["facility_detail"]
+
 
 def screen_kind(path: Path) -> str:
     prefix = path.stem.split("-", 1)[0].lower()
@@ -92,7 +135,8 @@ def screen_kind(path: Path) -> str:
 
 def known_names(root: Path) -> dict:
     config = (root / "web" / "facility-config.js").read_text(encoding="utf-8") if (root / "web" / "facility-config.js").exists() else ""
-    facilities = re.findall(r"name: '([^']+)'", config)
+    # Only the FACILITIES entries (name followed by slug), not the festival, special recipes or notes.
+    facilities = re.findall(r"name: '([^']+)',\s*slug: '", config)
     # Items: every recipe and ingredient in the CSVs, plus the level-up materials (byproducts such
     # as wood_block appear only as ingredients and in LEVEL_UP_COSTS).
     items = set(re.findall(r"\['([a-z0-9_]+)', \d+\]", config))
@@ -134,12 +178,17 @@ def match_name(text, candidates: list[str], notes: list[str], what: str):
 
 # --- Ollama ----------------------------------------------------------------------------
 
-def image_payload(path: Path) -> str:
+def image_payload(path: Path, crop=None) -> str:
+    """The image as base64, shrunk to MAX_SIDE. `crop` (see crop_box) is the part of the screen to send
+    at full detail, e.g. the side panel, so small text such as the facility panel's grey upgrade
+    line is not lost in the shrink."""
     data = path.read_bytes()
     try:
         from PIL import Image  # optional: only to shrink big screenshots
         with Image.open(io.BytesIO(data)) as im:
-            if max(im.size) > MAX_SIDE:
+            if crop:
+                im = im.crop(crop_box(im.size, crop))
+            if crop or max(im.size) > MAX_SIDE:
                 im.thumbnail((MAX_SIDE, MAX_SIDE))
                 out = io.BytesIO()
                 im.convert("RGB").save(out, format="PNG")
@@ -288,6 +337,13 @@ def score(screens: list[dict], expected: dict) -> list[dict]:
 
 # --- main ----------------------------------------------------------------------------------
 
+def attach_follow_up(fields: dict, follow: dict, answer) -> None:
+    """Merge a follow-up answer into the first reading under follow["field"]. The note is kept only
+    when it carries a number; "no such line" (all null, or an empty answer) becomes None."""
+    answer = answer if isinstance(answer, dict) else {}
+    fields[follow["field"]] = answer if any(isinstance(v, int) and not isinstance(v, bool) for v in answer.values()) else None
+
+
 def read_all(paths: list[Path], host: str, model: str, ask=ask_model) -> list[dict]:
     screens = []
     for path in paths:
@@ -296,7 +352,14 @@ def read_all(paths: list[Path], host: str, model: str, ask=ask_model) -> list[di
         started = time.time()
         entry = {"file": path.name, "kind": kind, "fields": None, "seconds": 0.0}
         try:
-            entry["fields"] = ask(host, model, spec["prompt"], spec["schema"], image_payload(path))
+            entry["fields"] = ask(host, model, spec["prompt"], spec["schema"], image_payload(path, spec.get("crop")))
+            follow = spec.get("follow_up")
+            if follow and isinstance(entry["fields"], dict):
+                try:  # a failed second question costs only its field, not the whole reading
+                    answer = ask(host, model, follow["prompt"], follow["schema"], image_payload(path, follow.get("crop")))
+                except (urllib.error.URLError, OSError, ValueError) as e:
+                    answer, entry["follow_up_error"] = None, str(e)
+                attach_follow_up(entry["fields"], follow, answer)
         except (urllib.error.URLError, OSError, ValueError) as e:
             entry["error"] = str(e)
         entry["seconds"] = round(time.time() - started, 1)
