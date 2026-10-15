@@ -7,24 +7,24 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-screens-1';
+} from './facility-config.js?v=fork-watch-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-screens-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-screens-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-watch-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-watch-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-screens-1';
+} from './upstream-check.js?v=fork-watch-1';
 import {
     addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-screens-1';
+} from './history.js?v=fork-watch-1';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
     ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-screens-1';
-import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-screens-1';
+} from './reminders.js?v=fork-watch-1';
+import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-watch-1';
 
 let wasmReady = false;
 
@@ -954,19 +954,55 @@ let pendingReading = null;
 
 async function importReadingFile(file) {
     if (!file) return;
+    await showReading(await file.text(), 'file');
+}
+
+// The watcher (scripts/watch_game.py) keeps web/reading.json current next to the local site. The
+// page looks for it on load and every minute; GitHub Pages has no such file, so nothing shows there.
+const LOCAL_READING_URL = './reading.json';
+const LOCAL_READING_POLL_MS = 60000;
+let localReading = null;
+
+async function checkLocalReading() {
     try {
-        const reading = parseReading(await file.text());
+        const response = await fetch(LOCAL_READING_URL, { cache: 'no-store' });
+        if (!response.ok) return;
+        const text = await response.text();
+        const reading = parseReading(text);
+        const seen = readProfileMeta().seenReading;
+        if (!reading.readAt || reading.readAt === seen || (localReading && localReading.readAt === reading.readAt)) return;
+        localReading = { text, readAt: reading.readAt };
+        if (pendingReading) return; // a diff is open; the hint waits for the next poll
+        document.getElementById('reading-auto-text').textContent = `The watcher read ${reading.screens} screen${reading.screens === 1 ? '' : 's'} (latest ${formatProfileTime(reading.readAt)}).`;
+        document.getElementById('reading-auto').hidden = false;
+    } catch (error) {
+        // No local reading, or not a valid one: the hint simply stays hidden.
+    }
+}
+
+function markReadingSeen(readAt) {
+    if (!readAt) return;
+    const meta = readProfileMeta();
+    meta.seenReading = readAt;
+    writeProfileMeta(meta);
+    document.getElementById('reading-auto').hidden = true;
+}
+
+async function showReading(text, source) {
+    try {
+        const reading = parseReading(text);
         const meta = readProfileMeta();
         const changes = proposeChanges(currentConfig(), { ...reading, currentCoins: Number.isFinite(meta.coins) ? meta.coins : '?' });
-        pendingReading = { changes };
+        pendingReading = { changes, readAt: source === 'watcher' ? reading.readAt : '' };
         const shots = `${reading.screens} screenshot${reading.screens === 1 ? '' : 's'}${reading.failed ? ` (${reading.failed} could not be read)` : ''}`;
-        document.getElementById('reading-summary').textContent = `Read by ${reading.model || 'a local model'} at ${formatProfileTime(reading.readAt)} from ${shots}. `
+        document.getElementById('reading-summary').textContent = `Read by ${reading.model || 'a local model'} at ${formatProfileTime(reading.readAt)} from ${shots}${source === 'watcher' ? ' (watcher)' : ''}. `
             + (changes.length === 0 ? 'Nothing differs from your current setup.' : `${changes.length} difference${changes.length === 1 ? '' : 's'}; untick anything the model got wrong, then apply.`);
         document.getElementById('reading-changes').innerHTML = changes.map(c =>
             `<li><label><input type="checkbox" class="reading-change" value="${escapeText(c.id)}" checked> <strong>${escapeText(c.what)}</strong>: ${escapeText(c.before)} → ${escapeText(c.after)}</label></li>`).join('');
         document.getElementById('reading-notes').innerHTML = reading.notes.map(n => `<li>${escapeText(n)}</li>`).join('');
         document.getElementById('reading-apply-btn').hidden = changes.length === 0;
         document.getElementById('reading-diff').hidden = false;
+        document.getElementById('reading-auto').hidden = true;
         showProfileStatus('');
     } catch (error) {
         showProfileStatus(`Could not load this reading: ${error.message}.`);
@@ -994,6 +1030,7 @@ function applyReading() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(setup));
         if (meta) {
             meta.lastReading = new Date().toISOString();
+            if (pendingReading.readAt) meta.seenReading = pendingReading.readAt;
             writeProfileMeta(meta);
         }
         clearShareHash();
@@ -1012,10 +1049,18 @@ function attachReadingHandlers() {
     });
     document.getElementById('reading-apply-btn').addEventListener('click', applyReading);
     document.getElementById('reading-cancel-btn').addEventListener('click', () => {
+        const readAt = pendingReading?.readAt;
         pendingReading = null;
         document.getElementById('reading-diff').hidden = true;
+        markReadingSeen(readAt);
         showProfileStatus('Screenshot reading discarded; nothing changed.');
     });
+    document.getElementById('reading-auto-review').addEventListener('click', () => {
+        if (localReading) showReading(localReading.text, 'watcher');
+    });
+    document.getElementById('reading-auto-dismiss').addEventListener('click', () => markReadingSeen(localReading?.readAt));
+    checkLocalReading();
+    setInterval(checkLocalReading, LOCAL_READING_POLL_MS);
 }
 
 // --- Batch-done reminders ------------------------------------------------------------------

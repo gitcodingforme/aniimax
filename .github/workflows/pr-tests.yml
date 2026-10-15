@@ -33,6 +33,7 @@ jobs:
 
       - name: Test and apply overrides
         run: |
+          python3 -m pip install --quiet pillow
           python3 -m unittest discover -s scripts -p "test_*.py"
           python3 scripts/apply_overrides.py
 

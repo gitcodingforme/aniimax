@@ -55,8 +55,13 @@
                             <input type="number" id="profile-coins" min="0" step="1" placeholder="optional">
                         </div>
                     </div>
+                    <p id="reading-auto" class="hint" hidden>
+                        <span id="reading-auto-text"></span>
+                        <button type="button" id="reading-auto-review" class="toggle-button small">Review changes</button>
+                        <button type="button" id="reading-auto-dismiss" class="toggle-button small">Dismiss</button>
+                    </p>
                     <div class="config-actions">
-                        <button type="button" id="reading-import-btn" class="toggle-button small" title="Loads reading.json made by scripts/read_screenshots.py from your game screenshots. Every difference is shown to confirm before anything is applied.">Load screenshot reading</button>
+                        <button type="button" id="reading-import-btn" class="toggle-button small" title="Loads reading.json made by scripts/read_screenshots.py or scripts/watch_game.py from your game screenshots. Every difference is shown to confirm before anything is applied.">Load screenshot reading</button>
                         <input type="file" id="reading-file" accept=".json,application/json" hidden>
                     </div>
                     <div id="reading-diff" hidden>
@@ -649,6 +654,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-screens-1"></script>
+    <script type="module" src="app.js?v=fork-watch-1"></script>
 </body>
 </html>

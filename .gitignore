@@ -31,3 +31,5 @@ screenshots/
 web/version.json
 # Copy of data/overrides/structure.json made by scripts/apply_overrides.py
 web/structure-overrides.json
+# Latest screenshot reading written by scripts/watch_game.py for the local site (personal data)
+web/reading.json

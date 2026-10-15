@@ -154,7 +154,7 @@ def get_json(url: str, timeout: float):
         return json.loads(response.read().decode("utf-8"))
 
 
-def ask_model(host: str, model: str, prompt: str, schema: dict, image_b64: str, timeout: float = 300) -> dict:
+def ask_model(host: str, model: str, prompt: str, schema: dict, image_b64: str, timeout: float = 300, keep_alive: str | None = None) -> dict:
     body = {
         "model": model,
         "messages": [{"role": "user", "content": prompt, "images": [image_b64]}],
@@ -162,6 +162,8 @@ def ask_model(host: str, model: str, prompt: str, schema: dict, image_b64: str, 
         "stream": False,
         "options": {"temperature": 0},
     }
+    if keep_alive:
+        body["keep_alive"] = keep_alive  # how long Ollama keeps the model loaded after this call
     answer = post_json(f"{host}/api/chat", body, timeout)
     content = answer.get("message", {}).get("content", "")
     try:
