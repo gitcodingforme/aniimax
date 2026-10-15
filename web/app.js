@@ -7,24 +7,28 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-watch-2';
+} from './facility-config.js?v=fork-check-2';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-watch-2';
-import { applyStructureOverrides } from './overrides.js?v=fork-watch-2';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-check-2';
+import { applyStructureOverrides } from './overrides.js?v=fork-check-2';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-watch-2';
+} from './upstream-check.js?v=fork-check-2';
 import {
     addSnapshots, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-watch-2';
+} from './history.js?v=fork-check-2';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
     ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-watch-2';
-import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-watch-2';
+} from './reminders.js?v=fork-check-2';
+import { applyChanges, parseReading, proposeChanges } from './screenshot-import.js?v=fork-check-2';
+import {
+    CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
+    toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
+} from './checklist.js?v=fork-check-2';
 
 let wasmReady = false;
 
@@ -199,6 +203,7 @@ function showSelectedPlan() {
     const pending = document.getElementById('aniimo-pending');
     const content = document.getElementById('results-content');
     content.classList.toggle('stale', !plan);
+    document.getElementById('checklist-card').classList.toggle('stale', !plan);
     if (!plan) {
         pending.style.display = 'block';
         return;
@@ -1122,22 +1127,110 @@ function reminderEvents(timers = readTimers()) {
     });
 }
 
+// --- Setup checklist -------------------------------------------------------------------
+// The plan as a tick list (see checklist.js). Ticks are kept in the browser per plan: the state
+// carries a fingerprint of the plan and is ignored when the plan changes.
+let checklistRowsNow = [];
+let checklistState = null;
+
+function loadChecklistState(planHash) {
+    try {
+        return readChecklistState(localStorage.getItem(CHECKLIST_KEY), planHash);
+    } catch (e) {
+        console.warn('Could not load the setup checklist from localStorage:', e);
+        return readChecklistState(null, planHash);
+    }
+}
+
+function saveChecklistState() {
+    try {
+        localStorage.setItem(CHECKLIST_KEY, writeChecklistState(checklistState));
+    } catch (e) {
+        console.warn('Could not save the setup checklist to localStorage:', e);
+    }
+}
+
+function renderChecklist(plan) {
+    const empty = document.getElementById('checklist-empty');
+    const body = document.getElementById('checklist-body');
+    document.getElementById('checklist-card').classList.remove('stale');
+    if (!plan || !plan.success) {
+        checklistRowsNow = [];
+        checklistState = null;
+        body.hidden = true;
+        empty.hidden = false;
+        return;
+    }
+    // lastPlanSetupHash is set when the solve starts, before any plan arrives.
+    checklistRowsNow = checklistRows(plan, roster);
+    checklistState = loadChecklistState(checklistHash(lastPlanSetupHash, checklistRowsNow, selectedSetupTab()));
+    document.getElementById('checklist-card').classList.remove('stale');
+    empty.hidden = checklistRowsNow.length > 0;
+    body.hidden = checklistRowsNow.length === 0;
+    if (checklistRowsNow.length === 0) return;
+    document.getElementById('checklist-rows').innerHTML = checklistRowsNow.map(row =>
+        `<label class="reminder-option checklist-row"><input type="checkbox" data-check="${escapeText(row.id)}"> <span>${escapeText(row.text)}</span></label>`).join('');
+    refreshChecklist();
+}
+
+// Sets every box and the count from `checklistState`.
+function refreshChecklist() {
+    if (!checklistState) return;
+    const ticked = new Set(checklistState.ticked);
+    document.querySelectorAll('#checklist-rows input[data-check]').forEach(box => {
+        box.checked = ticked.has(box.dataset.check);
+        box.closest('label').classList.toggle('done', box.checked);
+    });
+    document.getElementById('checklist-count').textContent = `${doneCount(checklistState, checklistRowsNow)} of ${checklistRowsNow.length} done`;
+}
+
+function attachChecklistHandlers() {
+    document.getElementById('checklist-rows').addEventListener('change', event => {
+        const id = event.target.dataset?.check;
+        if (id == null || !checklistState) return;
+        checklistState = toggleChecklist(checklistState, id, event.target.checked);
+        saveChecklistState();
+        refreshChecklist();
+    });
+    document.getElementById('checklist-none-btn').addEventListener('click', () => {
+        if (!checklistState) return;
+        checklistState = untickAllChecklist(checklistState);
+        saveChecklistState();
+        refreshChecklist();
+    });
+    // Ticking everything means the homeland is set up as the plan says, which is exactly what the
+    // reminders button asks; it confirms before replacing running timers.
+    document.getElementById('checklist-all-btn').addEventListener('click', () => {
+        if (!checklistState) {
+            showReminderStatus('Solve a plan first; the checklist comes from it.');
+            return;
+        }
+        // Only when the reminders really start: if the inputs changed since the solve, or the
+        // player keeps the running timers, the boxes stay as they were.
+        if (!setUpPerPlan()) return;
+        checklistState = tickAllChecklist(checklistState, checklistRowsNow);
+        saveChecklistState();
+        refreshChecklist();
+    });
+}
+
+// Returns true when new timers were written (the checklist's "Tick all" relies on that).
 function setUpPerPlan() {
     if (!lastPlan || !lastPlan.success) {
         showReminderStatus('Solve a plan first; the reminders come from its batch times.');
-        return;
+        return false;
     }
     if (lastPlanSetupHash !== setupHash(currentConfig())) {
         showReminderStatus('Your inputs changed since the last solve. Solve again, set up as that plan says, then press this.');
-        return;
+        return false;
     }
     const rows = reminderRows(lastPlan);
     if (rows.length === 0) {
         showReminderStatus('This plan has no producing rows to remind you about.');
-        return;
+        return false;
     }
     const existing = readTimers();
-    if (existing && !window.confirm('Replace the current reminders with new ones starting now? Reminders already sent to your phone are not cancelled by this (use "Cancel sent reminders" first if you want that).')) return;
+    if (existing && !window.confirm('Replace the current reminders with new ones starting now? Reminders already sent to your phone are not cancelled by this (use "Cancel sent reminders" first if you want that).')) return false;
     writeTimers({
         startedAt: new Date().toISOString(),
         planHash: lastPlanSetupHash,
@@ -1149,6 +1242,7 @@ function setUpPerPlan() {
     });
     renderReminders();
     showReminderStatus(`Reminders set from ${rows.length} plan rows, starting now. Untick rows you set up differently, or fix their start time.`);
+    return true;
 }
 
 function clearReminders() {
@@ -3557,6 +3651,7 @@ function formatRate(n) {
 // Show an error in the results section (plan-level failures only; goal-level failures are rare
 // and shown inline in the goal section instead, since the plan above it is still valid).
 function showError(message) {
+    renderChecklist(null);
     const errorEl = document.getElementById('error-message');
     const resultsContent = document.getElementById('results-content');
     const resultsSection = document.getElementById('results-section');
@@ -4575,6 +4670,7 @@ function displayPlan(plan) {
     resultsSection.style.display = 'block';
 
     if (!plan.success) {
+        renderChecklist(null);
         goalSection.style.display = 'none';
         if (selectedSetupTab() === 'custom') {
             showRosterShortfall();
@@ -4594,6 +4690,7 @@ function displayPlan(plan) {
     updateRateDisplay(!rateUnitChosen);
     renderGoalTargets(plan);
     renderHomelandLayout(plan);
+    renderChecklist(plan);
     updateHistoryHint();
 
     // Said only when the plan might not be the best: the solver ran out of time, or the backup
@@ -5076,6 +5173,7 @@ async function initApp() {
     attachReadingHandlers();
     attachHistoryHandlers();
     attachReminderHandlers();
+    attachChecklistHandlers();
     document.getElementById('upstream-recheck').addEventListener('click', event => {
         event.preventDefault();
         if (buildStamp) checkUpstream(buildStamp, true);

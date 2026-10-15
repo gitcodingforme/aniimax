@@ -437,6 +437,22 @@
                 </div>
             </section>
 
+            <section class="card production-steps checklist-card" id="checklist-card">
+                <div class="card-head">
+                    <h2>Setup checklist</h2>
+                    <div class="config-actions">
+                        <button type="button" id="checklist-all-btn" class="toggle-button small" title="Ticks every box, then starts the reminders as if you had pressed the button in the Reminders card.">Tick all</button>
+                        <button type="button" id="checklist-none-btn" class="toggle-button small">Untick all</button>
+                    </div>
+                </div>
+                <p class="hint">Tick each facility as you set it up in game. Tick all starts the reminders.</p>
+                <p id="checklist-empty" class="hint">Solve a plan to get a checklist.</p>
+                <div id="checklist-body" hidden>
+                    <p id="checklist-count" class="hint" role="status" aria-live="polite"></p>
+                    <div id="checklist-rows"></div>
+                </div>
+            </section>
+
             <section class="card production-steps reminders-card" id="reminders-card">
                 <div class="card-head">
                     <h2>Reminders</h2>
@@ -654,6 +670,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-watch-2"></script>
+    <script type="module" src="app.js?v=fork-check-2"></script>
 </body>
 </html>

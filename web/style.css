@@ -2808,7 +2808,8 @@ tr:hover .skip-row,
 /* While another Aniimo setup is worked out, the last one's results are dimmed. */
 #results-content.stale > :not(#aniimo-card),
 #results-content.stale #aniimo-body,
-#results-content.stale #aniimo-abilities {
+#results-content.stale #aniimo-abilities,
+#checklist-card.stale #checklist-body {
     opacity: 0.45;
     pointer-events: none;
 }
@@ -2916,4 +2917,13 @@ tr:hover .skip-row,
 .reminders-card input[type="datetime-local"] {
     font: inherit;
     padding: 0.2rem 0.4rem;
+}
+
+/* Fork: Setup checklist card */
+.checklist-row {
+    padding: 0.15rem 0;
+}
+.checklist-row.done span {
+    text-decoration: line-through;
+    opacity: 0.6;
 }
