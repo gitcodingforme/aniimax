@@ -24,9 +24,10 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false  # create-pull-request below brings its own token
 
       - name: Fetch upstream and look for game data changes
         id: diff
@@ -67,7 +68,7 @@ jobs:
             python3 scripts/describe_data_diff.py --git "$SYNCED" FETCH_HEAD --max-lines 150 --format text || echo "(describe_data_diff.py failed; see the file list above)"
             echo '```'
             echo
-            echo "Merging this PR does not deploy: tag a \`v*\` release or run the Deploy workflow afterwards (see docs/runbooks/game-patched.md in the workspace)."
+            echo "Merging this PR into main deploys the site by itself once the tests pass (see docs/runbooks/game-patched.md in the workspace)."
             echo
           } > /tmp/pr-body.md
           cat /tmp/pr-body.md >> "$GITHUB_STEP_SUMMARY"
@@ -95,13 +96,16 @@ jobs:
 
       - name: Setup Rust
         if: steps.diff.outputs.changed == 'true'
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Test with overrides applied
         if: steps.diff.outputs.changed == 'true'
         id: tests
         continue-on-error: true
-        run: cargo test --release --locked 2>&1 | tail -n 40 | tee /tmp/test-tail.txt
+        # pipefail: without it the step's outcome is tee's, so a failing test would read as success.
+        run: |
+          set -o pipefail
+          cargo test --release --locked 2>&1 | tail -n 40 | tee /tmp/test-tail.txt
 
       - name: Add the test result to the PR body
         if: steps.diff.outputs.changed == 'true'
@@ -123,7 +127,7 @@ jobs:
 
       - name: Open or update the sync pull request
         if: steps.diff.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: sync/upstream
           title: "Upstream game data changed (${{ steps.diff.outputs.synced }} -> ${{ steps.diff.outputs.upstream }})"

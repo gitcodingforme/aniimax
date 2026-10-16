@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -63,4 +64,33 @@ test('test_cache_expires_after_six_hours_and_backs_off_after_a_failure', () => {
     assert.equal(readCache(broken), null);
     writeCache(broken, results);
     clearCache(broken);
+});
+
+// The workflow itself, read as text: each step is the block from its "- name:" line to the next.
+const WORKFLOW = readFileSync(new URL('../.github/workflows/upstream-check.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const step = name => {
+    const start = WORKFLOW.indexOf(`- name: ${name}\n`);
+    assert.notEqual(start, -1, `step "${name}" not found`);
+    const next = WORKFLOW.indexOf('\n      - name:', start + 1);
+    return WORKFLOW.slice(start, next === -1 ? undefined : next);
+};
+
+test('test_upstream_workflow_reports_a_failing_cargo_test_as_failure', () => {
+    const body = step('Test with overrides applied');
+    assert.match(body, /^\s+set -o pipefail$/m);
+    assert.ok(body.indexOf('set -o pipefail') < body.indexOf('cargo test'), 'pipefail must come before cargo test');
+    assert.match(body, /cargo test --release --locked 2>&1 \| tail -n 40 \| tee \/tmp\/test-tail\.txt/);
+});
+
+test('test_upstream_workflow_checkout_does_not_persist_credentials', () => {
+    assert.match(step('Checkout'), /^\s+persist-credentials: false(\s|$)/m);
+});
+
+test('test_deploy_workflow_runs_on_main_after_the_tests_and_never_on_tags', () => {
+    const deploy = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+    assert.match(deploy, /^on:\n {2}push:\n {4}branches: \[main\]$/m);
+    assert.doesNotMatch(deploy, /^\s+tags:/m);
+    const build = deploy.slice(deploy.indexOf('\n  build:\n'), deploy.indexOf('\n  deploy:\n'));
+    assert.ok(build.length > 0, 'build job not found');
+    assert.match(build, /^ {4}needs: test$/m);
 });
