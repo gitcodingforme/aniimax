@@ -51,8 +51,28 @@
 
 #what-if-card .what-if-row input:focus,
 #what-if-card .what-if-row select:focus {
-    outline: none;
     border-color: var(--accent);
+}
+
+/* Keyboard focus keeps a visible ring (style.css hides the default one on some fields). */
+#what-if-card .what-if-row input:focus-visible,
+#what-if-card .what-if-row select:focus-visible,
+#what-if-card .skip-add-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Text for screen readers only: the table captions. */
+#what-if-card .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 #what-if-card .what-if-member-name {

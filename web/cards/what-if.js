@@ -4,9 +4,8 @@
 // snapshot and keeps nothing in storage. Logic in web/what-if.js; the card contract is in web/panels.js.
 
 import { stripVariant } from '../plan-summary.js?v=fork-m10-1';
+import { MAX_ANIIMO_LEVEL } from '../shared.js?v=fork-m10-1';
 import { applyEdits, buildableFacilities, editsFromForm, homeLevelFor, sideBySide, slugOf, warnings } from '../what-if.js?v=fork-m10-1';
-
-const MAX_ABILITY_LEVEL = 4; // MAX_ANIIMO_LEVEL in app.js and models.rs
 
 export function mount(el, ctx) {
     ctx.addStylesheet('css/what-if.css');
@@ -15,7 +14,7 @@ export function mount(el, ctx) {
     el.innerHTML = `
         <h2>What if</h2>
         <p class="hint">Change a few things and see how the plan answers. Your own setup stays as it is, and nothing here is saved.</p>
-        <p class="feature-status" id="what-if-note" role="status"></p>
+        <p class="feature-status" id="what-if-note" role="status" aria-live="polite"></p>
         <div class="what-if-form" id="what-if-form"></div>
         <div class="feature-actions">
             <button type="button" id="what-if-try" class="skip-add-btn">Try it</button>
@@ -23,8 +22,8 @@ export function mount(el, ctx) {
             <button type="button" id="what-if-reset" class="skip-add-btn">Reset to my setup</button>
         </div>
         <p class="feature-status" id="what-if-status" role="status" aria-live="polite"></p>
-        <ul class="what-if-warnings" id="what-if-warnings"></ul>
-        <div id="what-if-result" aria-live="polite"></div>`;
+        <div role="status" aria-live="polite"><ul class="what-if-warnings" id="what-if-warnings" aria-label="Warnings about these changes"></ul></div>
+        <div id="what-if-result" aria-live="polite" aria-busy="false"></div>`;
     const formEl = el.querySelector('#what-if-form');
     const tryBtn = el.querySelector('#what-if-try');
     const stopBtn = el.querySelector('#what-if-stop');
@@ -33,6 +32,12 @@ export function mount(el, ctx) {
     const statusEl = el.querySelector('#what-if-status');
     const warnEl = el.querySelector('#what-if-warnings');
     const resultEl = el.querySelector('#what-if-result');
+
+    // The status line is a polite status; a failure is announced at once, as an alert.
+    const say = (text, isError = false) => {
+        statusEl.setAttribute('role', isError ? 'alert' : 'status');
+        statusEl.textContent = text;
+    };
 
     let current = null;  // the latest 'plan' value, or null
     let seedSnap = null; // the plan value the form was filled from
@@ -117,7 +122,7 @@ export function mount(el, ctx) {
             aniimo = input.roster.members.map((m, i) => {
                 const label = `Aniimo ${i + 1}${m.count > 1 ? ` (×${m.count})` : ''}`;
                 const rows = Object.entries(m.abilities || {}).map(([ability, level]) => `<div class="what-if-row">
-                    ${select(`what-if-member-${i + 1}-${slugOf(ability)}`, escape(ability), `roster|${i}|${ability}`, `${label} ${ability}`, 1, MAX_ABILITY_LEVEL, Number(level) || 1)}</div>`);
+                    ${select(`what-if-member-${i + 1}-${slugOf(ability)}`, escape(ability), `roster|${i}|${ability}`, `${label} ${ability}`, 1, MAX_ANIIMO_LEVEL, Number(level) || 1)}</div>`);
                 return `<div class="what-if-member"><p class="what-if-member-name">${escape(label)}</p>${rows.join('') || '<p class="hint small">No abilities.</p>'}</div>`;
             }).join('');
             aniimo = aniimo ? `<div class="what-if-group"><h3>Aniimo levels</h3><div class="what-if-grid">${aniimo}</div></div>` : '';
@@ -125,7 +130,7 @@ export function mount(el, ctx) {
             aniimo = '<p class="hint small">The minimum team plan ignores Aniimo levels, so there is nothing to change there.</p>';
         } else if (Object.keys(input.aniimo_levels || {}).length > 0) {
             const rows = Object.entries(input.aniimo_levels).map(([ability, level]) => `<div class="what-if-row">
-                ${select(`what-if-ability-${slugOf(ability)}`, escape(ability), `ability|${ability}`, `${ability} Aniimo level`, 1, MAX_ABILITY_LEVEL, Number(level) || 1)}</div>`);
+                ${select(`what-if-ability-${slugOf(ability)}`, escape(ability), `ability|${ability}`, `${ability} Aniimo level`, 1, MAX_ANIIMO_LEVEL, Number(level) || 1)}</div>`);
             aniimo = `<div class="what-if-group"><h3>Aniimo levels</h3><div class="what-if-grid">${rows.join('')}</div></div>`;
         }
 
@@ -164,7 +169,7 @@ export function mount(el, ctx) {
         const changes = `<p class="hint small">Tried: ${tried.map(escape).join('; ')}</p>`;
         const cmp = sideBySide(snap.plan, plan);
         if (!cmp.b.ok) {
-            resultEl.innerHTML = `${changes}<p class="what-if-fail">No plan with these changes: ${escape(plan?.error || 'the planner found none')}.</p>`;
+            resultEl.innerHTML = `${changes}<p class="what-if-fail" role="alert">No plan with these changes: ${escape(plan?.error || 'the planner found none')}.</p>`;
             return;
         }
         const coins = s => (s.coinsPerHour === null ? '–' : number(Math.round(s.coinsPerHour)));
@@ -177,7 +182,7 @@ export function mount(el, ctx) {
         const rows = cmp.rows.map(r => `<tr><td>${escape(r.facility)}</td><td>${escape(item(stripVariant(r.item)))}</td>
             <td class="what-if-num">${r.before}</td><td class="what-if-num">${r.after}</td></tr>`).join('');
         const table = rows
-            ? `<div class="feature-scroll"><table class="what-if-table"><thead><tr><th>Facility</th><th>Item</th><th class="what-if-num">Facilities before</th><th class="what-if-num">Facilities after</th></tr></thead><tbody>${rows}</tbody></table></div>`
+            ? `<div class="feature-scroll" tabindex="0" role="region" aria-label="Facilities that make a different item"><table class="what-if-table"><caption class="visually-hidden">Facilities that make a different item with your changes</caption><thead><tr><th scope="col">Facility</th><th scope="col">Item</th><th scope="col" class="what-if-num">Facilities before</th><th scope="col" class="what-if-num">Facilities after</th></tr></thead><tbody>${rows}</tbody></table></div>`
             : '<p class="hint small">No facility changes what it makes.</p>';
         const unproven = cmp.a.proven && cmp.b.proven ? '' : '<p class="hint small">The solver ran out of time before proving one of these is its best answer, so small differences may be noise.</p>';
         resultEl.innerHTML = `${changes}<div class="feature-compare">
@@ -194,7 +199,7 @@ export function mount(el, ctx) {
         const edits = editsFromForm(changedValues());
         const tried = describeChanges();
         if (tried.length === 0 || !Object.values(edits).some(group => Object.keys(group).length > 0)) {
-            statusEl.textContent = 'Change a number or a level above first, then press Try it.';
+            say('Change a number or a level above first, then press Try it.');
             return;
         }
         const input = applyEdits(snap.input, edits);
@@ -202,7 +207,8 @@ export function mount(el, ctx) {
         const controller = new AbortController();
         run = { controller };
         let steps = 0;
-        statusEl.textContent = 'Working it out…';
+        say('Working it out…');
+        resultEl.setAttribute('aria-busy', 'true');
         render();
         try {
             const plan = await ctx.solver.findPlan(input, {
@@ -210,18 +216,19 @@ export function mount(el, ctx) {
                 onProgress: (count) => {
                     if (count && typeof count === 'object' && count.state !== 'done') return;
                     steps++;
-                    statusEl.textContent = `Working it out… ${steps} step${steps === 1 ? '' : 's'} done.`;
+                    say(`Working it out… ${steps} step${steps === 1 ? '' : 's'} done.`);
                 },
             });
             showComparison(snap, plan, tried);
-            statusEl.textContent = plan?.success ? 'Done.' : 'The planner found no plan with these changes.';
+            say(plan?.success ? 'Done.' : 'The planner found no plan with these changes.');
         } catch (error) {
             const message = String(error?.message || error);
-            statusEl.textContent = message === 'cancelled' ? 'Stopped.'
+            say(message === 'cancelled' ? 'Stopped.'
                 : message === 'timed out' ? 'The planner ran out of time. Try a smaller change.'
-                : `The planner failed: ${message}`;
+                : `The planner failed: ${message}`, message !== 'cancelled');
         } finally {
             if (run?.controller === controller) run = null;
+            resultEl.setAttribute('aria-busy', run ? 'true' : 'false');
             render();
         }
     }
@@ -231,7 +238,8 @@ export function mount(el, ctx) {
     resetBtn.addEventListener('click', () => {
         run?.controller.abort();
         if (current) seedForm(current, true);
-        statusEl.textContent = '';
+        say('');
+        resultEl.setAttribute('aria-busy', 'false');
         warnEl.innerHTML = '';
         resultEl.innerHTML = '';
         shown = null;

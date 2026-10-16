@@ -12,17 +12,17 @@ export function mount(el, ctx) {
         <p class="hint">Where each recipe's numbers come from: your own checks in game, a fan wiki, or nothing yet.</p>
         <details class="coverage-details" id="coverage-details">
             <summary>Show the checks</summary>
-            <div class="coverage-body" id="coverage-body" aria-live="polite"></div>
+            <div class="coverage-body" id="coverage-body" aria-live="polite" aria-busy="false"></div>
         </details>`;
     const details = el.querySelector('#coverage-details');
     const body = el.querySelector('#coverage-body');
     let state = 'idle'; // idle -> loading -> done; back to idle after a failure, so opening again retries
 
-    const status = message => {
+    const status = (message, isError = false) => {
         body.innerHTML = '';
         const p = document.createElement('p');
         p.className = 'feature-status';
-        p.setAttribute('role', 'status');
+        p.setAttribute('role', isError ? 'alert' : 'status');
         p.textContent = message;
         body.appendChild(p);
         return p;
@@ -31,6 +31,7 @@ export function mount(el, ctx) {
     async function load() {
         if (state !== 'idle') return;
         state = 'loading';
+        body.setAttribute('aria-busy', 'true');
         status('Loading the checks...');
         let items;
         try {
@@ -38,7 +39,8 @@ export function mount(el, ctx) {
         } catch (err) {
             state = 'idle';
             console.warn('coverage: the game data is not ready', err);
-            const p = status('The game data is not ready yet (the solver is still loading). ');
+            body.setAttribute('aria-busy', 'false');
+            const p = status('The game data is not ready yet (the solver is still loading). ', true);
             const retry = document.createElement('button');
             retry.type = 'button';
             retry.id = 'coverage-retry';
@@ -51,11 +53,13 @@ export function mount(el, ctx) {
         try {
             const model = await loadCoverage({ getItems: () => items, config: ctx.config });
             body.innerHTML = coverageHtml(model, ctx.format);
+            body.setAttribute('aria-busy', 'false');
             state = 'done';
         } catch (err) {
             state = 'idle';
             console.warn('coverage: not shown', err);
-            status('The checks could not be shown. Close this section and open it again to retry.');
+            body.setAttribute('aria-busy', 'false');
+            status('The checks could not be shown. Close this section and open it again to retry.', true);
         }
     }
 

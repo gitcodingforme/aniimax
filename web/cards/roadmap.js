@@ -22,7 +22,7 @@ export function mount(el, ctx) {
             <button type="button" id="roadmap-more" class="skip-add-btn" hidden>Check more</button>
         </div>
         <p class="feature-status" id="roadmap-status" role="status" aria-live="polite"></p>
-        <div class="feature-scroll" id="roadmap-table"></div>`;
+        <div class="feature-scroll" id="roadmap-table" aria-busy="false"></div>`;
     const checkBtn = el.querySelector('#roadmap-check');
     const stopBtn = el.querySelector('#roadmap-stop');
     const moreBtn = el.querySelector('#roadmap-more');
@@ -67,8 +67,15 @@ export function mount(el, ctx) {
     function renderTable(rows) {
         if (rows.length === 0) {
             tableEl.innerHTML = '';
+            tableEl.removeAttribute('tabindex');
+            tableEl.removeAttribute('role');
+            tableEl.removeAttribute('aria-label');
             return;
         }
+        // A scrolling box is reachable from the keyboard only while it has something in it.
+        tableEl.setAttribute('tabindex', '0');
+        tableEl.setAttribute('role', 'region');
+        tableEl.setAttribute('aria-label', 'Upgrade roadmap');
         const notes = [];
         const body = rows.map((row, i) => {
             const note = noteFor(row);
@@ -87,12 +94,13 @@ export function mount(el, ctx) {
         }).join('');
         const unproven = rows.some(r => r.status === 'gain' && r.proven === false);
         tableEl.innerHTML = `<table class="roadmap-table">
+            <caption class="visually-hidden">Possible upgrades with their cost, extra Home Coins an hour, payback and time to save the coins</caption>
             <thead><tr>
-                <th>Change</th>
-                <th class="roadmap-num">Cost</th>
-                <th class="roadmap-num" title="Extra Home Coins an hour the planner expects with this change alone">+coins/h</th>
-                <th class="roadmap-num" title="How long the extra coins take to repay the cost">Payback</th>
-                <th class="roadmap-num" title="How long the plan's income now takes to save the cost in Home Coins, starting from zero; items a change also needs are not counted">Coins saved in</th>
+                <th scope="col">Change</th>
+                <th scope="col" class="roadmap-num">Cost</th>
+                <th scope="col" class="roadmap-num" title="Extra Home Coins an hour the planner expects with this change alone">+coins/h</th>
+                <th scope="col" class="roadmap-num" title="How long the extra coins take to repay the cost">Payback</th>
+                <th scope="col" class="roadmap-num" title="How long the plan's income now takes to save the cost in Home Coins, starting from zero; items a change also needs are not counted">Coins saved in</th>
             </tr></thead>
             <tbody>${body}</tbody>
         </table>${notes.join('')}${unproven ? '<p class="hint small roadmap-footnote">~ the solver ran out of time before proving this is its best answer.</p>' : ''}`;
@@ -142,7 +150,9 @@ export function mount(el, ctx) {
                 coinsPerHour: state.coinsPerHour, baseProven: state.baseProven,
             })
             : [];
+        statusEl.setAttribute('role', state?.baseFailed ? 'alert' : 'status');
         statusEl.textContent = statusText(rows);
+        tableEl.setAttribute('aria-busy', running ? 'true' : 'false');
         renderTable(rows);
     }
 

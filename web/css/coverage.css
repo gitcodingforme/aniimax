@@ -88,3 +88,24 @@
 .coverage-footnote {
     margin: 0.5rem 0 0;
 }
+
+/* Keyboard focus keeps a visible ring. */
+.coverage-details > summary:focus-visible,
+.coverage-body .toggle-button:focus-visible,
+.coverage-body .feature-scroll:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Text for screen readers only: the table captions. */
+.coverage-body .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}

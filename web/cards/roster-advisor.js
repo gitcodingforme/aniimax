@@ -31,9 +31,9 @@ export function mount(el, ctx) {
                 <button type="button" id="roster-advisor-stop" class="skip-add-btn" hidden>Stop</button>
             </div>
             <p class="feature-status" id="roster-advisor-status" role="status" aria-live="polite"></p>
-            <p class="roster-advisor-share" id="roster-advisor-share" hidden></p>
-            <div class="feature-scroll" id="roster-advisor-table"></div>
-            <p class="hint small" id="roster-advisor-missing" hidden></p>
+            <p class="roster-advisor-share" id="roster-advisor-share" role="status" aria-live="polite" hidden></p>
+            <div class="feature-scroll" id="roster-advisor-table" aria-busy="false"></div>
+            <p class="hint small" id="roster-advisor-missing" role="status" aria-live="polite" hidden></p>
         </div>`;
     const hintEl = el.querySelector('#roster-advisor-hint');
     const bodyEl = el.querySelector('#roster-advisor-body');
@@ -87,8 +87,15 @@ export function mount(el, ctx) {
     function renderTable(rows) {
         if (rows.length === 0) {
             tableEl.innerHTML = '';
+            tableEl.removeAttribute('tabindex');
+            tableEl.removeAttribute('role');
+            tableEl.removeAttribute('aria-label');
             return;
         }
+        // A scrolling box is reachable from the keyboard only while it has something in it.
+        tableEl.setAttribute('tabindex', '0');
+        tableEl.setAttribute('role', 'region');
+        tableEl.setAttribute('aria-label', 'Roster advice');
         const weakest = weakestLink(rows);
         const body = rows.map((row) => {
             const notes = [row.note, row.overCap ? `over the roster cap (${state.homeCap})` : ''].filter(Boolean);
@@ -103,11 +110,12 @@ export function mount(el, ctx) {
         }).join('');
         const unproven = rows.some(r => r.status === 'ok' && r.proven === false);
         tableEl.innerHTML = `<table class="roster-advisor-table">
+            <caption class="visually-hidden">Changes to your Aniimo team and how each moves what the plan leads with (${escape(state.label)})</caption>
             <thead><tr>
-                <th>Change</th>
-                <th class="roster-advisor-num" title="How the change moves what the plan leads with (${escape(state.label)})">Effect</th>
-                <th class="roster-advisor-num" title="Home Coins an hour with this change (shown when known)">Coins/h</th>
-                <th>Note</th>
+                <th scope="col">Change</th>
+                <th scope="col" class="roster-advisor-num" title="How the change moves what the plan leads with (${escape(state.label)})">Effect</th>
+                <th scope="col" class="roster-advisor-num" title="Home Coins an hour with this change (shown when known)">Coins/h</th>
+                <th scope="col">Note</th>
             </tr></thead>
             <tbody>${body}</tbody>
         </table>${unproven ? '<p class="hint small">~ the solver ran out of time before proving this is its best answer.</p>' : ''}`;
@@ -163,7 +171,9 @@ export function mount(el, ctx) {
         stopBtn.hidden = !running;
         el.classList.toggle('roster-advisor-stale', isStale());
         const rows = state && !state.baseFailed ? rankRows(state.candidates, state.baseTop, state.results, state.measure) : [];
+        statusEl.setAttribute('role', state?.baseFailed ? 'alert' : 'status');
         statusEl.textContent = statusText(rows);
+        tableEl.setAttribute('aria-busy', running ? 'true' : 'false');
         const share = state && !state.baseFailed ? shareText() : '';
         shareEl.hidden = !share;
         shareEl.textContent = share;

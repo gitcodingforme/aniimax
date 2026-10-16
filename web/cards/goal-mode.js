@@ -56,7 +56,7 @@ export function mount(el, ctx) {
             <button type="button" id="goal-mode-continue" class="skip-add-btn" hidden>Continue</button>
         </div>
         <p class="feature-status" id="goal-mode-status" role="status" aria-live="polite"></p>
-        <div class="feature-scroll" id="goal-mode-results"></div>`;
+        <div class="feature-scroll" id="goal-mode-results" aria-busy="false"></div>`;
     const $ = sel => el.querySelector(sel);
     const kindInputs = [...el.querySelectorAll('input[name="goal-mode-kind"]')];
     const rvInput = $('#goal-mode-rv');
@@ -187,7 +187,8 @@ export function mount(el, ctx) {
                     : `${escape(formatDays(total))} for ${oks.length} of ${s.steps.length} steps; the rest could not be worked out.`;
         const stocked = (s.steps.find(step => step.input)?.input.level_up.stock || []).length > 0;
         resultsEl.innerHTML = done.length ? `<table class="goal-mode-table">
-            <thead><tr><th>Step</th><th class="goal-mode-num">Time</th><th>Slowest part</th><th>Run</th></tr></thead>
+            <caption class="visually-hidden">Time to reach each RV level, step by step</caption>
+            <thead><tr><th scope="col">Step</th><th scope="col" class="goal-mode-num">Time</th><th scope="col">Slowest part</th><th scope="col">Run</th></tr></thead>
             <tbody>${body}</tbody>
         </table>${totalText ? `<p class="goal-mode-total">${totalText}</p>` : ''}
         <p class="hint small">Each step starts once the RV before it is reached, from nothing saved${stocked ? ' (your stock counts toward the first)' : ''}. Times are steady running, without each recipe's first wait.</p>` : '';
@@ -213,10 +214,17 @@ export function mount(el, ctx) {
             lines.push(`<p class="goal-mode-total">Planned for it: ${escape(formatDays(o.seconds))}.</p>`, earns, chips(o.rows));
         } else if (o && o.status !== 'ok') {
             const keep = est.seconds ? ' The estimate above still stands.' : '';
-            lines.push(`<p class="goal-mode-bad">${problemText(o, name, simpleOf(s.snap))}${keep}</p>`);
+            lines.push(`<p class="goal-mode-bad" role="alert">${problemText(o, name, simpleOf(s.snap))}${keep}</p>`);
         }
         resultsEl.innerHTML = lines.join('');
     }
+
+    // The status line is a polite status; a planner failure or a bad target is an alert.
+    function setStatus(text, isError = false) {
+        statusEl.setAttribute('role', isError ? 'alert' : 'status');
+        statusEl.textContent = text;
+    }
+    const failed = () => !!state?.ended && /^The planner could not run/.test(state.ended);
 
     function statusText() {
         if (!current) return 'Solve a plan first.';
@@ -257,7 +265,18 @@ export function mount(el, ctx) {
         continueBtn.hidden = left <= 0;
         continueBtn.textContent = `Continue (${left} more step${left === 1 ? '' : 's'})`;
         el.classList.toggle('goal-mode-stale', isStale());
-        statusEl.textContent = statusText();
+        setStatus(statusText(), failed());
+        resultsEl.setAttribute('aria-busy', running ? 'true' : 'false');
+        // A scrolling box is reachable from the keyboard only while it has something in it.
+        if (state) {
+            resultsEl.setAttribute('tabindex', '0');
+            resultsEl.setAttribute('role', 'region');
+            resultsEl.setAttribute('aria-label', 'Goal results');
+        } else {
+            resultsEl.removeAttribute('tabindex');
+            resultsEl.removeAttribute('role');
+            resultsEl.removeAttribute('aria-label');
+        }
         if (!state) resultsEl.innerHTML = '';
         else if (state.kind === 'rv') renderRv(state);
         else renderItem(state);
@@ -271,41 +290,47 @@ export function mount(el, ctx) {
         s.stopped = false;
         s.ended = null;
         s.controller = new AbortController();
-        let solved = 0;
-        while (s.next < s.steps.length && solved < PER_CLICK) {
-            const step = s.steps[s.next];
-            if (!step.input || step.ready) {
-                s.results[s.next] = step.input ? { status: 'ok', seconds: 0, slowest: null, rows: [], ready: true } : { status: 'skipped' };
+        try {
+            let solved = 0;
+            while (s.next < s.steps.length && solved < PER_CLICK) {
+                const step = s.steps[s.next];
+                if (!step.input || step.ready) {
+                    s.results[s.next] = step.input ? { status: 'ok', seconds: 0, slowest: null, rows: [], ready: true } : { status: 'skipped' };
+                    s.next++;
+                    continue;
+                }
+                s.working = step.rv;
+                if (state === s) render();
+                let plan;
+                try {
+                    plan = await ctx.solver.findPlan(step.input, { signal: s.controller.signal });
+                } catch (err) {
+                    s.ended = endedText(err, `RV ${step.rv}`);
+                    break;
+                }
+                solved++;
+                const costNames = step.input.level_up.cost.map(([n]) => n);
+                const outcome = stepOutcome(plan, costNames);
+                if (outcome.status === 'unreachable') {
+                    const list = await recipeList();
+                    if (list) outcome.missing = unmakeable(costNames, list, step.input);
+                }
+                s.results[s.next] = outcome;
                 s.next++;
-                continue;
+                if (outcome.status !== 'ok') {
+                    s.blocked = true;
+                    // Only when there were steps after it: the table row already says what went wrong.
+                    if (s.next < s.steps.length) s.ended = `Stopped at RV ${step.rv}: the steps after it were not worked out.`;
+                    break;
+                }
             }
-            s.working = step.rv;
-            if (state === s) render();
-            let plan;
-            try {
-                plan = await ctx.solver.findPlan(step.input, { signal: s.controller.signal });
-            } catch (err) {
-                s.ended = endedText(err, `RV ${step.rv}`);
-                break;
-            }
-            solved++;
-            const costNames = step.input.level_up.cost.map(([n]) => n);
-            const outcome = stepOutcome(plan, costNames);
-            if (outcome.status === 'unreachable') {
-                const list = await recipeList();
-                if (list) outcome.missing = unmakeable(costNames, list, step.input);
-            }
-            s.results[s.next] = outcome;
-            s.next++;
-            if (outcome.status !== 'ok') {
-                s.blocked = true;
-                // Only when there were steps after it: the table row already says what went wrong.
-                if (s.next < s.steps.length) s.ended = `Stopped at RV ${step.rv}: the steps after it were not worked out.`;
-                break;
-            }
+        } catch (err) {
+            // Not expected (the planner's own failures are caught above); say so instead of leaving the card busy.
+            s.ended = endedText(err, 'this step');
+        } finally {
+            s.running = false;
+            s.controller = null;
         }
-        s.running = false;
-        s.controller = null;
         if (state === s) render();
     }
 
@@ -313,7 +338,7 @@ export function mount(el, ctx) {
         const from = fromLevel(snap);
         const to = whole(rvInput, 1);
         if (!to || to <= from || to > maxRv) {
-            statusEl.textContent = `Pick an RV level from ${from + 1} to ${maxRv}.`;
+            setStatus(`Pick an RV level from ${from + 1} to ${maxRv}.`, true);
             return;
         }
         const steps = rvSteps(snap.input, {
@@ -328,7 +353,7 @@ export function mount(el, ctx) {
         const amount = whole(amountInput, 1);
         const have = whole(haveInput, 0) || 0;
         if (!item || !amount) {
-            statusEl.textContent = 'Pick an item and how many you want.';
+            setStatus('Pick an item and how many you want.', true);
             return;
         }
         const s = { kind: 'item', snap, item, amount, have, estimate: atCurrentPlan(snap.plan, item, amount, have), outcome: null };

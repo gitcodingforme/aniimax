@@ -16,7 +16,7 @@ export function mount(el, ctx) {
     el.innerHTML = `
         <h2>Compare homelands</h2>
         <p class="hint">Put your setup next to a friend's. What you load here stays in this tab's memory only: it is not saved, not uploaded, and gone when you close or reload the page.</p>
-        <p class="feature-status compare-warning" id="compare-warning" role="status" hidden>The compare tool's input differs from the page's; results may be off.</p>
+        <p class="feature-status compare-warning" id="compare-warning" role="status" aria-live="polite" hidden>The compare tool's input differs from the page's; results may be off.</p>
         <div class="compare-chooser">
             <div class="input-field">
                 <label for="compare-file">Profile file</label>
@@ -39,7 +39,7 @@ export function mount(el, ctx) {
         </div>
         <p class="feature-status" id="compare-status" role="status" aria-live="polite"></p>
         <div id="compare-output"></div>
-        <div id="compare-results"></div>`;
+        <div id="compare-results" aria-busy="false"></div>`;
     const q = id => el.querySelector(`#compare-${id}`);
     const fileEl = q('file');
     const textEl = q('text');
@@ -51,6 +51,12 @@ export function mount(el, ctx) {
     const outputEl = q('output');
     const resultsEl = q('results');
     const warningEl = q('warning');
+
+    // The status line is a polite status; a problem reading the other side is an alert.
+    const say = (text, isError = false) => {
+        statusEl.setAttribute('role', isError ? 'alert' : 'status');
+        statusEl.textContent = text;
+    };
 
     let kind = 'text'; // which chooser was used last: 'file', 'text' or 'snapshot'
     let fileText = '';
@@ -144,14 +150,14 @@ export function mount(el, ctx) {
         try {
             other = await resolveOther();
             render(compareSetups(ctx.getSetup(), other.setup, ctx.config), other);
-            statusEl.textContent = `Compared with the ${sourceLabel(other)}. Press Solve both to work out both plans.`;
+            say(`Compared with the ${sourceLabel(other)}. Press Solve both to work out both plans.`);
             solveBtn.disabled = false;
             selfCheck();
         } catch (error) {
             other = null;
             outputEl.innerHTML = '';
             solveBtn.disabled = true;
-            statusEl.textContent = error.message === NOTHING_LOADED ? NOTHING_LOADED : `Could not read the other side: ${error.message}.`;
+            say(error.message === NOTHING_LOADED ? NOTHING_LOADED : `Could not read the other side: ${error.message}.`, error.message !== NOTHING_LOADED);
         }
     }
 
@@ -176,14 +182,15 @@ export function mount(el, ctx) {
         const levelCell = s => (s.ok ? (s.levelUpSeconds === null ? 'n/a (not a level-up plan)' : formatSeconds(s.levelUpSeconds)) : '–');
         const rows = result.rows.filter(r => r.a !== r.b).slice(0, 40).map(r =>
             `<tr><td>${cell(r.facility)}</td><td>${cell(ctx.format.item(r.item))}</td><td class="compare-num">${cell(r.a)}</td><td class="compare-num">${cell(r.b)}</td></tr>`).join('');
-        resultsEl.innerHTML = `<div class="feature-scroll"><table class="compare-table">
-            <thead><tr><th></th><th class="compare-num">Mine</th><th class="compare-num">Other</th><th class="compare-num">Other minus mine</th></tr></thead>
+        resultsEl.innerHTML = `<div class="feature-scroll" tabindex="0" role="region" aria-label="Plan comparison"><table class="compare-table">
+            <caption class="visually-hidden">Home Coins an hour and time to the next RV level, for my plan and the other homeland's</caption>
+            <thead><tr><th scope="col">Setting</th><th scope="col" class="compare-num">Mine</th><th scope="col" class="compare-num">Other</th><th scope="col" class="compare-num">Other minus mine</th></tr></thead>
             <tbody>
                 <tr><td>Home Coins an hour</td>${planCell(a, planA)}${planCell(b, planB)}${delta(coinsDelta, `${coinsDelta > 0 ? '+' : ''}${number(coinsDelta ?? 0)}`, true)}</tr>
                 <tr><td>Time to the next RV level</td><td class="compare-num">${cell(levelCell(a))}</td><td class="compare-num">${cell(levelCell(b))}</td>${delta(secs, `${secs > 0 ? '+' : '-'}${formatSeconds(Math.abs(secs ?? 0))}`, false)}</tr>
             </tbody></table></div>
             ${a.ok && b.ok && !(a.proven && b.proven) ? '<p class="hint small">At least one plan is not proven best (the solver ran out of time), so the gap is approximate.</p>' : ''}
-            ${rows ? `<h4>Where the plans differ (facilities making each item)</h4><div class="feature-scroll"><table class="compare-table"><thead><tr><th>Facility</th><th>Item</th><th class="compare-num">Mine</th><th class="compare-num">Other</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}`;
+            ${rows ? `<h4>Where the plans differ (facilities making each item)</h4><div class="feature-scroll" tabindex="0" role="region" aria-label="Where the plans differ"><table class="compare-table"><caption class="visually-hidden">Facilities making each item where the two plans differ</caption><thead><tr><th scope="col">Facility</th><th scope="col">Item</th><th scope="col" class="compare-num">Mine</th><th scope="col" class="compare-num">Other</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}`;
     }
 
     async function solveBoth() {
@@ -204,7 +211,8 @@ export function mount(el, ctx) {
         stopBtn.hidden = false;
         stopBtn.disabled = false;
         resultsEl.innerHTML = '';
-        statusEl.textContent = reuse ? 'Using your plan on screen; solving the other homeland…' : 'Solving both plans…';
+        resultsEl.setAttribute('aria-busy', 'true');
+        say(reuse ? 'Using your plan on screen; solving the other homeland…' : 'Solving both plans…');
         const [planA, planB] = await Promise.all([
             reuse ? Promise.resolve(last.plan) : planOf(mineInput, controller.signal),
             planOf(otherInput, controller.signal),
@@ -215,13 +223,14 @@ export function mount(el, ctx) {
         stopBtn.disabled = true;
         runBtn.disabled = false;
         solveBtn.disabled = false;
+        resultsEl.setAttribute('aria-busy', 'false');
         if (stopped) {
-            statusEl.textContent = stopReason || 'Stopped.';
+            say(stopReason || 'Stopped.');
             return;
         }
         shown = started;
         renderResults(compareResults(planA, planB), planA, planB);
-        statusEl.textContent = 'Done. The other side is compared as saved, with their own strategy and Aniimo choices.';
+        say('Done. The other side is compared as saved, with their own strategy and Aniimo choices.');
     }
 
     fileEl.addEventListener('change', () => {
@@ -232,7 +241,7 @@ export function mount(el, ctx) {
         const mine = ++fileRead;
         if (!file) return;
         if (file.size > MAX_FILE_BYTES) {
-            statusEl.textContent = 'That file is too large to be a profile.';
+            say('That file is too large to be a profile.', true);
             return;
         }
         const reader = new FileReader();
@@ -240,9 +249,9 @@ export function mount(el, ctx) {
             if (mine !== fileRead) return; // a newer file was picked meanwhile
             fileText = String(reader.result || '');
             fileName = file.name;
-            statusEl.textContent = `Read ${fileName}. Press Compare.`;
+            say(`Read ${fileName}. Press Compare.`);
         };
-        reader.onerror = () => { if (mine === fileRead) statusEl.textContent = 'Could not read that file.'; };
+        reader.onerror = () => { if (mine === fileRead) say('Could not read that file.', true); };
         reader.readAsText(file);
     });
     textEl.addEventListener('input', () => { kind = 'text'; });
@@ -263,7 +272,8 @@ export function mount(el, ctx) {
         resultsEl.innerHTML = '';
         solveBtn.disabled = true;
         stopReason = '';
-        statusEl.textContent = 'The other side is forgotten.';
+        resultsEl.setAttribute('aria-busy', 'false');
+        say('The other side is forgotten.');
     });
 
     fillSnapshots();

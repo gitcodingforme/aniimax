@@ -319,8 +319,8 @@ export function coverageHtml(model, format = {}) {
     for (const s of STATUSES) out.push(`<li class="coverage-chip coverage-is-${s}">${STATUS_LABELS[s]}: ${Number(counts[s]) || 0}</li>`);
     out.push('</ul>');
 
-    out.push('<h3>Recipes by facility</h3><div class="feature-scroll"><table class="coverage-table"><thead><tr><th>Facility</th><th class="coverage-num">Recipes</th>');
-    for (const s of STATUSES) out.push(`<th class="coverage-num">${STATUS_LABELS[s]}</th>`);
+    out.push('<h3>Recipes by facility</h3><div class="feature-scroll" tabindex="0" role="region" aria-label="Recipes by facility"><table class="coverage-table"><caption class="visually-hidden">How many recipes each facility has, by the best check behind their numbers</caption><thead><tr><th scope="col">Facility</th><th scope="col" class="coverage-num">Recipes</th>');
+    for (const s of STATUSES) out.push(`<th scope="col" class="coverage-num">${STATUS_LABELS[s]}</th>`);
     out.push('</tr></thead><tbody>');
     for (const f of model?.facilities || []) {
         out.push(`<tr><td>${esc(f.facility)}</td>${num(f.total)}${STATUSES.map(s => num(f.counts?.[s])).join('')}</tr>`);
@@ -331,8 +331,8 @@ export function coverageHtml(model, format = {}) {
     if (facts.length) {
         out.push('<h3>Facility levels and RV costs</h3>');
         out.push('<p class="feature-status">Per facility level: the RV level it needs, its output cap and its upgrade cost; per RV level: its coin cost. Each against the wiki.</p>');
-        out.push('<div class="feature-scroll"><table class="coverage-table"><thead><tr><th>Facility</th><th class="coverage-num">Levels with wiki values</th>'
-            + `<th class="coverage-num">Values that match</th><th>Differ</th>${local ? '<th class="coverage-num">Unlocks seen in game</th>' : ''}</tr></thead><tbody>`);
+        out.push('<div class="feature-scroll" tabindex="0" role="region" aria-label="Facility levels and RV costs"><table class="coverage-table"><caption class="visually-hidden">Facility levels and RV costs checked against the wiki</caption><thead><tr><th scope="col">Facility</th><th scope="col" class="coverage-num">Levels with wiki values</th>'
+            + `<th scope="col" class="coverage-num">Values that match</th><th scope="col">Differ</th>${local ? '<th scope="col" class="coverage-num">Unlocks seen in game</th>' : ''}</tr></thead><tbody>`);
         for (const f of facts) {
             const rv = f.facility === 'RV';
             const differs = f.differs.length

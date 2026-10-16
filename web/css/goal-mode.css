@@ -82,3 +82,26 @@
         padding: 0.4rem 0.5rem;
     }
 }
+
+/* Keyboard focus keeps a visible ring (style.css hides the default one on number and select fields). */
+#goal-mode-card .input-field input:focus-visible,
+#goal-mode-card .input-field select:focus-visible,
+#goal-mode-card .goal-mode-check input:focus-visible,
+#goal-mode-card .skip-add-btn:focus-visible,
+#goal-mode-card #goal-mode-results:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Text for screen readers only: the table captions. */
+#goal-mode-card .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
