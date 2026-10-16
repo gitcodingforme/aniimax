@@ -5,7 +5,7 @@
 //
 // The app cannot see the game, so every event assumes the player did exactly what the plan says
 // at the moment they pressed the button. Game facts not yet verified are `assumptions` switches.
-import { FOOD_NOTE, feedEvent, foodHours, workingAniimo } from './food.js?v=fork-m10-1';
+import { FOOD_NOTE, feedEvent, foodHours, workingAniimo } from './food.js?v=fork-m10-2';
 
 export const SETTINGS_KEY = 'aniimax-reminders-v1';
 export const TIMERS_KEY = 'aniimax-timers-v1';
@@ -72,6 +72,10 @@ function toMs(value) {
 // fed 12 items an hour finishes one batch every 5 minutes, and its store fills that slowly. It
 // comes from the plan's output rate (see processorInterval), is never less than cycleSeconds, and
 // equals it for crops and gatherers, which work at their own pace.
+//
+// An E-mode row (`electric: true` from the solver: the units run on generator power, no Aniimo)
+// stays apart from the same recipe worked by an Aniimo: its key ends `|E`, it carries
+// `electric: true`, and its reminders say "(E-mode)". Its batch time is already the E-mode one.
 export function planRows(plan, { recipes = null, facilities = null } = {}) {
     const streams = plan?.income_streams || [];
     const steps = (plan?.coin_items || [])
@@ -83,9 +87,10 @@ export function planRows(plan, { recipes = null, facilities = null } = {}) {
             const recipe = findRecipe(recipes, s.item_name, s.facility);
             const minLevel = recipe ? (recipe.facilityLevel ?? recipe.facility_level ?? 1) : 1;
             return {
-                key: `${s.facility}|${s.item_name}`,
+                key: `${s.facility}|${s.item_name}${s.electric === true ? '|E' : ''}`,
                 facility: s.facility,
                 item: s.item_name,
+                ...(s.electric === true ? { electric: true } : {}),
                 kind,
                 cycleSeconds: s.cycle_time,
                 // Seconds between finished batches on each unit; set below for processors.
@@ -112,7 +117,7 @@ export function planRows(plan, { recipes = null, facilities = null } = {}) {
 
 // An item's name without the plan's variant suffixes (as plan-summary.js's stripVariant).
 function baseItem(name) {
-    return typeof name === 'string' ? name.replace(/__by\d+$/, '').replace(/__uncovered$/, '') : name;
+    return typeof name === 'string' ? name.replace(/__by\d+$/, '').replace(/__uncovered$/, '').replace(/__electric$/, '') : name;
 }
 
 // Units a second the plan sells of each row's item, in `rows` order: income_streams'
@@ -169,7 +174,7 @@ function spanText(seconds) {
 
 function findRecipe(recipes, item, facility) {
     if (!Array.isArray(recipes)) return null;
-    const base = String(item).replace(/__uncovered$/, '');
+    const base = String(item).replace(/__uncovered$/, '').replace(/__electric$/, '');
     return recipes.find(r => r.name === base && r.facility === facility) || recipes.find(r => r.name === base) || null;
 }
 
@@ -246,10 +251,11 @@ export function buildEvents(rows, {
         if (!Number.isFinite(start)) continue;
         const cycle = row.cycleSeconds * 1000;      // one batch (a crop's grow time, for watering)
         const interval = effectiveCycle(row) * 1000; // between finished batches
-        const item = pretty(row.item);
+        const item = pretty(row.item) + (row.electric ? ' (E-mode)' : '');
         const where = `${item} on ${row.count}× ${row.facility}`;
         const repeats = row.kind === 'crop' ? !!assumptions.plotsResow : row.kind === 'processor' ? !!assumptions.processorsRepeat : true;
-        if (row.kind === 'crop' && assumptions.wateringPrompts) {
+        // Only crops are watered; an E-mode row is a processor on power.
+        if (row.kind === 'crop' && !row.electric && assumptions.wateringPrompts) {
             fractions.forEach((fraction, i) => events.push({
                 at: start + cycle * fraction, kind: 'water', key: row.key, approximate: true,
                 title: `Water ${item}`,

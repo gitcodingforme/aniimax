@@ -13,7 +13,8 @@
 // The rules both files use (priority targets, Aniimo levels, environment abilities) are not
 // copied: they come from shared.js.
 
-import { ENVIRONMENT_BUILDING_ABILITY, MAX_ANIIMO_LEVEL, PRIORITY_TARGETS, defaultLevelFor } from './shared.js?v=fork-m10-1';
+import { ENVIRONMENT_BUILDING_ABILITY, MAX_ANIIMO_LEVEL, PRIORITY_TARGETS, defaultLevelFor } from './shared.js?v=fork-m10-2';
+import { EMODE } from './facility-config.js?v=fork-m10-2';
 
 // app.js numberOrDefault: parseInt that keeps a real 0.
 function numberOrDefault(value, fallback) {
@@ -91,6 +92,25 @@ function seasonActiveOf(data, config, simple, homeLevel) {
 function seasonCurrencyOf(data) {
     const value = String(data['season-currency-per-day'] ?? '').trim();
     return value !== '' && Number(value) >= 0 ? Number(value) : null;
+}
+
+// E-mode's input (src/wasm.rs JsEmode) from Advanced mode's generator fields (index.html): the
+// checkbox `emode-on`, `emode-generator-level` (1 to 5), `emode-generator-count` and `emode-supply`
+// ('100' or '120'), saved by currentConfig() like every persisted field (a checkbox as true/false,
+// the others as text). `{ generators: [{ level, count }], supply }` only when E-mode is ticked with
+// at least one generator in Advanced mode at RV EMODE.minHomeLevel (12) or above; otherwise
+// undefined, so the input has no `emode` key and the plan is exactly the one without E-mode. The
+// level is held to the generator's levels (1 to 5) and the count to the most generators any RV
+// allows (EMODE.maxGenerators, 3), so a typo can't plan a budget no homeland has. `config.EMODE`
+// when the config carries it, else facility-config.js's (fan data, INFERRED).
+function emodeOf(data, config, eff) {
+    const emode = config?.EMODE || EMODE;
+    if (eff.simple || !data['emode-on'] || eff.homeLevel < emode.minHomeLevel) return undefined;
+    const most = Math.max(...Object.values(emode.maxGenerators));
+    const count = Math.min(most, numberOrDefault(data['emode-generator-count'], 0));
+    if (!(count > 0)) return undefined;
+    const level = Math.min(emode.generatorCapacity.length, Math.max(1, numberOrDefault(data['emode-generator-level'], 1)));
+    return { generators: [{ level, count }], supply: String(data['emode-supply']) === '120' ? '120' : '100' };
 }
 
 // app.js initFacilityTiers: the saved tiers per
@@ -222,6 +242,7 @@ export function planInputFromSetup(setup, config, { homeLevel = null, aniimoTab 
     const locked = [...config.SPECIAL_RECIPES, ...config.SEASON.recipeNotes].map(r => r.name).filter(name => !unlocked.has(name));
     const best = priorities.includes('aniipods') ? bestAniipodOf(eff, config) : null;
     const lesser = best ? config.ANIIPOD_TIERS.filter(name => name !== best) : [];
+    const emode = emodeOf(data, config, eff);
     return {
         currency: 'coins',
         priorities,
@@ -233,6 +254,8 @@ export function planInputFromSetup(setup, config, { homeLevel = null, aniimoTab 
         facilities: eff.facilities,
         modules: eff.modules,
         ...aniimoInput(aniimoTab || aniimoTabOf(data), data, config),
+        // Only with E-mode on: no key at all otherwise (see emodeOf).
+        ...(emode ? { emode } : {}),
     };
 }
 

@@ -438,3 +438,51 @@ export function simpleSetup(homeLevel) {
     return { facilities, modules };
 }
 
+
+// E-mode (Electric Mode): from RV 12 a processor can run on a Crackle Generator's power instead of
+// an Aniimo. Every number here is fan data, INFERRED and not verified in game; the solver's copy is
+// src/emode.rs, and tests/data_tests.rs (test_emode_constants_match_the_web) fails if the two
+// differ. `generatorCapacity`: watts one generator gives at levels 1 to 5. `drawPerLevel`: watts an
+// electrified unit draws per level of its facility, twice that for `doubleDraw`. `boostRate`: the
+// 120% supply setting runs batches 1.2 times as fast but lets the load reach only capacity ÷ 1.2,
+// rounded down. `facilities`: the processors with an E-mode switch. `minHomeLevel`: the RV level
+// that opens E-mode. `maxGenerators`: how many generators each RV level allows (from that level up).
+export const EMODE = Object.freeze({
+    generatorCapacity: Object.freeze([600, 800, 1000, 1200, 1500]),
+    drawPerLevel: 15,
+    boostRate: 1.2,
+    doubleDraw: Object.freeze(['Mine', 'Well', 'Aniipod Maker', 'Dance Pad Polisher']),
+    facilities: Object.freeze([
+        'Carousel Mill', 'Jukebox Dryer', 'Claw Game Cooker', 'Crafting Table', 'Simmering Pot', 'Phonolfactory Table',
+        'Bouncy Brew Keg', 'Blazing Stove', 'Pickling Jar', 'Joy Wheel Loom', 'Woodworking Bench', 'Chimney Kiln',
+    ]),
+    minHomeLevel: 12,
+    maxGenerators: Object.freeze({ 12: 1, 15: 2, 18: 3 }),
+});
+
+// The power budget `{ budget, rate }` for `generators` (`[{ level, count }]`) at `supply` ('100'
+// or '120'), as the solver works it out (src/emode.rs `budget`): the generators' watts in all, or
+// at 120% that ÷ 1.2 rounded down (500 W from one 600 W generator), with batches 1.2 times as fast.
+// A generator at a level the game doesn't have, or a count that isn't a whole number above 0,
+// adds nothing.
+export function emodeBudget({ generators = [], supply = '100' } = {}) {
+    let capacity = 0;
+    for (const generator of Array.isArray(generators) ? generators : []) {
+        const level = Number(generator?.level), count = Number(generator?.count);
+        const watts = Number.isInteger(level) ? EMODE.generatorCapacity[level - 1] : undefined;
+        if (watts && Number.isInteger(count) && count > 0) capacity += watts * count;
+    }
+    const boosted = String(supply) === '120';
+    // A hair over before rounding down, as the Rust does, so 600 ÷ 1.2 comes to 500 and not 499.
+    return { budget: boosted ? Math.floor(capacity / EMODE.boostRate + 1e-9) : capacity, rate: boosted ? EMODE.boostRate : 1 };
+}
+
+// How many Crackle Generators RV level `homeLevel` allows (EMODE.maxGenerators): 0 below
+// EMODE.minHomeLevel.
+export function emodeGeneratorsAllowed(homeLevel) {
+    let allowed = 0;
+    for (const [rv, count] of Object.entries(EMODE.maxGenerators)) {
+        if (Number(homeLevel) >= Number(rv)) allowed = Math.max(allowed, count);
+    }
+    return Number(homeLevel) >= EMODE.minHomeLevel ? allowed : 0;
+}

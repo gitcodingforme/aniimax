@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    ANIIPOD_TIERS, FACILITIES, LEVEL_UP_CHAINS, LEVEL_UP_COSTS, MAX_HOME_LEVEL, MODULE_MAX_LEVELS, SEASON, SPECIAL_RECIPES, simpleSetup,
+    ANIIPOD_TIERS, EMODE, FACILITIES, LEVEL_UP_CHAINS, LEVEL_UP_COSTS, MAX_HOME_LEVEL, MODULE_MAX_LEVELS, SEASON, SPECIAL_RECIPES, simpleSetup,
 } from '../web/facility-config.js';
 import { aniimoTabOf, differingKeys, effectiveSetup, planInputFromSetup, sameInput } from '../web/setup-input.js';
 
@@ -159,4 +159,33 @@ test('test_differing_keys_names_where_two_inputs_disagree', () => {
     assert.deepEqual(differingKeys({ a: 1, b: [1], c: { d: 1 } }, { c: { d: 1 }, b: [1], a: 1 }), []);
     assert.deepEqual(differingKeys({ priorities: [], level_up: null, x: 1 }, { priorities: ['coins'], level_up: null, y: 2 }), ['priorities', 'x', 'y']);
     assert.deepEqual(differingKeys(null, { a: 1 }), ['a']);
+});
+
+test('test_emode_only_when_on_with_a_generator_in_advanced_mode', () => {
+    assert.ok(!('emode' in planInputFromSetup(advanced, config)), 'a setup without the E-mode fields sends no emode key');
+    const rv13 = { ...advanced, 'home-level': '13' };
+    const fields = { 'emode-on': true, 'emode-generator-level': '2', 'emode-generator-count': '1', 'emode-supply': '120' };
+    assert.deepEqual(planInputFromSetup({ ...rv13, ...fields }, config).emode, { generators: [{ level: 2, count: 1 }], supply: '120' });
+    const off = planInputFromSetup({ ...rv13, ...fields, 'emode-on': false }, config);
+    assert.ok(!('emode' in off), 'unticked: no key');
+    assert.ok(sameInput(off, planInputFromSetup(rv13, config)), 'unticked: the same input as without the fields');
+    assert.ok(!('emode' in planInputFromSetup({ ...rv13, ...fields, 'emode-generator-count': '0' }, config)), 'no generator: no key');
+    assert.ok(!('emode' in planInputFromSetup({ ...rv13, ...fields, 'emode-generator-count': '' }, config)), 'blank count: no key');
+    const simple = { ...rv13, ...fields, 'mode-simple': true, 'mode-advanced': false };
+    assert.ok(!('emode' in planInputFromSetup(simple, config)), 'Simple mode never sends E-mode');
+    // A level the game doesn't have is held to 1 to 5, a count to 3 generators; any supply but 120 is 100.
+    const odd = planInputFromSetup({ ...rv13, ...fields, 'emode-generator-level': '9', 'emode-generator-count': '10', 'emode-supply': 'x' }, config);
+    assert.deepEqual(odd.emode, { generators: [{ level: 5, count: 3 }], supply: '100' });
+    const low = planInputFromSetup({ ...rv13, 'emode-on': true, 'emode-generator-level': '0', 'emode-generator-count': '2' }, config);
+    assert.deepEqual(low.emode, { generators: [{ level: 1, count: 2 }], supply: '100' }, 'level 0 is level 1; no supply is 100');
+});
+
+test('test_emode_starts_at_rv_12', () => {
+    const fields = { 'emode-on': true, 'emode-generator-level': '1', 'emode-generator-count': '1' };
+    assert.ok(!('emode' in planInputFromSetup({ ...advanced, ...fields }, config)), 'RV 5: no key');
+    assert.ok(!('emode' in planInputFromSetup({ ...advanced, ...fields, 'home-level': '11' }, config)), 'RV 11: no key');
+    assert.deepEqual(planInputFromSetup({ ...advanced, ...fields, 'home-level': '12' }, config).emode, { generators: [{ level: 1, count: 1 }], supply: '100' });
+    // The page's config may carry its own EMODE (pageConfig); it is the one used.
+    const later = { ...config, EMODE: { ...EMODE, minHomeLevel: 13 } };
+    assert.ok(!('emode' in planInputFromSetup({ ...advanced, ...fields, 'home-level': '12' }, later)));
 });

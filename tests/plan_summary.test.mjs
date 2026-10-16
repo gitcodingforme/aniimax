@@ -176,3 +176,28 @@ test('test_player_home_level_edges', () => {
     assert.equal(playerHomeLevel({ input: owned, config, savedHomeLevel: 1, context: { simple: false } }), 2);
     assert.equal(playerHomeLevel(), 1);
 });
+
+test('test_emode_rows_stay_apart_from_the_ones_an_aniimo_works', () => {
+    const emode = {
+        success: true,
+        rate_per_second: 1,
+        coin_items: [
+            { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 1, status: 'producing', cycle_time: 54 },
+            { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 1, status: 'producing', cycle_time: 45, electric: true },
+            { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 1, status: 'producing', cycle_time: 54 },
+        ],
+    };
+    const { rows } = summarizePlan(emode);
+    assert.deepEqual(rows, [
+        { key: 'Carousel Mill:milled_rice', facility: 'Carousel Mill', item: 'milled_rice', count: 2, cycleSeconds: 54 },
+        { key: 'Carousel Mill:milled_rice:E', facility: 'Carousel Mill', item: 'milled_rice', count: 1, cycleSeconds: 45, electric: true },
+    ]);
+    // Going from Aniimo to power shows as a change on both rows, not as no change.
+    const manualOnly = { ...emode, coin_items: [{ ...emode.coin_items[0], facility_count: 3 }] };
+    assert.deepEqual(diffPlans(manualOnly, emode).map(c => [c.key, c.before, c.after]), [
+        ['Carousel Mill:milled_rice', 3, 2],
+        ['Carousel Mill:milled_rice:E', 0, 1],
+    ]);
+    assert.equal(stripVariant('milled_rice__electric'), 'milled_rice');
+    assert.equal(stripVariant('rough_lumber__electric'), 'rough_lumber');
+});

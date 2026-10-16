@@ -99,3 +99,35 @@ test('facility table keeps only the physical units that remain idle', () => {
     assert.equal(shown.reduce((sum, step) => sum + step.facility_count, 0), 3);
     assert.equal(idle.facility_count, 2);
 });
+
+test('E-mode Bench units are a pool of their own, sized from the plan\'s power', () => {
+    const takesTurns = step => step.facility === 'Woodworking Bench';
+    const bench = (item_name, busy_units, extra = {}) => ({ facility: 'Woodworking Bench', status: 'producing', item_name, busy_units, facility_count: 1, cycle_time: 30, ...extra });
+    const steps = [
+        bench('rough_lumber', 0.6),
+        bench('standard_planks', 0.3),
+        bench('rough_lumber', 0.5, { electric: true, cycle_time: 27 }),
+        { facility: 'Woodworking Bench', status: 'idle', item_name: null, facility_count: 1, cycle_time: null },
+    ];
+    const power = { used: 15, budget: 600, supply: 100, units: [{ facility: 'Woodworking Bench', level: 1, count: 1, draw: 15 }] };
+    const units = allocateTurnFacilities(steps, () => 4, takesTurns, power).get('Woodworking Bench');
+    assert.equal(units.length, 4);
+    const onPower = units.filter(jobs => jobs.some(job => job.electric));
+    assert.equal(onPower.length, 1, 'one unit runs on power');
+    assert.ok(onPower[0].every(job => job.electric && job.item === 'rough_lumber' && job.cycle === 27));
+    const worked = units.filter(jobs => jobs.length && !jobs.some(job => job.electric));
+    assert.deepEqual(worked.map(jobs => jobs.map(job => job.item)), [['rough_lumber'], ['standard_planks']], 'the Aniimo-worked tiers get their own units');
+    assert.ok(units.flat().filter(job => !job.electric).every(job => job.cycle === 30));
+    // The idle row shrinks to the one unit nothing uses.
+    const shown = redistributeTurnFacilityRows(steps, () => 4, takesTurns, power);
+    assert.deepEqual(shown.filter(s => s.status === 'idle').map(s => s.facility_count), [1]);
+    // With only two units, the Aniimo-worked tiers share the one left over from power.
+    const two = allocateTurnFacilities(steps, () => 2, takesTurns, power).get('Woodworking Bench');
+    assert.deepEqual(two.map(jobs => jobs.map(job => `${job.item}${job.electric ? ' (E)' : ''}`)), [['rough_lumber', 'standard_planks'], ['rough_lumber (E)']]);
+    // Without the plan's power, the E-mode rows get as many units as their workload needs.
+    const guessed = allocateTurnFacilities(steps, () => 4, takesTurns).get('Woodworking Bench');
+    assert.equal(guessed.filter(jobs => jobs.some(job => job.electric)).length, 1);
+    // A plan without E-mode is allocated exactly as before.
+    const plain = steps.filter(s => !s.electric);
+    assert.deepEqual(allocateTurnFacilities(plain, () => 4, takesTurns, power), allocateTurnFacilities(plain, () => 4, takesTurns));
+});

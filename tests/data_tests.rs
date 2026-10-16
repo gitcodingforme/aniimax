@@ -427,8 +427,8 @@ fn test_emode_sources_agree() {
     }
 }
 
-/// The text of one key's value inside the web's `EMODE` block: `[...]` for a list, else up to the
-/// next comma or line end.
+/// The text of one key's value inside the web's `EMODE` block: what's inside `[...]` (frozen or
+/// not) for a list, else up to the next comma, space or line end.
 fn js_value<'a>(block: &'a str, key: &str) -> Option<&'a str> {
     let pattern = format!("{key}:");
     // The key itself, not the end of a longer one (`facilities:` inside `emodeFacilities:`).
@@ -436,6 +436,7 @@ fn js_value<'a>(block: &'a str, key: &str) -> Option<&'a str> {
         block[..i].chars().next_back().is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'))
     })? + pattern.len();
     let rest = block[at..].trim_start();
+    let rest = rest.strip_prefix("Object.freeze(").map_or(rest, str::trim_start);
     if rest.starts_with('[') {
         rest.find(']').map(|end| &rest[1..end])
     } else {
@@ -452,17 +453,21 @@ fn js_numbers(list: &str) -> Vec<f64> {
 }
 
 // The web page's copy of the E-mode numbers (`EMODE` in web/facility-config.js) is the Rust one.
-// Until the page has its copy, this says so and checks nothing.
 #[test]
 fn test_emode_constants_match_the_web() {
     use aniimax::emode::{BOOST_RATE, DOUBLE_DRAW, DRAW_PER_LEVEL, EMODE_FACILITIES, GENERATOR_CAPACITY};
-    let Ok(js) = std::fs::read_to_string("web/facility-config.js") else { return };
-    let Some(start) = js.find("export const EMODE") else {
-        eprintln!("web/facility-config.js has no EMODE yet; the E-mode constants aren't compared");
-        return;
+    let js = std::fs::read_to_string("web/facility-config.js").expect("web/facility-config.js");
+    let declared = js.match_indices("export const EMODE").map(|(i, _)| i).find(|&i| {
+        js[i + "export const EMODE".len()..].trim_start().starts_with('=')
+    });
+    let Some(start) = declared else {
+        panic!("web/facility-config.js has no `export const EMODE`, the page's copy of src/emode.rs");
     };
     let block = &js[start..];
-    let block = &block[..block.find("\n};").unwrap_or(block.len())];
+    // `Object.freeze({ ... })` ends `});`, a plain object `};`.
+    let end = block.find("\n});").or_else(|| block.find("\n};")).expect("the end of the EMODE block");
+    let block = &block[..end];
+    assert!(block.len() < js.len() - start, "the EMODE block runs to the end of the file");
     let value = |key: &str| js_value(block, key).unwrap_or_else(|| panic!("EMODE has no {key}"));
     let capacity: Vec<f64> = GENERATOR_CAPACITY.iter().map(|&w| w as f64).collect();
     assert_eq!(js_numbers(value("generatorCapacity")), capacity, "generatorCapacity");

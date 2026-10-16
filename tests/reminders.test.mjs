@@ -479,3 +479,36 @@ test('test_the_food_note_appears_only_when_workers_are_not_kept_fed', () => {
     assert.equal(foodNote(undefined), '');
     assert.equal(foodNote('text'), '');
 });
+
+test('test_emode_rows_stay_apart_with_their_own_key_and_text', () => {
+    const emode = {
+        success: true,
+        coin_items: [
+            { item_name: 'rice', facility: 'Farmland', facility_count: 4, status: 'producing', is_grower: true, cycle_time: 1800, busy_units: 4 },
+            { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 1, status: 'producing', is_grower: false, cycle_time: 54, busy_units: 1 },
+            { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 1, status: 'producing', is_grower: false, cycle_time: 45, busy_units: 1, electric: true, reason: 'Sells directly; E-mode, no Aniimo' },
+        ],
+        income_streams: [],
+    };
+    const recipes = [{ name: 'milled_rice', facility: 'Carousel Mill', facility_level: 2, yield_amount: 1 }];
+    const rows = planRows(emode, { recipes, facilities: { 'Carousel Mill': [{ count: 2, level: 2 }] } });
+    assert.deepEqual(rows.map(r => [r.key, r.cycleSeconds, r.electric === true]), [
+        ['Farmland|rice', 1800, false],
+        ['Carousel Mill|milled_rice', 54, false],
+        ['Carousel Mill|milled_rice|E', 45, true],
+    ]);
+    assert.ok(!('electric' in rows[1]), 'a row an Aniimo works has no electric field (saved rows keep their shape)');
+    assert.equal(rows[2].level, 2, 'the recipe is found by its own name');
+    assert.equal(rows[2].yieldPerBatch, 1);
+    const events = buildEvents(rows, { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, wateringPrompts: true } });
+    const electric = events.filter(e => e.key === 'Carousel Mill|milled_rice|E');
+    assert.ok(electric.length > 0);
+    assert.equal((electric[0].at - T0) / 1000, 45, 'the batch time is the E-mode one');
+    assert.ok(electric.every(e => e.kind !== 'water' && e.title.includes('(E-mode)') && e.body.includes('(E-mode)')), JSON.stringify(electric[0]));
+    const manual = events.filter(e => e.key === 'Carousel Mill|milled_rice');
+    assert.ok(manual.length > 0 && manual.every(e => !e.title.includes('E-mode')));
+    assert.ok(events.some(e => e.kind === 'water' && e.key === 'Farmland|rice'), 'crops are still watered');
+    // An electric copy's own name, if one ever reaches a row, still finds its recipe.
+    const named = planRows({ ...emode, coin_items: [{ ...emode.coin_items[2], item_name: 'milled_rice__electric' }] }, { recipes, facilities: { 'Carousel Mill': [{ count: 2, level: 2 }] } });
+    assert.equal(named[0].level, 2);
+});
