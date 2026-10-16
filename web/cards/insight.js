@@ -2,8 +2,8 @@
 // between your snapshots, and, when the latest stretch fell short, ranked guesses at why. Logic in
 // web/insight.js; the card contract is in web/panels.js. Nothing is stored.
 
-import { gaps as findGaps, gapsWithin, guesses, intervals } from '../insight.js?v=fork-m9-2';
-import { planRows } from '../reminders.js?v=fork-m9-2';
+import { gaps as findGaps, gapsWithin, guesses, intervals } from '../insight.js?v=fork-m10-1';
+import { planRows } from '../reminders.js?v=fork-m10-1';
 
 const SHORTFALL_BELOW = 0.9;
 const MAX_GUESSES = 5;

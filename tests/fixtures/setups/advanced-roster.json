@@ -1,0 +1,25 @@
+{
+  "facilityTiers": {
+    "Farmland": [{ "count": 6, "level": 3 }],
+    "Woodland": [{ "count": 3, "level": 2 }],
+    "Mine": [{ "count": 1, "level": 2 }],
+    "Claw Game Cooker": [{ "count": 1, "level": 2 }],
+    "Heat Furnace": [{ "count": 1, "level": 4 }]
+  },
+  "levelUpStock": {},
+  "skippedRecipes": [],
+  "unlockedSpecial": [],
+  "priorities": [{ "target": "coins", "on": true }, { "target": "aniimo_exp", "on": false }],
+  "aniimoLevels": { "Fire": 3 },
+  "roster": [
+    { "name": "Test Fox", "count": 2, "abilities": { "Fire": 3, "Earth": 2 }, "personalities": ["Energetic", "Nimble", "Faithful", "Judicious"] },
+    { "name": "Pebble <b>Two</b>", "count": 1, "abilities": { "Earth": 4, "Grass": 9, "Nonsense": 2 }, "personalities": ["Unknown"] },
+    { "name": "", "count": 0, "abilities": { "Water": 1 } }
+  ],
+  "target-amount": "1000", "current-amount": "0",
+  "strategy-level-up": false, "strategy-priorities": true, "level-up-target": "4",
+  "mode-simple": false, "mode-advanced": true, "home-level": "3",
+  "ecological-module-level": "1", "kitchen-module-level": "1", "resource-detector-level": "0", "crafting-module-level": "0",
+  "rate-unit": "hour", "season-on": false, "layout-sim-on": true, "season-currency-per-day": "",
+  "aniimo-best": false, "aniimo-minimum": false, "aniimo-custom": true
+}

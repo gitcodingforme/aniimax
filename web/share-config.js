@@ -65,6 +65,17 @@ export async function readShareHash(hash) {
     return config;
 }
 
+// The setup as a share link should carry it: every key kept, each roster Aniimo's name blanked,
+// since a link may be posted where anyone reads it. A copy; `config` is not changed.
+export function shareableSetup(config) {
+    if (!config || typeof config !== 'object') return config;
+    const copy = { ...config };
+    if (Array.isArray(copy.roster)) {
+        copy.roster = copy.roster.map(a => (a && typeof a === 'object' && 'name' in a ? { ...a, name: '' } : a));
+    }
+    return copy;
+}
+
 // Keep any unrelated fragment parameters when a shared setup is edited or cleared.
 export function urlWithoutShare(href) {
     const url = new URL(href);

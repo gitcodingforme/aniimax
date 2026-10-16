@@ -1,11 +1,13 @@
 // A plan in a few numbers, what changed between two plans, and the RV level the player is at
-// (playerHomeLevel, below), for the feature cards. Pure functions only (no DOM, no storage, no
-// imports); tested in tests/plan_summary.test.mjs.
+// (playerHomeLevel, below), for the feature cards. Pure functions only (no DOM, no storage; its
+// one import is shared.js); tested in tests/plan_summary.test.mjs.
 //
 // A plan is what find_plan returns (JsProductionPlan in src/wasm.rs): `success`,
 // `rate_per_second` (Home Coins), `proven_optimal`, `level_up: { seconds } | null`, and
 // `coin_items`, one row per facility group with `facility`, `item_name`, `facility_count`,
 // `status` ('producing', 'nothing_available', 'not_needed', 'idle') and `cycle_time` (seconds).
+
+import { tierCount, tierLevel } from './shared.js?v=fork-m10-1';
 
 // The recipe or crop behind a plan item name: without a roster copy's `__by<n>` or an uncovered
 // crop's `__uncovered` (see base_item_name in src/models.rs). 'rose__uncovered__by2' -> 'rose'.
@@ -90,9 +92,6 @@ const facilityList = config => (Array.isArray(config?.FACILITIES)
     ? config.FACILITIES
     : Object.entries(config?.FACILITIES || {}).map(([name, f]) => ({ name, ...f })));
 const topHomeLevel = config => (Number.isInteger(config?.MAX_HOME_LEVEL) ? config.MAX_HOME_LEVEL : 20);
-// How many of a facility `tiers` hold, and the highest level among them (as in app.js).
-const ownedCount = tiers => (tiers || []).reduce((sum, t) => sum + (t?.count > 0 ? t.count : 0), 0);
-const ownedLevel = tiers => Math.max(0, ...(tiers || []).filter(t => t?.count > 0).map(t => t.level));
 // The value for RV level `rv` in a per-RV list, keeping the last value past its end.
 const atRv = (list, rv) => (Array.isArray(list) && list.length ? list[Math.max(1, Math.min(rv, list.length)) - 1] : 0);
 
@@ -114,21 +113,25 @@ export function setupAtHomeLevel(config, rv) {
 
 // Whether RV `rv` allows everything `input` (a plan input) owns: of each facility no more than
 // that RV has room for and no level above the highest it unlocks, and every module at or below
-// that RV's cap (homeLevelCovering in app.js; a module the RV has no cap for allows level 0 only).
+// that RV's cap (the page's covering rule; a module the RV has no cap for allows level 0 only).
 export function coversHomeLevel(input, config, rv) {
     const allowed = setupAtHomeLevel(config, rv);
     const facilitiesFit = facilityList(config).every((f) => {
         const have = input?.facilities?.[f.name];
-        if (ownedCount(have) === 0) return true;
+        if (tierCount(have) === 0) return true;
         const cap = allowed.facilities?.[f.name];
-        return ownedCount(have) <= ownedCount(cap) && (f.hasLevels === false || ownedLevel(have) <= ownedLevel(cap));
+        return tierCount(have) <= tierCount(cap) && (f.hasLevels === false || tierLevel(have) <= tierLevel(cap));
     });
     const modulesFit = Object.entries(input?.modules || {}).every(([name, level]) => !(level > (allowed.modules?.[name] ?? 0)));
     return facilitiesFit && modulesFit;
 }
 
-// The lowest RV level that allows every facility and module `input` owns (homeLevelCovering in
-// app.js), or MAX_HOME_LEVEL when none does.
+// The lowest RV level that allows every facility and module `input` owns, or MAX_HOME_LEVEL when
+// none does. Two rules, on purpose: the page (app.js) uses only this covering rule, for Advanced
+// mode's layout RV and the Opportunities card's "Within RV X" (what the entered setup allows,
+// whatever level-up is planned), while the cards use playerHomeLevel below, which starts from a
+// level-up target or the saved RV level. Switching the page to playerHomeLevel would visibly change
+// those two, so it keeps this one.
 export function coveringHomeLevel(input, config) {
     const top = topHomeLevel(config);
     for (let rv = 1; rv <= top; rv++) if (coversHomeLevel(input, config, rv)) return rv;

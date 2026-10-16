@@ -9,7 +9,8 @@
 // RV step; an item goal is one solve with that item as the only cost. `priorities: []` is what the
 // page sends for its Level up strategy (activePriorities() in app.js), so nothing else is chased.
 // `config` is ctx.config (see web/panels.js).
-import { coveringHomeLevel, playerHomeLevel, stripVariant, summarizePlan } from './plan-summary.js?v=fork-m9-2';
+import { coveringHomeLevel, playerHomeLevel, stripVariant, summarizePlan } from './plan-summary.js?v=fork-m10-1';
+import { tierCount, tierLevel } from './shared.js?v=fork-m10-1';
 
 export const GOAL_KEY = 'aniimax-goal-mode-v1';
 
@@ -17,7 +18,6 @@ const copy = value => JSON.parse(JSON.stringify(value ?? null));
 const facilityList = config => (Array.isArray(config?.FACILITIES)
     ? config.FACILITIES
     : Object.entries(config?.FACILITIES || {}).map(([name, f]) => ({ name, ...f })));
-const tierCount = tiers => (tiers || []).reduce((sum, t) => sum + (t.count > 0 ? t.count : 0), 0);
 
 // Home Coins to raise one facility from `from` to `to`: the page's upgradeCost, else the table.
 function upgradeCostOf(config, facility, from, to) {
@@ -70,8 +70,6 @@ export function goalBase(base, { tiers = [], skipped = [] } = {}) {
     }
     return input;
 }
-
-const tierLevel = tiers => Math.max(0, ...(tiers || []).filter(t => t.count > 0).map(t => t.level));
 
 // The lowest RV level whose facilities and modules cover everything in `input` (app.js's rule):
 // coveringHomeLevel in plan-summary.js.

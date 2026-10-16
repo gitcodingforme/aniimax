@@ -1,16 +1,21 @@
-// Side solves for feature cards: the planner (worker.js) in workers of their own, so a card never
-// touches app.js's worker or its Calculate run. No imports, no DOM; the Worker class is injected
-// (`makeWorker`), so tests/solve.test.mjs runs it all with a fake one.
+// Side solves for feature cards and the page's Opportunities ranking: the planner (worker.js) in
+// workers of their own, so they never touch app.js's main worker or its Calculate run. No imports,
+// no DOM; the Worker class is injected (`makeWorker`), so tests/solve.test.mjs runs it all with a
+// fake one.
 //
 // Worker messages (see worker.js): the page posts `{ id, type, payload }` with `payload` a JSON
 // string; the worker answers with any number of `{ id, type: 'progress', count }` and then one
 // `{ id, ok, result | error }`, where `result` is a JSON string.
 //
 // Every plan and ranking worker this solver starts goes through one limiter, so no more than
-// `maxWorkers` of them are alive at once; extra work waits its turn. Each solve's `timeoutMs`
+// `maxWorkers` of them are alive at once; extra work waits its turn, background work (the page's
+// ranking, `rank(..., { background: true })`) behind everything else. Each solve's `timeoutMs`
 // counts from when its worker starts, not from when it was queued. The time_to_reach helper is
 // one extra worker outside the limiter (so a goal time never waits behind a ranking), stopped
 // after `helperIdleMs` with nothing to do.
+//
+// createChannel (at the end) is the page's own long-lived worker (app.js callWorker): one worker,
+// many requests by id, restarted when it breaks or goes silent.
 
 // The candidates dealt out across `n` workers, each list keeping the candidates' order:
 // splitIndices(5, 2) -> [[0, 2, 4], [1, 3]]. Never more lists than candidates; none for none.
@@ -39,26 +44,41 @@ function stop(worker) {
     } catch (_) { /* already gone */ }
 }
 
-// Hands out at most `max` slots. `acquire(signal)` resolves with a `release` function once a slot
-// is free (or rejects with 'cancelled' if `signal` aborts while it waits).
+// Hands out at most `max` slots. `acquire(signal, { background })` resolves with a `release`
+// function once a slot is free (or rejects with 'cancelled' if `signal` aborts while it waits).
+// Waiting requests are granted in order, except that a background one waits until no other
+// request is waiting, and (with two slots or more) background work holds at most max - 1 slots,
+// so a card's click always finds one free or freeing soon. With one slot, it is just the order.
 function createLimiter(max) {
     let live = 0;
+    let liveBackground = 0;
+    const backgroundMax = max >= 2 ? max - 1 : max;
     const queue = [];
+    const later = [];
     const pump = () => {
-        while (live < max && queue.length > 0) {
-            live++;
-            queue.shift().grant();
+        while (live < max) {
+            if (queue.length > 0) {
+                live++;
+                queue.shift().grant();
+            } else if (later.length > 0 && liveBackground < backgroundMax) {
+                live++;
+                liveBackground++;
+                later.shift().grant();
+            } else {
+                break;
+            }
         }
     };
-    const acquire = (signal) => new Promise((resolve, reject) => {
+    const acquire = (signal, { background = false } = {}) => new Promise((resolve, reject) => {
         if (signal?.aborted) {
             reject(cancelledError());
             return;
         }
+        const line = background ? later : queue;
         const onAbort = () => {
-            const at = queue.indexOf(entry);
+            const at = line.indexOf(entry);
             if (at >= 0) {
-                queue.splice(at, 1);
+                line.splice(at, 1);
                 reject(cancelledError());
             }
         };
@@ -70,12 +90,13 @@ function createLimiter(max) {
                     if (released) return;
                     released = true;
                     live--;
+                    if (background) liveBackground--;
                     pump();
                 });
             },
         };
         signal?.addEventListener('abort', onAbort, { once: true });
-        queue.push(entry);
+        line.push(entry);
         pump();
     });
     return { acquire };
@@ -158,8 +179,9 @@ export function createSolver({
     // `baseTop` is the plan's `measure_top`, which spares each worker solving the base again.
     // Never rejects: on a timeout or an abort the workers are stopped and it resolves with what it
     // has and `timedOut: true` (`cancelled: true` as well for an abort); `failed` is true when a
-    // worker broke.
-    function rank(measure, base, inputs, { onResult, onBase, baseTop, workers = 2, timeoutMs = 300000, signal } = {}) {
+    // worker broke. `timeoutMs` 0 means no timeout. With `background`, its shares wait for a slot
+    // behind every other request (the cards' clicks go first).
+    function rank(measure, base, inputs, { onResult, onBase, baseTop, workers = 2, timeoutMs = 300000, signal, background = false } = {}) {
         return new Promise((resolve) => {
             const list = Array.isArray(inputs) ? inputs : [];
             const outcome = { base: null, results: list.map(() => null), timedOut: false, cancelled: false, failed: false };
@@ -267,7 +289,7 @@ export function createSolver({
                 });
             };
             shares.forEach((indices) => {
-                limiter.acquire(local.signal).then((release) => {
+                limiter.acquire(local.signal, { background }).then((release) => {
                     if (settled) {
                         release();
                         return;
@@ -421,4 +443,125 @@ export function createSolver({
     }
 
     return { findPlan, rank, timeOver, timeTo };
+}
+
+// The page's main worker as a channel: `call(type, payload, onProgress)` posts
+// `{ id, type, payload }` and resolves with the answer's `result` (or rejects with its `error`);
+// `onProgress(count)` gets each progress message first. The worker starts with the first call.
+// `restart(error)` stops it and rejects whatever was waiting with `error` (default 'Cancelled by a
+// newer calculation'); the next call starts a new one. `pending()` is how many requests wait.
+// A worker that fails (`onerror`), or says nothing for `silenceMs` while requests wait (any
+// message resets the clock; the exact planner posts a step at least every 30 s or so), is
+// replaced the same way, its requests rejected. It is replaced at most `maxRestarts` times in a
+// row with no final answer (ok or error) in between; after that every call is rejected until
+// restart().
+export function createChannel({
+    workerUrl, makeWorker = url => new Worker(url, { type: 'module' }), silenceMs = 180000, maxRestarts = 3,
+} = {}) {
+    let worker = null;
+    let nextId = 0;
+    let failures = 0;
+    let broken = null;
+    let silence = null;
+    const waiting = new Map();
+
+    const quiet = () => {
+        clearTimeout(silence);
+        silence = null;
+    };
+    const listen = () => {
+        quiet();
+        if (waiting.size > 0) silence = startTimer(silenceMs, () => fail(new Error('The planner stopped answering')));
+    };
+    const rejectAll = (error) => {
+        const list = [...waiting.values()];
+        waiting.clear();
+        quiet();
+        list.forEach(request => request.reject(error));
+    };
+    // Stops the worker, and the next call (or none, if it has failed too often) starts another.
+    const drop = () => {
+        const old = worker;
+        worker = null;
+        if (old) {
+            old.onmessage = null;
+            old.onerror = null;
+        }
+        stop(old);
+    };
+    function fail(error) {
+        drop();
+        rejectAll(error);
+        if (++failures > maxRestarts) broken = new Error(`The planner stopped ${failures} times; reload the page to try again`);
+    }
+
+    function open() {
+        const w = makeWorker(workerUrl);
+        w.onmessage = (event) => {
+            if (worker !== w) return;
+            const { id, type, ok, result, error, count } = event.data || {};
+            const request = waiting.get(id);
+            if (request && type === 'progress') {
+                if (request.onProgress) {
+                    try {
+                        request.onProgress(count);
+                    } catch (e) {
+                        console.warn('A progress listener failed:', e);
+                    }
+                }
+            } else if (request) {
+                waiting.delete(id);
+                // Any final answer, an error included, shows the worker is alive.
+                failures = 0;
+                if (ok) {
+                    request.resolve(result);
+                } else {
+                    request.reject(new Error(error));
+                }
+            }
+            listen();
+        };
+        w.onerror = (event) => {
+            if (worker !== w) return;
+            console.error('Worker error:', event?.message || event);
+            fail(new Error(event?.message || 'The planner stopped'));
+        };
+        worker = w;
+        return w;
+    }
+
+    function call(type, payload, onProgress) {
+        return new Promise((resolve, reject) => {
+            if (broken) {
+                reject(broken);
+                return;
+            }
+            let w;
+            try {
+                w = worker || open();
+            } catch (error) {
+                reject(error);
+                return;
+            }
+            const id = ++nextId;
+            waiting.set(id, { resolve, reject, onProgress });
+            if (!silence) listen();
+            try {
+                w.postMessage({ id, type, payload });
+            } catch (error) {
+                waiting.delete(id);
+                listen();
+                reject(error);
+            }
+        });
+    }
+
+    function restart(error = new Error('Cancelled by a newer calculation')) {
+        drop();
+        rejectAll(error);
+        broken = null;
+        failures = 0;
+    }
+
+    return { call, restart, pending: () => waiting.size };
 }

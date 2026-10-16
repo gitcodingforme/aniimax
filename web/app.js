@@ -8,82 +8,62 @@ import {
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, OUTPUT_CAPS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
     FACILITY_UPGRADE_COSTS, upgradeCost,
-} from './facility-config.js?v=fork-m9-2';
+} from './facility-config.js?v=fork-m10-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
-import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js?v=fork-m9-2';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m9-2';
-import { applyStructureOverrides } from './overrides.js?v=fork-m9-2';
+import { createShareUrl, readShareHash, shareableSetup, urlWithoutShare } from './share-config.js?v=fork-m10-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m10-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-m10-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-m9-2';
+} from './upstream-check.js?v=fork-m10-1';
 import {
     addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-m9-2';
+} from './history.js?v=fork-m10-1';
 import {
     DEFAULT_ASSUMPTIONS, NTFY_SERVER, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, effectiveCycle, formatCountdown,
     googleCalendarUrl, icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-m9-2';
-import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m9-2';
+} from './reminders.js?v=fork-m10-1';
+import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m10-1';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-m9-2';
+} from './checklist.js?v=fork-m10-1';
 // Feature cards (web/cards/, see panels.js): the bus they listen on, their side solver, and the
 // loader that mounts them.
-import { publish, on, last } from './bus.js?v=fork-m9-2';
-import { createSolver } from './solve.js?v=fork-m9-2';
-import { mountCards, addStylesheet } from './panels.js?v=fork-m9-2';
+import { publish, on, last } from './bus.js?v=fork-m10-1';
+import { createChannel, createSolver } from './solve.js?v=fork-m10-1';
+import { mountCards, addStylesheet } from './panels.js?v=fork-m10-1';
+import {
+    ENVIRONMENT_BUILDING_ABILITY, MAX_ANIIMO_LEVEL, PACE_UNIT_SECONDS, PRIORITY_TARGETS as PRIORITY_IDS, RANK_MIN_GAIN,
+    defaultLevelFor, escapeHtml, measureFor, onceUntilFailed, tierCount, tierLevel,
+} from './shared.js?v=fork-m10-1';
+import { coveringHomeLevel } from './plan-summary.js?v=fork-m10-1';
+import { aniimoInputFromSetup, migrateSetup, planInputFromSetup, savedChoices } from './setup-input.js?v=fork-m10-1';
 
 let wasmReady = false;
 
 // The wasm optimizer runs in a Web Worker (see worker.js), not on the main thread: `find_plan`
 // can take long enough on a complex facility setup that running it here would freeze the page's
 // own rendering, which is what makes the browser offer to kill the tab. Every call site below
-// goes through `callWorker` instead of calling a wasm-bindgen function directly.
-let worker = null;
-let nextRequestId = 0;
-const pendingWorkerRequests = new Map();
+// goes through `callWorker` instead of calling a wasm-bindgen function directly. The worker sits
+// behind solve.js's createChannel, which replaces it when it breaks or goes silent and rejects
+// what was waiting on it, so a stuck solve can't leave the page waiting forever.
+let channel = null;
 
 // Tags this page load's worker (and, through it, the wasm solver; see worker.js) so the browser
 // never runs a cached older solver next to newer page code.
 const WORKER_URL = `./worker.js?load=${Date.now()}`;
 
 function initWorker() {
-    worker = new Worker(WORKER_URL, { type: 'module' });
-    worker.onmessage = (event) => {
-        const { id, type, ok, result, error, count } = event.data;
-        const pending = pendingWorkerRequests.get(id);
-        if (!pending) return;
-        // A `find_plan` request can receive several `type: 'progress'` messages (the solver's own
-        // real trial-solve count; see `find_plan`'s doc comment in wasm.rs) before its one final
-        // `{ ok, result }` response; only the latter resolves/removes the pending request.
-        if (type === 'progress') {
-            if (pending.onProgress) pending.onProgress(count);
-            return;
-        }
-        pendingWorkerRequests.delete(id);
-        if (ok) {
-            pending.resolve(result);
-        } else {
-            pending.reject(new Error(error));
-        }
-    };
-    worker.onerror = (event) => {
-        console.error('Worker error:', event.message || event);
-        pendingWorkerRequests.forEach(pending => pending.reject(new Error(event.message || 'The planner stopped')));
-        pendingWorkerRequests.clear();
-    };
+    channel = createChannel({ workerUrl: WORKER_URL });
 }
 
 // Throws away the worker and anything still running in it, e.g. a Minimum-setup solve from an
-// older Calculate click that would otherwise hold up the new one, and starts a fresh worker.
+// older Calculate click that would otherwise hold up the new one; the next call starts a fresh one.
 function restartWorker() {
-    worker.terminate();
-    pendingWorkerRequests.forEach(pending => pending.reject(new Error('Cancelled by a newer calculation')));
-    pendingWorkerRequests.clear();
-    initWorker();
+    channel.restart(new Error('Cancelled by a newer calculation'));
 }
 
 // Sends one request to the worker and resolves with its result (or rejects with its error);
@@ -91,12 +71,9 @@ function restartWorker() {
 // own single string argument (omit for `get_version`/`get_all_items`, which take none).
 // `onProgress(count)`, if given, gets each progress message before the result: `find_plan`
 // sends every solve step and, from the backup planner, its trial count; see worker.js.
+// A `find_plan` request can get several progress messages before its one final answer.
 function callWorker(type, payload, onProgress) {
-    return new Promise((resolve, reject) => {
-        const id = ++nextRequestId;
-        pendingWorkerRequests.set(id, { resolve, reject, onProgress });
-        worker.postMessage({ id, type, payload });
-    });
+    return channel.call(type, payload, onProgress);
 }
 
 // Converts the solver's real, running trial-solve count (from `find_plan`'s progress callback;
@@ -164,31 +141,27 @@ function bestAniimoSetup() {
 let lastPlanInput = null;
 
 // Solves for `setup` if it isn't already worked out, and shows it when it lands if that's still
-// what's selected. It runs in a worker of its own, which a newer pick stops, so quick roster
-// edits don't queue a solve each. A run id guards against a newer Find the best plan click.
+// what's selected. It runs in a worker of its own (solve.js, one at a time, with its timeout and a
+// guarded read of the answer), which a newer pick stops, so quick roster edits don't queue a solve
+// each. A run id guards against a newer Find the best plan click.
+const setupSolver = createSolver({ workerUrl: WORKER_URL, maxWorkers: 1 });
 let setupSolve = null;
 function ensurePlanFor(setup) {
     if (plansBySetup[setup] || !lastPlanInput || setupSolve?.setup === setup) return;
     stopSetupSolve();
     const runId = planRunId;
-    const solver = new Worker(WORKER_URL, { type: 'module' });
-    setupSolve = { setup, worker: solver };
-    const done = (plan) => {
-        solver.terminate();
-        if (setupSolve?.worker === solver) setupSolve = null;
-        if (runId !== planRunId) return;
-        plansBySetup[setup] = plan;
-        if (selectedAniimoSetup() === setup) showSelectedPlan();
-    };
-    solver.onmessage = (event) => {
-        const { type, ok, result, error } = event.data;
-        if (type === 'progress') return;
-        done(ok ? JSON.parse(result) : { success: false, error });
-    };
-    solver.onerror = (event) => done({ success: false, error: event.message || 'The planner stopped' });
+    const solve = { setup, controller: new AbortController() };
+    setupSolve = solve;
     // The levels are read afresh: the player may have changed which abilities they have since
     // the plan this input came from.
-    solver.postMessage({ id: 1, type: 'find_plan', payload: JSON.stringify({ ...lastPlanInput, ...aniimoInput(setup) }) });
+    setupSolver.findPlan({ ...lastPlanInput, ...aniimoInput(setup) }, { signal: solve.controller.signal })
+        .catch(error => (error.message === 'cancelled' ? null : { success: false, error: `The planner stopped: ${error.message}` }))
+        .then(plan => {
+            if (setupSolve === solve) setupSolve = null;
+            if (!plan || solve.controller.signal.aborted || runId !== planRunId) return;
+            plansBySetup[setup] = plan;
+            if (selectedAniimoSetup() === setup) showSelectedPlan();
+        });
 }
 
 // What the feature cards get on the 'plan' topic (see panels.js): the plan on screen, the input
@@ -207,7 +180,7 @@ function planSnapshot(setup, plan) {
 }
 
 function stopSetupSolve() {
-    setupSolve?.worker.terminate();
+    setupSolve?.controller.abort();
     setupSolve = null;
 }
 
@@ -401,8 +374,9 @@ const STORAGE_KEY = 'aniimax-config-v1';
 // The deploy workflow's build stamp (web/version.json), once loaded; null for a local build.
 let buildStamp = null;
 
-// True once the player has picked a rate unit themselves this visit. Until then a fresh plan
-// picks the unit it reads best at; after it, their choice stands.
+// True once the player has picked a rate unit themselves, this visit or in the setup loaded (see
+// savedChoices in setup-input.js). Until then a fresh plan picks the unit it reads best at; after
+// it, their choice stands.
 let rateUnitChosen = false;
 
 // Every plain input ID whose value should be persisted (facility tiers are saved separately;
@@ -424,31 +398,11 @@ function getPersistedFieldIds() {
 function readStorage() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? migrateSavedConfig(JSON.parse(raw)) : null;
+        return raw ? migrateSetup(JSON.parse(raw)) : null;
     } catch (e) {
         console.warn('Could not load saved inputs from localStorage:', e);
         return null;
     }
-}
-
-// Carries a save made under an older name forward to its current one, so a returning user keeps
-// their inputs across a rename instead of silently falling back to defaults. The full release
-// renamed Mineral Pile to Mine and the Mineral Detector module to Resource Detector.
-function migrateSavedConfig(data) {
-    if (!data || typeof data !== 'object') return data;
-    // Saves from before simple mode existed hold a hand-entered setup; keep showing it.
-    if (data['mode-simple'] === undefined && data.facilityTiers) {
-        data['mode-simple'] = false;
-        data['mode-advanced'] = true;
-    }
-    const tiers = data.facilityTiers;
-    if (tiers && tiers['Mine'] === undefined && tiers['Mineral Pile'] !== undefined) {
-        tiers['Mine'] = tiers['Mineral Pile'];
-    }
-    if (data['resource-detector-level'] === undefined && data['mineral-detector-level'] !== undefined) {
-        data['resource-detector-level'] = data['mineral-detector-level'];
-    }
-    return data;
 }
 
 // Populates the module-level `facilityTiers` from a saved config blob (see `readStorage`),
@@ -505,7 +459,8 @@ async function shareCurrentConfig() {
     const result = document.getElementById('share-config-result');
     const status = document.getElementById('share-config-status');
     try {
-        link.value = await createShareUrl(window.location.href, currentConfig());
+        // Roster names stay in this browser; the link carries everything else.
+        link.value = await createShareUrl(window.location.href, shareableSetup(currentConfig()));
         result.hidden = false;
         link.focus();
         link.select();
@@ -539,7 +494,7 @@ function loadInputsFromStorage(data) {
     }
     if (data.aniimoLevels && typeof data.aniimoLevels === 'object') {
         aniimoLevels = Object.fromEntries(Object.entries(data.aniimoLevels)
-            .filter(([ability, level]) => ABILITY_BY_NAME.has(ability) && Number.isInteger(Number(level)) && level >= 1 && level <= 4)
+            .filter(([ability, level]) => ABILITY_BY_NAME.has(ability) && Number.isInteger(Number(level)) && level >= 1 && level <= MAX_ANIIMO_LEVEL)
             .map(([ability, level]) => [ability, Number(level)]));
     }
     if (Array.isArray(data.roster)) {
@@ -549,7 +504,7 @@ function loadInputsFromStorage(data) {
                 name: typeof a.name === 'string' ? a.name : '',
                 count: Math.max(1, Math.round(Number(a.count)) || 1),
                 abilities: Object.fromEntries(Object.entries(a.abilities)
-                    .filter(([ability, level]) => ABILITY_BY_NAME.has(ability) && Number.isInteger(Number(level)) && level >= 1 && level <= 4)
+                    .filter(([ability, level]) => ABILITY_BY_NAME.has(ability) && Number.isInteger(Number(level)) && level >= 1 && level <= MAX_ANIIMO_LEVEL)
                     .map(([ability, level]) => [ability, Number(level)])),
                 personalities: PERSONALITY_PAIRS.map((pair, p) => pair.names.includes(a.personalities?.[p]) ? a.personalities[p] : pair.names[0]),
             }));
@@ -564,7 +519,7 @@ function loadInputsFromStorage(data) {
             el.value = data[id];
         }
     });
-    levelUpTargetChosen = 'level-up-target' in data;
+    ({ levelUpTargetChosen, rateUnitChosen } = savedChoices(data, pageConfig()));
 }
 
 // Auto-save on every change to a persisted static field (facility tier inputs save themselves;
@@ -867,7 +822,8 @@ async function importHistoryFile(file) {
         const existing = readHistory();
         const known = new Set(existing.map(s => s.id));
         const fresh = imported.filter(s => !known.has(s.id)).length;
-        writeHistory(addSnapshots(existing, imported));
+        // writeHistory has already said why it could not save.
+        if (!writeHistory(addSnapshots(existing, imported))) return;
         renderHistory();
         showHistoryStatus(`Restored ${imported.length} snapshot${imported.length === 1 ? '' : 's'} from the file, ${fresh} new; the rest were already here.`);
     } catch (error) {
@@ -880,14 +836,14 @@ function clearHistory() {
     const list = readHistory();
     if (list.length === 0) return;
     if (!window.confirm(`Delete all ${list.length} snapshots from this browser? Download the history first if you want to keep them.`)) return;
-    writeHistory([]);
+    if (!writeHistory([])) return;
     renderHistory();
     showHistoryStatus('History cleared.');
 }
 
 function deleteSnapshot(id) {
     if (!window.confirm(`Delete the snapshot from ${formatProfileTime(id)}?`)) return;
-    writeHistory(readHistory().filter(s => s.id !== id));
+    if (!writeHistory(readHistory().filter(s => s.id !== id))) return;
     renderHistory();
     showHistoryStatus('Snapshot deleted.');
 }
@@ -1707,7 +1663,7 @@ function renderSimpleSummary() {
 }
 
 // Whether the player has picked Advanced mode's level-up target; until then it follows the RV
-// level the facilities came from.
+// level (see savedChoices in setup-input.js for a loaded setup).
 let levelUpTargetChosen = false;
 
 function followLevelUpTarget(homeLevel) {
@@ -1744,6 +1700,12 @@ function attachModeHandlers() {
     document.getElementById('mode-simple').addEventListener('change', applyConfigMode);
     document.getElementById('mode-advanced').addEventListener('change', applyConfigMode);
     document.getElementById('home-level').addEventListener('change', () => {
+        // The target moves along with the RV level until the player picks one, and is saved so a
+        // reload doesn't take the old one for a pick.
+        if (!levelUpTargetChosen) {
+            followLevelUpTarget(selectedHomeLevel());
+            saveInputsToStorage();
+        }
         renderSimpleSummary();
         renderStrategy();
     });
@@ -1782,11 +1744,14 @@ function attachSpecialHandlers() {
 // Aniimo a level higher, and in Advanced mode a module level or one more facility or facility
 // level. Only changes within reach: Simple mode already has everything its RV level allows, and
 // Advanced mode goes up to the lowest RV level that allows everything entered. Each change is
-// solved in full in a worker of its own (see `rankImprovements` in worker.js), so planning never
-// waits on it, and it's measured by what the plan leads with (see `rankMeasure`).
+// solved in full (see `rankImprovements` in worker.js) by `sideSolver`, the one solver the cards
+// share, in the background behind the cards' own requests, so planning never waits on it; it's
+// measured by what the plan leads with (see `measureFor` in shared.js).
+// "Within reach" in Advanced mode uses the covering rule, `coveringHomeLevel(input, pageConfig())`
+// from plan-summary.js (the cards' playerHomeLevel differs; see the note there).
 
-let rankWorkers = [];
-let rankRunId = 0;
+// Stops the ranking in progress (see rankImprovementsFor).
+let rankAbort = null;
 // Finished rankings by Aniimo setup, for the plan they were worked out from.
 let rankingsBySetup = {};
 // The ranking on screen: `{ setup, measure, homeLevel, candidates, base, results, done }`.
@@ -1800,42 +1765,14 @@ const MODULE_NAMES = {
 };
 
 function stopRanking() {
-    rankRunId++;
-    rankWorkers.forEach(worker => worker.terminate());
-    rankWorkers = [];
+    rankAbort?.abort();
+    rankAbort = null;
 }
 
-// How many workers share the ranking: up to six, leaving cores for the page, the plan's own worker
-// and the layout's.
-const RANK_WORKERS = Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 2) - 3));
-
-// What a change is measured by: level-up time for a level-up plan that can be worked toward,
-// else the first ranked priority, else Home Coins.
-function rankMeasure() {
-    if (planContext?.levelUp && !planContext.unavailable && !planContext.ready) return 'level_up';
-    return (lastPlanInput?.priorities || [])[0] || 'coins';
-}
-
-// How many of a facility `tiers` hold, and the highest level among them.
-const tierCount = tiers => (tiers || []).reduce((sum, t) => sum + t.count, 0);
-const tierLevel = tiers => Math.max(0, ...(tiers || []).filter(t => t.count > 0).map(t => t.level));
-
-// The lowest RV level whose facilities and modules cover everything in `input`, for Advanced
-// mode, where the player enters what they have rather than their RV level.
-function homeLevelCovering(input) {
-    for (let level = 1; level <= MAX_HOME_LEVEL; level++) {
-        const allowed = simpleSetup(level);
-        const facilitiesFit = FACILITIES.every(f => {
-            const have = input.facilities[f.name];
-            if (tierCount(have) === 0) return true;
-            const cap = allowed.facilities[f.name];
-            return tierCount(have) <= tierCount(cap) && (f.hasLevels === false || tierLevel(have) <= tierLevel(cap));
-        });
-        const modulesFit = Object.entries(input.modules).every(([name, level_]) => level_ <= (allowed.modules[name] ?? 0));
-        if (facilitiesFit && modulesFit) return level;
-    }
-    return MAX_HOME_LEVEL;
-}
+// The cards' side solver (see solve.js and featureContext), which the page's ranking shares: two
+// plan or ranking workers at most, fewer on small machines, leaving cores for the page, the plan's
+// own worker and the layout's. HiGHS gives up after 30 s of wall-clock time per solve.
+const sideSolver = createSolver({ workerUrl: WORKER_URL, maxWorkers: Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 4) - 3)) });
 
 // Every change within reach of `base` (a plan input), as `{ label, input, group }`. Changes
 // sharing a `group` are one thing taken further and further (a module at each level up to what
@@ -1879,7 +1816,7 @@ function improvementCandidates(base, setup) {
         // One of the player's own Aniimo at a higher level, in each ability it has that matters
         // here. Of several alike, just one is trained up, on a card of its own.
         base.roster.members.forEach((member, i) => {
-            const who = roster[i]?.name.trim() ? escapeText(roster[i].name.trim()) : `${rosterLabel(roster[i] || member, i)} Aniimo`;
+            const who = roster[i]?.name.trim() ? roster[i].name.trim() : `${rosterLabel(roster[i] || member, i)} Aniimo`;
             for (const [ability, level] of Object.entries(member.abilities).filter(([a]) => abilities.has(a))) {
                 for (const next of levelsAbove(level, defaultLevelFor(ability))) {
                     const trained = { ...member, count: 1, abilities: { ...member.abilities, [ability]: next } };
@@ -1912,7 +1849,7 @@ function improvementCandidates(base, setup) {
     // Advanced mode: a module at a higher level, one more facility, or one facility at a higher
     // level, within what the RV level covering the rest allows.
     if (planContext && !planContext.simple) {
-        const allowed = simpleSetup(homeLevelCovering(base));
+        const allowed = simpleSetup(coveringHomeLevel(base, pageConfig()));
         for (const [module, level] of Object.entries(base.modules)) {
             for (const next of levelsAbove(level, allowed.modules[module] ?? 0)) {
                 candidates.push({
@@ -1967,11 +1904,11 @@ function rankImprovementsFor(setup) {
     }
     setStep('improve', 'start');
     const base = { ...lastPlanInput, ...aniimoInput(setup) };
-    const measure = rankMeasure();
+    const measure = measureFor(lastPlanInput, planContext);
     const candidates = improvementCandidates(base, setup);
     ranking = {
         setup, measure, candidates, base: null, results: [], done: false,
-        homeLevel: planContext?.simple ? null : homeLevelCovering(base),
+        homeLevel: planContext?.simple ? null : coveringHomeLevel(base, pageConfig()),
     };
     renderImprovements();
     if (candidates.length === 0) {
@@ -1981,59 +1918,48 @@ function rankImprovementsFor(setup) {
         setStep('improve', 'done', 'nothing to check');
         return;
     }
-    const runId = rankRunId;
     const current = ranking;
-    // The candidates dealt out across the workers, each keeping their place in the list.
-    const shares = Array.from({ length: Math.min(RANK_WORKERS, candidates.length) }, () => []);
-    candidates.forEach((candidate, i) => shares[i % shares.length].push(i));
-    let running = shares.length;
-    let failed = false;
-    rankWorkers = shares.map(indices => {
-        const worker = new Worker(WORKER_URL, { type: 'module' });
-        worker.onmessage = (event) => {
-            if (runId !== rankRunId) return;
-            const { type, count: result, ok } = event.data;
-            if (type === 'progress') {
-                if (result.index === -1) current.base ||= result;
-                else current.results[indices[result.index]] = result;
-                setStep('improve', 'start', `${current.results.filter(Boolean).length} of ${candidates.length}`);
-            } else {
-                if (!ok) console.warn('Ranking changes failed:', event.data.error);
-                finish(!ok);
-            }
-            if (ranking === current) renderImprovements();
-        };
-        let finished = false;
-        const finish = (fail) => {
-            if (finished) return;
-            finished = true;
-            failed ||= fail;
-            worker.terminate();
-            if (--running === 0) {
-                current.done = true;
-                if (!failed) rankingsBySetup[setup] = current;
-                setStep('improve', failed ? 'fail' : 'done', `${candidates.length} changes`);
-                rankWorkers = [];
-            }
-        };
-        worker.onerror = (event) => {
-            if (runId !== rankRunId) return;
-            console.warn('Ranking changes failed:', event.message || event);
-            finish(true);
-            if (ranking === current) renderImprovements();
-        };
-        worker.postMessage({
-            id: 1,
-            type: 'rank_improvements',
+    const runId = planRunId;
+    const controller = new AbortController();
+    rankAbort = controller;
+    const show = () => {
+        if (ranking === current) renderImprovements();
+    };
+    const start = () => {
+        if (controller.signal.aborted || runId !== planRunId) return;
+        // Up to six changes a worker, each answer shown as it comes in. No timeout: it runs in the
+        // background until done, or until a newer plan or setup stops it.
+        sideSolver.rank(measure, base, candidates.map(c => c.input), {
             // The plan's own first solve is the plan as it stands, so no worker solves it again.
-            payload: JSON.stringify({ measure, base, candidates: indices.map(i => candidates[i].input), baseTop: plansBySetup[setup]?.measure_top }),
+            baseTop: plansBySetup[setup]?.measure_top,
+            workers: Math.ceil(candidates.length / 6),
+            background: true,
+            timeoutMs: 0,
+            signal: controller.signal,
+            onBase: result => {
+                current.base ||= result;
+                show();
+            },
+            onResult: (index, result) => {
+                current.results[index] = result;
+                setStep('improve', 'start', `${current.results.filter(Boolean).length} of ${candidates.length}`);
+                show();
+            },
+        }).then(outcome => {
+            if (outcome.cancelled || controller.signal.aborted) return;
+            if (rankAbort === controller) rankAbort = null;
+            current.done = true;
+            // Kept for this setup only when every share finished (solve.js has logged a failure).
+            if (!outcome.failed && !outcome.timedOut) rankingsBySetup[setup] = current;
+            setStep('improve', outcome.failed ? 'fail' : 'done', `${candidates.length} changes`);
+            show();
         });
-        return worker;
-    });
+    };
+    // After the plan has painted, so the ranking's workers never hold up the page showing it.
+    // A hidden tab never paints (requestAnimationFrame waits until it is shown), so it starts at once.
+    if (document.hidden) setTimeout(start, 0);
+    else requestAnimationFrame(() => setTimeout(start, 0));
 }
-
-// The smallest gain worth showing (see `RANK_MIN_GAIN` in worker.js).
-const RANK_MIN_GAIN = 1e-3;
 
 // How a change compares with the plan, or null if it doesn't help: `{ score, text }`, with
 // `score` ordering changes that move the measure ahead of those that only earn more Home Coins.
@@ -2070,8 +1996,6 @@ function improvementGain(result) {
     }
     return null;
 }
-
-const PACE_UNIT_SECONDS = 86400;
 
 function formatPercent(share) {
     const percent = share * 100;
@@ -2110,7 +2034,7 @@ function renderImprovements() {
     // the list open if the player opened it.
     const open = !!document.querySelector('#improve-list .improve-checked')?.open;
     document.getElementById('improve-list').innerHTML = improvementsChecked(best, status, open) + (rows.length
-        ? `<ol class="improve-list">${rows.map(r => `<li><span class="improve-name">${r.candidate.label}</span><span class="improve-gain">${r.gain.text}</span></li>`).join('')}</ol>`
+        ? `<ol class="improve-list">${rows.map(r => `<li><span class="improve-name">${escapeText(r.candidate.label)}</span><span class="improve-gain">${r.gain.text}</span></li>`).join('')}</ol>`
         : '');
 }
 
@@ -2139,7 +2063,7 @@ function improvementsChecked(best, status, open) {
             ? `<span class="improve-gain">${found.candidate.level != null && levels.length > 1 ? `Lv.${found.candidate.level}: ` : ''}${found.gain.text}</span>`
             : `<span class="improve-none">${done ? 'no gain' : 'checking…'}</span>`;
         if (!kinds.has(group.kind)) kinds.set(group.kind, []);
-        kinds.get(group.kind).push(`<li><span>${name}</span>${outcome}</li>`);
+        kinds.get(group.kind).push(`<li><span>${escapeText(name)}</span>${outcome}</li>`);
     }
     return `<details class="explain improve-checked"${open ? ' open' : ''}><summary>${status}</summary>${[...kinds]
         .map(([kind, items]) => `<p class="assume-title">${kind}</p><ul class="improve-checked-list">${items.join('')}</ul>`)
@@ -2302,9 +2226,9 @@ function homelandPlots() {
 }
 
 // The RV level the layout is for: the one given in Simple mode, else the lowest that allows
-// everything entered (see `homeLevelCovering`).
+// everything entered (`coveringHomeLevel` in plan-summary.js).
 function layoutHomeLevel() {
-    return isSimpleMode() ? selectedHomeLevel() : homeLevelCovering(lastPlanInput);
+    return isSimpleMode() ? selectedHomeLevel() : coveringHomeLevel(lastPlanInput, pageConfig());
 }
 
 function attachLayoutHandlers() {
@@ -2848,17 +2772,7 @@ function newRosterAniimo(abilities = {}, personalities = null) {
 // Facilities whose Aniimo lives there: every Aniimo Materials facility.
 const RESIDENT_FACILITIES = new Set(FACILITIES.filter(f => f.category === 'Aniimo Materials').map(f => f.name));
 
-// The roster for the solver (see `JsRoster` in wasm.rs).
-function rosterPayload() {
-    return {
-        members: roster.map(a => ({ count: a.count, abilities: a.abilities, personalities: a.personalities })),
-        residents: [...RESIDENT_FACILITIES],
-        environment: ENVIRONMENT_BUILDING_ABILITY,
-        personalities: Object.fromEntries(FACILITIES.filter(f => f.personality).map(f => [f.name, f.personality])),
-    };
-}
-
-const escapeText = text => String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const escapeText = escapeHtml;
 
 // A card's name: what the player called it, else its abilities.
 function rosterLabel(aniimo, i) {
@@ -3042,12 +2956,6 @@ function renderRosterSummary(plan) {
 // where there's no RV level to go by. While it's on, plans may use the season's recipes, bar Recipe
 // Notes the player hasn't unlocked, and say how much Moonray Wheat their seeds use.
 
-// The Moonray Wheat a day the player can spend on seeds, or `null` when blank (no limit).
-function seasonCurrencyPerDay() {
-    const value = document.getElementById('season-currency-per-day').value.trim();
-    return value !== '' && Number(value) >= 0 ? Number(value) : null;
-}
-
 function seasonAvailable() {
     return !isSimpleMode() || selectedHomeLevel() >= SEASON.minHomeLevel;
 }
@@ -3074,15 +2982,6 @@ function attachSeasonHandlers() {
         if (e.target.checked) unlockedSpecial.add(name); else unlockedSpecial.delete(name);
         saveInputsToStorage();
     });
-}
-
-// Every recipe plans may not use: the player's skips and any special recipe not unlocked.
-function excludedRecipes() {
-    const locked = [...SPECIAL_RECIPES, ...SEASON.recipeNotes].map(r => r.name).filter(name => !unlockedSpecial.has(name));
-    // Going for Aniipods means the best tier only; the others would be cheaper but catch worse.
-    const best = wantsAniipods() ? bestAniipod() : null;
-    const lesser = best ? ANIIPOD_TIERS.filter(name => name !== best) : [];
-    return [...new Set([...skippedRecipes, ...locked, ...lesser])];
 }
 
 // --- Recipes to skip -------------------------------------------------------------------
@@ -3204,14 +3103,6 @@ function attachSkipHandlers() {
 // What the player has toward a level-up, by item name ('coins' for coins).
 let levelUpStock = {};
 
-// The highest ability level an Aniimo reaches, and the abilities that stop short of it; mirrors
-// `MAX_ANIIMO_LEVEL` and `ABILITY_DEFAULTS` in models.rs.
-const MAX_ANIIMO_LEVEL = 4;
-// Abilities to assume less of unless the player says otherwise: there is no level-4 Perfumery
-// Aniimo in the game yet, so one isn't assumed, but a player who has one can say so.
-const ABILITY_DEFAULTS = { Perfumery: 3 };
-const defaultLevelFor = ability => ABILITY_DEFAULTS[ability] ?? MAX_ANIIMO_LEVEL;
-
 // Which abilities a level matters for: the ones a facility works with, since a crop's grow time
 // is fixed and an environment building's Aniimo level isn't known to change anything. Largest
 // first so the list reads in the game's ability order.
@@ -3224,13 +3115,12 @@ function levelledAbilities() {
 // as level 4; the game's own ceiling applies on top (see `max_level_for` in models.rs).
 let aniimoLevels = {};
 
-// What to send the solver for `setup`: the per-ability levels, or the player's roster (see
-// `aniimo_setup_from` and `JsRoster` in wasm.rs).
+// What to send the solver for `setup` (a selectedAniimoSetup() key): the per-ability levels, or the
+// player's roster (see `aniimo_setup_from` and `JsRoster` in wasm.rs), from the saved inputs as
+// setup-input.js reads them, so the page and the cards build it the same way.
 function aniimoInput(setup) {
-    if (setup.startsWith('roster')) return { aniimo: 'roster', roster: rosterPayload(), aniimo_levels: {} };
-    const levels = {};
-    levelledAbilities().forEach(ability => { levels[ability] = bestAniimoLevel(ability); });
-    return { aniimo: setup.split(':')[0], aniimo_levels: levels };
+    const tab = setup.startsWith('roster') ? 'custom' : setup === 'minimum' ? 'minimum' : 'best';
+    return aniimoInputFromSetup(currentConfig(), pageConfig(), tab);
 }
 
 function bestAniimoLevel(ability) {
@@ -3302,14 +3192,12 @@ function isLevelUpStrategy() {
 // What the Priorities strategy can go for, and the player's ranking of it. The plan makes as much
 // of each ticked one as the ones above it allow, then earns coins with what's left (see
 // `JsPlanInput::priorities` in wasm.rs).
-const PRIORITY_TARGETS = [
-    { id: 'coins', label: 'Home Coins' },
-    { id: 'aniimo_exp', label: 'Aniimo EXP' },
-    { id: 'aniipods', label: 'Aniipods' },
-    { id: 'Wood Blocks', label: 'Wood Blocks' },
-    { id: 'Mineral Sand', label: 'Mineral Sand' },
-    { id: 'season_points', label: SEASON.points, season: true },
-];
+// The ids and which are seasonal live in shared.js; the page adds the names it shows.
+const PRIORITY_LABELS = {
+    coins: 'Home Coins', aniimo_exp: 'Aniimo EXP', aniipods: 'Aniipods',
+    'Wood Blocks': 'Wood Blocks', 'Mineral Sand': 'Mineral Sand', season_points: SEASON.points,
+};
+const PRIORITY_TARGETS = PRIORITY_IDS.map(t => ({ ...t, label: PRIORITY_LABELS[t.id] }));
 
 // Drawn arrows rather than the ↑/↓ characters, which some systems render as colored emoji.
 const ARROW_UP = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M6 2.5 L10 7 H2 Z" fill="currentColor"/></svg>';
@@ -3524,16 +3412,6 @@ function attachStrategyHandlers() {
     });
 }
 
-// The level-up the solver should plan for (see `JsPlanInput::level_up` in wasm.rs), or null.
-function levelUpInput() {
-    if (!isLevelUpStrategy() || levelUpUnavailable()) return null;
-    const cost = levelUpCost();
-    return {
-        cost: [['coins', cost.coins], ...cost.items],
-        stock: stockNames(cost).filter(name => stockAmount(name) > 0).map(name => [name, stockAmount(name)]),
-    };
-}
-
 // A per-second rate as a per-hour figure, with a decimal when it's small.
 function perHour(perSecond) {
     const hourly = perSecond * 3600;
@@ -3712,51 +3590,15 @@ function renderProfitBreakdown(plan) {
 // Get plan-level input values from the form (facilities/modules/prioritize-byproducts, nothing
 // goal-related, since find_plan doesn't need a target). Currency is always coins: the full
 // release removed Bud Tickets, the only other sellable currency.
+// The saved inputs (currentConfig(), with `facilityTiers` the live source of truth for owned
+// counts) read by setup-input.js's planInputFromSetup, the same function the cards use, so there is
+// one copy of the rules. The Aniimo half is left out: aniimoInput adds it per setup.
 function getPlanInputValues() {
-    // `facilityTiers` is the live source of truth for owned counts (kept in sync with the DOM by
-    // `attachFacilityTierHandlers`), sent straight through as a list of tiers per facility; see
-    // `JsPlanInput::facilities` in wasm.rs for the shape (`[{count, level}, ...]` per facility).
-    if (isSimpleMode()) {
-        const { facilities, modules } = simpleSetup(selectedHomeLevel());
-        return {
-            currency: 'coins',
-            priorities: activePriorities(),
-            prioritize_byproducts: false,
-            level_up: levelUpInput(),
-            exclude: excludedRecipes(),
-            season: seasonActive(),
-            season_currency_per_day: seasonCurrencyPerDay(),
-            facilities,
-            modules
-        };
-    }
-
-    const facilities = {};
-    FACILITIES.forEach(f => {
-        facilities[f.name] = facilityTiers[f.name].map(t => ({
-            count: t.count,
-            level: f.hasLevels === false ? 1 : t.level
-        }));
-    });
-
-    const modules = {
-        ecological_module: numberOrDefault(document.getElementById('ecological-module-level').value, 0),
-        kitchen_module: numberOrDefault(document.getElementById('kitchen-module-level').value, 0),
-        resource_detector: numberOrDefault(document.getElementById('resource-detector-level').value, 0),
-        crafting_module: numberOrDefault(document.getElementById('crafting-module-level').value, 0)
-    };
-
-    return {
-        currency: 'coins',
-        priorities: activePriorities(),
-        prioritize_byproducts: false,
-        level_up: levelUpInput(),
-        exclude: excludedRecipes(),
-        season: seasonActive(),
-        season_currency_per_day: seasonCurrencyPerDay(),
-        facilities,
-        modules
-    };
+    const input = planInputFromSetup(currentConfig(), pageConfig());
+    delete input.aniimo;
+    delete input.aniimo_levels;
+    delete input.roster;
+    return input;
 }
 
 // parseInt/parseFloat that fall back to `fallback` only when the input doesn't parse to a number
@@ -3949,13 +3791,6 @@ const ABILITIES = [
     { name: 'Perfumery', color: '#b877d9', about: 'Perfumes and incense' },
 ];
 const ABILITY_BY_NAME = new Map(ABILITIES.map(a => [a.name, a]));
-
-// The ability each environment building's Aniimo needs (confirmed in game).
-const ENVIRONMENT_BUILDING_ABILITY = {
-    'Heat Furnace': 'Fire',
-    'Cooling Unit': 'Ice',
-    'Sunlamp': 'Light',
-};
 
 // A colored ability tag, like the game's.
 function abilityTag(name) {
@@ -4937,7 +4772,7 @@ async function runFindPlan() {
     stopRanking();
     stopSetupSolve();
     stopLayout();
-    if (pendingWorkerRequests.size > 0) restartWorker();
+    if (channel.pending() > 0) restartWorker();
     try {
         const input = getPlanInputValues();
         lastPlanInput = input;
@@ -5292,21 +5127,33 @@ window.closeFacilitiesOnBackdrop = function(event) {
 }
 
 // --- Feature cards ------------------------------------------------------------------------
+// The page's constants in one object, the shape the cards' ctx.config has (see panels.js) and the
+// shared rules in plan-summary.js take. Made once: the structure overrides patch these objects in
+// place before anything asks (see loadStructureOverrides), so it never goes stale. Frozen at the top,
+// since the page and every card share this one object.
+let pageConfigMemo = null;
+function pageConfig() {
+    pageConfigMemo ||= Object.freeze({
+        FACILITIES, FACILITY_CATEGORIES, OUTPUT_CAPS, LEVEL_UP_COSTS, LEVEL_UP_CHAINS, MODULE_MAX_LEVELS, MAX_HOME_LEVEL,
+        ANIIMO_MAX, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, FACILITY_UPGRADE_COSTS, upgradeCost, simpleSetup,
+        abilities: ABILITIES.map(a => a.name),
+        modules: Object.keys(MODULE_MAX_LEVELS),
+        moduleNames: { ...MODULE_NAMES },
+    });
+    return pageConfigMemo;
+}
+
 // What every card's mount(el, ctx) gets; the full contract is in panels.js. The getters hand out
 // copies, so a card can't change the page's own state. `config` holds the page's own constants,
 // with the structure overrides already applied (a card's own import of facility-config.js would
 // be a second copy without them).
 function featureContext() {
     const copy = value => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
-    let allItems = null;
+    // Asked of the page's worker once; a failed ask (e.g. cancelled by a newer Calculate) is asked
+    // again next time.
+    const allItems = onceUntilFailed(() => callWorker('get_all_items').then(JSON.parse));
     return {
-        config: {
-            FACILITIES, FACILITY_CATEGORIES, OUTPUT_CAPS, LEVEL_UP_COSTS, LEVEL_UP_CHAINS, MODULE_MAX_LEVELS, MAX_HOME_LEVEL,
-            ANIIMO_MAX, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, FACILITY_UPGRADE_COSTS, upgradeCost, simpleSetup,
-            abilities: ABILITIES.map(a => a.name),
-            modules: Object.keys(MODULE_MAX_LEVELS),
-            moduleNames: { ...MODULE_NAMES },
-        },
+        config: pageConfig(),
         on,
         last,
         getSetup: () => copy(currentConfig()),
@@ -5318,19 +5165,11 @@ function featureContext() {
         getReminderSettings: () => readReminderSettings(),
         isSimple: () => isSimpleMode(),
         homeLevel: () => selectedHomeLevel(),
-        // Asked of the page's worker once; a failed ask (e.g. cancelled by a newer Calculate) is
-        // asked again next time.
-        items: () => {
-            allItems ||= callWorker('get_all_items').then(JSON.parse).catch(error => {
-                allItems = null;
-                throw error;
-            });
-            return allItems.then(copy);
-        },
+        items: () => allItems().then(copy),
         saveSnapshot: note => snapshotNow(typeof note === 'string' ? note : undefined),
-        // Two solve slots at most, fewer on small machines: the page's own ranking already uses
-        // hardwareConcurrency - 3 workers, and HiGHS gives up after 30 s of wall-clock time.
-        solver: createSolver({ workerUrl: WORKER_URL, maxWorkers: Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 4) - 3)) }),
+        // The page's own side solver (see sideSolver): the cards' requests go ahead of the page's
+        // background ranking.
+        solver: sideSolver,
         format: { number: formatNumber, duration: formatDuration, item: prettyItem, escape: escapeText, perHour },
         addStylesheet,
     };
@@ -5346,7 +5185,9 @@ async function initApp() {
         document.getElementById('share-config-status').textContent = 'This share link is invalid. Your saved setup was kept.';
         console.warn('Could not load shared config:', error);
     }
-    const savedData = sharedData ? migrateSavedConfig(sharedData) : readStorage();
+    // A save made under older names is carried forward (migrateSetup in setup-input.js), so a
+    // returning player keeps their inputs across a rename.
+    const savedData = sharedData ? migrateSetup(sharedData) : readStorage();
     initFacilityTiers(savedData);
     renderFacilityCards();
     populateHomeLevels();

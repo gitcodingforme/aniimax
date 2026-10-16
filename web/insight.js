@@ -2,7 +2,7 @@
 // snapshots, and guesses at the reasons. Pure functions only (no DOM, no storage); tested in
 // tests/insight.test.mjs; web/cards/insight.js draws it. The app cannot see the game, so every
 // reason here is a guess from the plan and from gaps in the watcher's readings, never a measurement.
-import { batchesUntilFull, effectiveCycle, outputCap, pretty } from './reminders.js?v=fork-m9-2';
+import { batchesUntilFull, effectiveCycle, outputCap, pretty } from './reminders.js?v=fork-m10-1';
 
 export const MIN_INTERVAL_MINUTES = 30;
 export const WATERING_LOSS = 0.25; // two waterings of an eighth of the grow time each

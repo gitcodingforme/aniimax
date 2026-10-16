@@ -1,0 +1,15 @@
+{
+  "facilityTiers": {},
+  "levelUpStock": {},
+  "skippedRecipes": [],
+  "unlockedSpecial": [],
+  "priorities": [{ "target": "coins", "on": true }],
+  "aniimoLevels": {},
+  "roster": [],
+  "target-amount": "1000", "current-amount": "0",
+  "strategy-level-up": true, "strategy-priorities": false, "level-up-target": "2",
+  "mode-simple": true, "mode-advanced": false, "home-level": "5",
+  "ecological-module-level": "0", "kitchen-module-level": "0", "resource-detector-level": "0", "crafting-module-level": "0",
+  "rate-unit": "hour", "season-on": false, "layout-sim-on": true, "season-currency-per-day": "",
+  "aniimo-best": true, "aniimo-minimum": false, "aniimo-custom": false
+}

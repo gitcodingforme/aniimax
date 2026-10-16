@@ -1,6 +1,6 @@
 // Roster advisor: for a player planning with "My Aniimo" (their own roster), which Aniimo is the
 // weakest link and which change to the team would help most. Pure functions only (no DOM, no
-// storage, no imports but plan-summary.js); the card is web/cards/roster-advisor.js and the tests
+// storage, no imports but plan-summary.js and shared.js); the card is web/cards/roster-advisor.js and the tests
 // are tests/roster-advisor.test.mjs.
 //
 // Inputs are plan inputs as the 'plan' topic carries them (planSnapshot in app.js). In My Aniimo
@@ -14,22 +14,19 @@
 // src/exact.rs, so the level-up takes 86400 / top seconds). `coins` ({ base, value }, per second)
 // comes only when the measure doesn't move: the most Home Coins while keeping it.
 
-import { playerHomeLevel } from './plan-summary.js?v=fork-m9-2';
+import { playerHomeLevel } from './plan-summary.js?v=fork-m10-1';
+import { ABILITY_DEFAULTS, PACE_UNIT_SECONDS, RANK_MIN_GAIN } from './shared.js?v=fork-m10-1';
 
-// The smallest change worth showing, as a share of the base (RANK_MIN_GAIN in worker.js).
-export const ADVISOR_MIN_GAIN = 1e-3;
-export const PACE_UNIT_SECONDS = 86400;
-// Abilities whose top level in game is below the usual 4 (ABILITY_DEFAULTS in app.js).
-export const ABILITY_CAPS = { Perfumery: 3 };
+// What a change is measured by, and the level-up pace unit: shared.js's, passed on for the card
+// and the tests.
+export { PACE_UNIT_SECONDS, measureFor } from './shared.js?v=fork-m10-1';
+
+// The smallest change worth showing, as a share of the base (RANK_MIN_GAIN in shared.js).
+export const ADVISOR_MIN_GAIN = RANK_MIN_GAIN;
+// Abilities whose top level in game is below the usual 4 (ABILITY_DEFAULTS in shared.js).
+export const ABILITY_CAPS = ABILITY_DEFAULTS;
 // The ability that waters crops and trees (WATERING_ABILITY in src/models.rs); it only speeds them up.
 export const WATERING_ABILITY = 'Water';
-
-// What a change is measured by (rankMeasure in app.js): level-up time for a level-up plan that
-// can be worked toward, else the first ranked priority, else Home Coins.
-export function measureFor(input, context) {
-    if (context?.levelUp && !context.unavailable && !context.ready) return 'level_up';
-    return (input?.priorities || [])[0] || 'coins';
-}
 
 const MEASURE_LABELS = { coins: 'Home Coins', level_up: 'level-up time', aniimo_exp: 'Aniimo EXP', aniipods: 'Aniipods' };
 export function measureLabel(measure, seasonPoints = 'season points') {

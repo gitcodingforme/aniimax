@@ -12,12 +12,15 @@
 const values = new Map();
 const listeners = new Map();
 
-// Calls one listener; one that throws is logged and the others still run.
+// Calls one listener; one that throws is logged and the others still run. An async listener's
+// rejection is logged the same way, instead of surfacing as an unhandled rejection.
 function deliver(topic, fn, value) {
+    const warn = error => console.warn(`A listener for "${topic}" failed:`, error);
     try {
-        fn(value);
+        const result = fn(value);
+        if (result && typeof result.then === 'function') result.then(undefined, warn);
     } catch (error) {
-        console.warn(`A listener for "${topic}" failed:`, error);
+        warn(error);
     }
 }
 

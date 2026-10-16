@@ -10,12 +10,13 @@
 // Pure logic lives in web/<name>.js, styles in web/css/<name>.css loaded with
 // ctx.addStylesheet('css/<name>.css'), tests in tests/<name>.test.mjs (node:test, assert/strict).
 // Logic modules import only pure modules (reminders.js, history.js, profile.js, plan-summary.js,
-// share-config.js, setup-input.js) and take data and solver functions as arguments. facility-config.js is NOT
+// share-config.js, setup-input.js, and shared.js, the one copy of each rule the page and the
+// worker use too) and take data and solver functions as arguments. facility-config.js is NOT
 // imported: use ctx.config, which holds the copies with data/overrides/structure.json applied
 // (a second import would be a second, unpatched copy). Never import app.js, i18n.js or bus.js
 // either: use ctx.on / ctx.last.
-// Every relative import carries the same ?v= tag as app.js (today ?v=fork-m9-2); from
-// web/cards/ that is e.g. `import { summarizePlan } from '../plan-summary.js?v=fork-m9-2';`.
+// Every relative import carries the same ?v= tag as app.js (today ?v=fork-m10-1); from
+// web/cards/ that is e.g. `import { summarizePlan } from '../plan-summary.js?v=fork-m10-1';`.
 // Ids and input names inside a card are prefixed with the card name (`roadmap-target`).
 // Every localStorage access sits in try/catch. Never start a solve without a click; on a new
 // 'plan' value mark results stale, do not re-solve. Write plain English: the page translates
@@ -34,11 +35,12 @@
 //   getCoinSeries() (watcher coin points), getTimers() (running reminders or null),
 //   getReminderSettings(), isSimple(), homeLevel() (the RV level input),
 //   items() (Promise of the worker's get_all_items, parsed), saveSnapshot(note) -> snapshot|null,
-//   solver: createSolver({ workerUrl }) from solve.js, shared by every card (two plan and ranking
-//     workers at most, queued beyond that, plus one time_to_reach helper of its own that never
-//     waits for them and is stopped after 60 s idle):
+//   solver: createSolver({ workerUrl }) from solve.js, shared by every card and the page's own
+//     Opportunities ranking (two plan and ranking workers at most, queued beyond that, the page's
+//     background ranking behind the cards' requests, plus one time_to_reach helper of its own that
+//     never waits for them and is stopped after 60 s idle):
 //     findPlan(input, { onProgress, timeoutMs = 300000, signal }), rank(measure, base, inputs,
-//     { onResult, onBase, baseTop, workers, timeoutMs = 300000, signal }),
+//     { onResult, onBase, baseTop, workers, timeoutMs = 300000, signal, background }),
 //     timeOver(plan, seconds, { timeoutMs = 60000, signal }),
 //     timeTo(plan, target, current, { timeoutMs = 60000, signal }); a timed-out or cancelled time
 //     request rejects with Error('timed out') or Error('cancelled') and replaces the helper,

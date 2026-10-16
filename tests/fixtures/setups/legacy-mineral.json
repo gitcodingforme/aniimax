@@ -1,0 +1,13 @@
+{
+  "facilityTiers": {
+    "Farmland": [{ "count": 5, "level": 2 }],
+    "Mineral Pile": [{ "count": 2, "level": 3 }]
+  },
+  "levelUpStock": { "coins": 1000 },
+  "skippedRecipes": [],
+  "unlockedSpecial": [],
+  "home-level": "4",
+  "mineral-detector-level": "2",
+  "ecological-module-level": "1",
+  "strategy-level-up": true
+}

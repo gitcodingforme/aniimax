@@ -3,10 +3,10 @@
 // next RV level. The other side lives in memory only; nothing of it is stored. Logic in
 // web/compare.js and web/setup-input.js; the card contract is in web/panels.js.
 
-import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText, NOTHING_LOADED, planMoved, shouldStop } from '../compare.js?v=fork-m9-2';
-import { aniimoTabOf, differingKeys, planInputFromSetup } from '../setup-input.js?v=fork-m9-2';
-import { formatSeconds, setupHash } from '../history.js?v=fork-m9-2';
-import { readShareHash } from '../share-config.js?v=fork-m9-2';
+import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText, NOTHING_LOADED, planMoved, shouldStop } from '../compare.js?v=fork-m10-1';
+import { aniimoTabOf, differingKeys, planInputFromSetup } from '../setup-input.js?v=fork-m10-1';
+import { formatSeconds, setupHash } from '../history.js?v=fork-m10-1';
+import { readShareHash } from '../share-config.js?v=fork-m10-1';
 
 const MAX_FILE_BYTES = 2_000_000;
 

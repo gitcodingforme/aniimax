@@ -1,6 +1,6 @@
 // "Streaks and milestones" card: snapshot streaks, first day of each RV level, personal bests.
 // Reads the history through ctx; stores nothing.
-import { chips, localDay, summarize } from '../streaks.js?v=fork-m9-2';
+import { chips, localDay, summarize } from '../streaks.js?v=fork-m10-1';
 
 const MAX_MILESTONES = 8;
 

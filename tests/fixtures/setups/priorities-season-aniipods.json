@@ -1,0 +1,23 @@
+{
+  "facilityTiers": {
+    "Farmland": [{ "count": 10, "level": 6 }],
+    "Aniipod Maker": [{ "count": 1, "level": 2 }],
+    "Dance Pad Polisher": [{ "count": 1, "level": 2 }],
+    "Pickling Jar": [{ "count": 1, "level": 3 }]
+  },
+  "levelUpStock": {},
+  "skippedRecipes": ["aniipod"],
+  "unlockedSpecial": ["umbral_pickle"],
+  "priorities": [
+    { "target": "aniipods", "on": true }, { "target": "season_points", "on": true },
+    { "target": "coins", "on": true }, { "target": "aniimo_exp", "on": false }, { "target": "made_up", "on": true }
+  ],
+  "aniimoLevels": { "Lightning": 2 },
+  "roster": [],
+  "target-amount": "1000", "current-amount": "0",
+  "strategy-level-up": false, "strategy-priorities": true, "level-up-target": "13",
+  "mode-simple": false, "mode-advanced": true, "home-level": "12",
+  "ecological-module-level": "2", "kitchen-module-level": "2", "resource-detector-level": "1", "crafting-module-level": "1",
+  "rate-unit": "hour", "season-on": true, "layout-sim-on": true, "season-currency-per-day": " 40 ",
+  "aniimo-best": false, "aniimo-minimum": true, "aniimo-custom": false
+}

@@ -1,27 +1,27 @@
 // Turns a saved setup (the object currentConfig() in app.js returns, which is also what a profile,
-// a snapshot and a share link hold) into the input find_plan wants, without a page. It is a careful
-// COPY of what app.js does with the page's inputs; the compare card checks it against the page's
-// own input at run time (sameInput), so a drift in app.js shows up as a warning, not as quiet
-// wrong numbers. Pure functions only (no DOM); the config comes in as an argument (ctx.config).
-// Tested in tests/setup_input.test.mjs.
+// a snapshot and a share link hold) into the input find_plan wants, without a page. The page builds
+// its own plan input with these same functions (app.js getPlanInputValues and aniimoInput call
+// planInputFromSetup and aniimoInputFromSetup on currentConfig(), and readStorage calls
+// migrateSetup), so there is one copy; the compare card's sameInput check still guards it. Pure
+// functions only (no DOM); the config comes in as an argument (ctx.config, app.js pageConfig()).
+// Tested in tests/setup_input.test.mjs and, against the page's own load path, in
+// tests/plan_input_equivalence.test.mjs.
 //
-// Each helper names the app.js lines it mirrors (as of the m9 build; the numbers drift, the
-// function names do not). Not mirrored: the old "strategy-coins/exp/aniipods" saves from before
-// Priorities (app.js loadInputsFromStorage, ~533-538); they fall back to the default priorities.
+// Each helper names the app.js function whose page state it reads. Not handled here: the old
+// "strategy-coins/exp/aniipods" saves from before Priorities (app.js loadInputsFromStorage); the
+// page converts those when it loads one, and here they fall back to the default priorities.
+// The rules both files use (priority targets, Aniimo levels, environment abilities) are not
+// copied: they come from shared.js.
 
-// app.js numberOrDefault (~3756): parseInt that keeps a real 0.
+import { ENVIRONMENT_BUILDING_ABILITY, MAX_ANIIMO_LEVEL, PRIORITY_TARGETS, defaultLevelFor } from './shared.js?v=fork-m10-1';
+
+// app.js numberOrDefault: parseInt that keeps a real 0.
 function numberOrDefault(value, fallback) {
     const parsed = parseInt(value, 10);
     return Number.isNaN(parsed) ? fallback : parsed;
 }
 
-// app.js PRIORITY_TARGETS (~3275): what Priorities can rank; `season` ones show only while the season is on.
-const PRIORITY_TARGETS = [
-    { id: 'coins' }, { id: 'aniimo_exp' }, { id: 'aniipods' },
-    { id: 'Wood Blocks' }, { id: 'Mineral Sand' }, { id: 'season_points', season: true },
-];
-
-// app.js getPlanInputValues (~3708): advanced mode's module inputs, by the field that holds each.
+// Advanced mode's module inputs (index.html), by the field that holds each.
 const MODULE_FIELDS = {
     ecological_module: 'ecological-module-level',
     kitchen_module: 'kitchen-module-level',
@@ -29,23 +29,16 @@ const MODULE_FIELDS = {
     crafting_module: 'crafting-module-level',
 };
 
-// app.js ENVIRONMENT_BUILDING_ABILITY (~3924): the ability each environment building's Aniimo needs.
-const ENVIRONMENT_BUILDING_ABILITY = { 'Heat Furnace': 'Fire', 'Cooling Unit': 'Ice', 'Sunlamp': 'Light' };
-
-// app.js ABILITY_DEFAULTS and defaultLevelFor (~3182): no level-4 Perfumery Aniimo is assumed.
-const ABILITY_DEFAULTS = { Perfumery: 3 };
-const MAX_ANIIMO_LEVEL = 4;
-const defaultLevelFor = ability => ABILITY_DEFAULTS[ability] ?? MAX_ANIIMO_LEVEL;
-
-// facility-config.js PERSONALITY_PAIRS (~292): the first name of each pair is app.js's default.
+// facility-config.js PERSONALITY_PAIRS: the first name of each pair is app.js's default.
 const PERSONALITY_NAMES = [['Instinctive', 'Energetic'], ['Nimble', 'Practical'], ['Faithful', 'Tenacious'], ['Playful', 'Judicious']];
 
 const isObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
 
-// app.js migrateSavedConfig (~437): a setup without a mode but with facilities was hand-entered
-// (advanced); Mineral Pile became Mine; the Mineral Detector became the Resource Detector.
-// Works on a copy, so the caller's setup is never touched.
-function migrated(setup) {
+// A save made under older names carried forward (app.js readStorage and initApp load every save
+// through this): a setup without a mode but with facilities was hand-entered (advanced); Mineral
+// Pile became Mine; the Mineral Detector became the Resource Detector. Works on a copy, so the
+// caller's setup is never touched.
+export function migrateSetup(setup) {
     const data = { ...(isObject(setup) ? setup : {}) };
     if (data['mode-simple'] === undefined && data.facilityTiers) {
         data['mode-simple'] = false;
@@ -60,7 +53,7 @@ function migrated(setup) {
     return data;
 }
 
-// Which radio of a group is on after loadInputsFromStorage (~524-566) has set the saved
+// Which radio of a group is on after loadInputsFromStorage has set the saved
 // `checked` flags in field order, starting from index.html's default: a true wins over earlier
 // ones, a false turns off only the one that is on.
 function radioOn(data, ids, defaultId) {
@@ -73,13 +66,13 @@ function radioOn(data, ids, defaultId) {
     return on;
 }
 
-// app.js selectedHomeLevel (~1637): the RV select, MAX_HOME_LEVEL when blank or not an option.
+// app.js selectedHomeLevel: the RV select, MAX_HOME_LEVEL when blank or not an option.
 function rvOf(data, config) {
     const level = numberOrDefault(data['home-level'], config.MAX_HOME_LEVEL);
     return level >= 1 && level <= config.MAX_HOME_LEVEL ? level : config.MAX_HOME_LEVEL;
 }
 
-// app.js loadInputsFromStorage (~526-532): priorities keep their saved order; a target the page
+// app.js loadInputsFromStorage: priorities keep their saved order; a target the page
 // knows but the save lacks goes last, off. Unknown targets are dropped.
 function priorityOrderOf(data) {
     const saved = Array.isArray(data.priorities) ? data.priorities.filter(p => PRIORITY_TARGETS.some(t => t.id === p?.target)) : null;
@@ -88,19 +81,19 @@ function priorityOrderOf(data) {
     return [...saved.map(p => ({ target: p.target, on: !!p.on })), ...missing];
 }
 
-// app.js seasonAvailable / seasonActive (~3021-3027).
+// app.js seasonAvailable / seasonActive.
 function seasonActiveOf(data, config, simple, homeLevel) {
     const available = !simple || homeLevel >= config.SEASON.minHomeLevel;
     return available && !!data['season-on'];
 }
 
-// app.js seasonCurrencyPerDay (~3016): blank means no limit.
+// The Moonray Wheat a day the player can spend on seeds; blank means no limit.
 function seasonCurrencyOf(data) {
     const value = String(data['season-currency-per-day'] ?? '').trim();
     return value !== '' && Number(value) >= 0 ? Number(value) : null;
 }
 
-// app.js initFacilityTiers (~457) and getPlanInputValues (~3692-3699): the saved tiers per
+// app.js initFacilityTiers: the saved tiers per
 // facility (defaults for a missing one), a facility without levels always at level 1.
 function advancedFacilities(data, config) {
     const facilities = {};
@@ -116,9 +109,9 @@ function advancedFacilities(data, config) {
 
 // What a setup means for the plan, before strategy and Aniimo: `{ simple, homeLevel, facilities,
 // modules }`. Simple mode builds everything the RV level allows (facility-config.js simpleSetup);
-// advanced reads the saved tiers and module levels (app.js getPlanInputValues, ~3685-3712).
+// advanced reads the saved tiers and module levels (app.js initFacilityTiers).
 export function effectiveSetup(setup, config, { homeLevel = null } = {}) {
-    const data = migrated(setup);
+    const data = migrateSetup(setup);
     const simple = radioOn(data, ['mode-simple', 'mode-advanced'], 'mode-simple') === 'mode-simple';
     const rv = Number.isInteger(homeLevel) && homeLevel >= 1 ? homeLevel : rvOf(data, config);
     if (simple) return { simple, homeLevel: rv, ...config.simpleSetup(rv) };
@@ -127,7 +120,7 @@ export function effectiveSetup(setup, config, { homeLevel = null } = {}) {
     return { simple, homeLevel: rv, facilities: advancedFacilities(data, config), modules };
 }
 
-// app.js loadInputsFromStorage (~545-556): the roster as the page holds it after loading.
+// app.js loadInputsFromStorage: the roster as the page holds it after loading.
 function rosterOf(data, config) {
     if (!Array.isArray(data.roster)) return [];
     const known = new Set(config.abilities);
@@ -143,7 +136,7 @@ function rosterOf(data, config) {
         }));
 }
 
-// app.js loadInputsFromStorage (~540-544): the saved ability levels, 1 to 4 and known abilities only.
+// app.js loadInputsFromStorage: the saved ability levels, 1 to 4 and known abilities only.
 function aniimoLevelsOf(data, config) {
     if (!isObject(data.aniimoLevels)) return {};
     const known = new Set(config.abilities);
@@ -152,14 +145,14 @@ function aniimoLevelsOf(data, config) {
         .map(([ability, level]) => [ability, Number(level)]));
 }
 
-// app.js selectedSetupTab (~3212): which of Best, Minimum and My Aniimo the setup has on.
+// app.js selectedSetupTab: which of Best, Minimum and My Aniimo the setup has on.
 export function aniimoTabOf(setup) {
-    const on = radioOn(migrated(setup), ['aniimo-best', 'aniimo-minimum', 'aniimo-custom'], 'aniimo-best');
+    const on = radioOn(migrateSetup(setup), ['aniimo-best', 'aniimo-minimum', 'aniimo-custom'], 'aniimo-best');
     return on === 'aniimo-minimum' ? 'minimum' : on === 'aniimo-custom' ? 'custom' : 'best';
 }
 
-// app.js aniimoInput (~3199), levelledAbilities (~3188) and rosterPayload (~2822): the Aniimo half
-// of the input. 'custom' sends the roster, the others the per-ability levels.
+// The Aniimo half of the input (app.js levelledAbilities and bestAniimoLevel; JsRoster in
+// src/wasm.rs). 'custom' sends the roster, the others the per-ability levels.
 function aniimoInput(tab, data, config) {
     if (tab === 'custom') {
         return {
@@ -167,7 +160,7 @@ function aniimoInput(tab, data, config) {
             roster: {
                 members: rosterOf(data, config),
                 residents: config.FACILITIES.filter(f => f.category === 'Aniimo Materials').map(f => f.name),
-                environment: ENVIRONMENT_BUILDING_ABILITY,
+                environment: { ...ENVIRONMENT_BUILDING_ABILITY },
                 personalities: Object.fromEntries(config.FACILITIES.filter(f => f.personality).map(f => [f.name, f.personality])),
             },
             aniimo_levels: {},
@@ -180,14 +173,15 @@ function aniimoInput(tab, data, config) {
     return { aniimo: tab, aniimo_levels: levels };
 }
 
-// app.js bestAniipod (~3397): the best Aniipod the owned Aniipod Maker can make, or null.
+// app.js bestAniipod: the best Aniipod the owned Aniipod Maker can make, or null.
 function bestAniipodOf(eff, config) {
     const level = Math.max(0, ...(eff.facilities['Aniipod Maker'] || []).filter(t => t.count > 0).map(t => t.level));
     return level > 0 ? config.ANIIPOD_TIERS[Math.min(level, config.ANIIPOD_TIERS.length) - 1] : null;
 }
 
-// app.js levelUpTarget (~3406) and levelUpInput (~3498): the next RV level in simple mode, the
-// saved target in advanced (it follows RV + 1 until one is saved); null if its cost is unknown.
+// app.js levelUpTarget: the next RV level in simple mode, the saved target in advanced (it follows
+// RV + 1 until one is saved); null if its cost is unknown. Known edge: a saved target that is not
+// in LEVEL_UP_COSTS is used as it is here, while the page's select drops it and plans for RV 7.
 function levelUpOf(data, config, eff) {
     let target;
     if (eff.simple) target = eff.homeLevel + 1;
@@ -195,7 +189,7 @@ function levelUpOf(data, config, eff) {
     else target = config.LEVEL_UP_COSTS[eff.homeLevel + 1] ? eff.homeLevel + 1 : Number(Object.keys(config.LEVEL_UP_COSTS)[0]);
     const cost = config.LEVEL_UP_COSTS[target];
     if (target > config.MAX_HOME_LEVEL || !cost) return null;
-    // app.js stockNames (~3425) and stockAmount (~3434): coins, and each chain up to the tier needed.
+    // app.js stockNames and stockAmount: coins, and each chain up to the tier needed.
     const names = ['coins'];
     cost.items.forEach(([item]) => {
         const chain = config.LEVEL_UP_CHAINS.find(c => c.includes(item));
@@ -208,13 +202,13 @@ function levelUpOf(data, config, eff) {
     return { cost: [['coins', cost.coins], ...cost.items], stock: names.filter(name => amount(name) > 0).map(name => [name, amount(name)]) };
 }
 
-// The find_plan input for a saved setup (see app.js getPlanInputValues, ~3685, and planSnapshot,
-// ~197, which adds the Aniimo half). Options: `homeLevel` overrides the RV level, `aniimoTab`
+// The find_plan input for a saved setup (app.js getPlanInputValues sends this without its Aniimo
+// half, which aniimoInput adds per setup; planSnapshot shows both). Options: `homeLevel` overrides the RV level, `aniimoTab`
 // ('best', 'minimum' or 'custom') overrides the setup's own pick.
 export function planInputFromSetup(setup, config, { homeLevel = null, aniimoTab = null } = {}) {
-    const data = migrated(setup);
+    const data = migrateSetup(setup);
     const eff = effectiveSetup(data, config, { homeLevel });
-    // app.js activePriorities / shownPriorities (~3295-3303): only while Priorities is the strategy.
+    // app.js activePriorities / shownPriorities: only while Priorities is the strategy.
     const strategy = radioOn(data, ['strategy-level-up', 'strategy-priorities'], 'strategy-level-up');
     const season = seasonActiveOf(data, config, eff.simple, eff.homeLevel);
     const priorities = strategy === 'strategy-priorities'
@@ -222,8 +216,7 @@ export function planInputFromSetup(setup, config, { homeLevel = null, aniimoTab 
             .filter(p => season || !PRIORITY_TARGETS.find(t => t.id === p.target)?.season)
             .filter(p => p.on).map(p => p.target)
         : [];
-    // app.js excludedRecipes (~3050): skips, locked special recipes, and (when going for Aniipods)
-    // every Aniipod tier but the best one.
+    // Skips, locked special recipes, and (when going for Aniipods) every Aniipod tier but the best one.
     const unlocked = new Set(Array.isArray(data.unlockedSpecial) ? data.unlockedSpecial.filter(n => typeof n === 'string') : []);
     const skipped = Array.isArray(data.skippedRecipes) ? data.skippedRecipes.filter(n => typeof n === 'string') : [];
     const locked = [...config.SPECIAL_RECIPES, ...config.SEASON.recipeNotes].map(r => r.name).filter(name => !unlocked.has(name));
@@ -241,6 +234,30 @@ export function planInputFromSetup(setup, config, { homeLevel = null, aniimoTab 
         modules: eff.modules,
         ...aniimoInput(aniimoTab || aniimoTabOf(data), data, config),
     };
+}
+
+// What the player picked themselves in a saved setup, which the page then leaves alone (app.js
+// loadInputsFromStorage): `levelUpTargetChosen` when a level-up target is saved, RV + 1 has a
+// level-up cost, and the target is not RV + 1 (a saved RV + 1 is just the target having followed
+// the RV level); `rateUnitChosen` when the saved rate unit is not index.html's default 'second'
+// (currentConfig() saves the select every time, so its mere presence says nothing). Edge: a player
+// who picked 'second' on purpose can still be switched by the next plan. No saved flag of its
+// own, so the saved shape is unchanged.
+export function savedChoices(setup, config) {
+    const data = migrateSetup(setup);
+    const rv = rvOf(data, config);
+    const next = rv + 1;
+    const target = 'level-up-target' in data ? numberOrDefault(data['level-up-target'], NaN) : NaN;
+    return {
+        levelUpTargetChosen: 'level-up-target' in data && !!config.LEVEL_UP_COSTS?.[next] && target !== next,
+        rateUnitChosen: 'rate-unit' in data && data['rate-unit'] !== 'second' && data['rate-unit'] !== '',
+    };
+}
+
+// Just the Aniimo half of planInputFromSetup for `tab` ('best', 'minimum' or 'custom'):
+// `{ aniimo, aniimo_levels }`, plus `roster` for 'custom'.
+export function aniimoInputFromSetup(setup, config, tab) {
+    return aniimoInput(tab, migrateSetup(setup), config);
 }
 
 function stableJson(value) {

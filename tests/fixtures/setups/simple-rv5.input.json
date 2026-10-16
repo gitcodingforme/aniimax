@@ -1,0 +1,664 @@
+{
+  "best": {
+    "currency": "coins",
+    "priorities": [],
+    "prioritize_byproducts": false,
+    "level_up": {
+      "cost": [
+        [
+          "coins",
+          32000
+        ],
+        [
+          "wood_block",
+          1300
+        ],
+        [
+          "mineral_sand",
+          700
+        ]
+      ],
+      "stock": []
+    },
+    "exclude": [
+      "rose_shortbread",
+      "potato_kvass",
+      "ginseng_porridge",
+      "strawberry_candy",
+      "flowers_in_a_bottle",
+      "lotion",
+      "harvest_platter",
+      "umbral_pickle",
+      "umbral_hot_pot",
+      "umbral_sweet_and_spicy_sauce"
+    ],
+    "season": false,
+    "season_currency_per_day": null,
+    "facilities": {
+      "Farmland": [
+        {
+          "count": 12,
+          "level": 3
+        }
+      ],
+      "Woodland": [
+        {
+          "count": 6,
+          "level": 2
+        }
+      ],
+      "Mine": [
+        {
+          "count": 3,
+          "level": 1
+        }
+      ],
+      "Well": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Tidewhisper Sandcastle": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Dewy House": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Nimbus Bed": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Starfall Hammock": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Floral Windmill": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Heat Furnace": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Cooling Unit": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Sunlamp": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Carousel Mill": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Crafting Table": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Claw Game Cooker": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Jukebox Dryer": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Simmering Pot": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Phonolfactory Table": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Bouncy Brew Keg": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Blazing Stove": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Pickling Jar": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Joy Wheel Loom": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Dance Pad Polisher": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Aniipod Maker": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Woodworking Bench": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Chimney Kiln": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ]
+    },
+    "modules": {
+      "ecological_module": 1,
+      "kitchen_module": 2,
+      "resource_detector": 1,
+      "crafting_module": 1
+    },
+    "aniimo": "best",
+    "aniimo_levels": {
+      "Fire": 4,
+      "Water": 4,
+      "Earth": 4,
+      "Lightning": 4,
+      "Wind": 4,
+      "Dark": 4,
+      "Artisanship": 4,
+      "Leisure": 4,
+      "Perfumery": 3
+    }
+  },
+  "minimum": {
+    "currency": "coins",
+    "priorities": [],
+    "prioritize_byproducts": false,
+    "level_up": {
+      "cost": [
+        [
+          "coins",
+          32000
+        ],
+        [
+          "wood_block",
+          1300
+        ],
+        [
+          "mineral_sand",
+          700
+        ]
+      ],
+      "stock": []
+    },
+    "exclude": [
+      "rose_shortbread",
+      "potato_kvass",
+      "ginseng_porridge",
+      "strawberry_candy",
+      "flowers_in_a_bottle",
+      "lotion",
+      "harvest_platter",
+      "umbral_pickle",
+      "umbral_hot_pot",
+      "umbral_sweet_and_spicy_sauce"
+    ],
+    "season": false,
+    "season_currency_per_day": null,
+    "facilities": {
+      "Farmland": [
+        {
+          "count": 12,
+          "level": 3
+        }
+      ],
+      "Woodland": [
+        {
+          "count": 6,
+          "level": 2
+        }
+      ],
+      "Mine": [
+        {
+          "count": 3,
+          "level": 1
+        }
+      ],
+      "Well": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Tidewhisper Sandcastle": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Dewy House": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Nimbus Bed": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Starfall Hammock": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Floral Windmill": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Heat Furnace": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Cooling Unit": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Sunlamp": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Carousel Mill": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Crafting Table": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Claw Game Cooker": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Jukebox Dryer": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Simmering Pot": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Phonolfactory Table": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Bouncy Brew Keg": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Blazing Stove": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Pickling Jar": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Joy Wheel Loom": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Dance Pad Polisher": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Aniipod Maker": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Woodworking Bench": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Chimney Kiln": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ]
+    },
+    "modules": {
+      "ecological_module": 1,
+      "kitchen_module": 2,
+      "resource_detector": 1,
+      "crafting_module": 1
+    },
+    "aniimo": "minimum",
+    "aniimo_levels": {
+      "Fire": 4,
+      "Water": 4,
+      "Earth": 4,
+      "Lightning": 4,
+      "Wind": 4,
+      "Dark": 4,
+      "Artisanship": 4,
+      "Leisure": 4,
+      "Perfumery": 3
+    }
+  },
+  "custom": {
+    "currency": "coins",
+    "priorities": [],
+    "prioritize_byproducts": false,
+    "level_up": {
+      "cost": [
+        [
+          "coins",
+          32000
+        ],
+        [
+          "wood_block",
+          1300
+        ],
+        [
+          "mineral_sand",
+          700
+        ]
+      ],
+      "stock": []
+    },
+    "exclude": [
+      "rose_shortbread",
+      "potato_kvass",
+      "ginseng_porridge",
+      "strawberry_candy",
+      "flowers_in_a_bottle",
+      "lotion",
+      "harvest_platter",
+      "umbral_pickle",
+      "umbral_hot_pot",
+      "umbral_sweet_and_spicy_sauce"
+    ],
+    "season": false,
+    "season_currency_per_day": null,
+    "facilities": {
+      "Farmland": [
+        {
+          "count": 12,
+          "level": 3
+        }
+      ],
+      "Woodland": [
+        {
+          "count": 6,
+          "level": 2
+        }
+      ],
+      "Mine": [
+        {
+          "count": 3,
+          "level": 1
+        }
+      ],
+      "Well": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Tidewhisper Sandcastle": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Dewy House": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Nimbus Bed": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Starfall Hammock": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Floral Windmill": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Heat Furnace": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Cooling Unit": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Sunlamp": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Carousel Mill": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Crafting Table": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Claw Game Cooker": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Jukebox Dryer": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Simmering Pot": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Phonolfactory Table": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Bouncy Brew Keg": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Blazing Stove": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Pickling Jar": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Joy Wheel Loom": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Dance Pad Polisher": [
+        {
+          "count": 1,
+          "level": 2
+        }
+      ],
+      "Aniipod Maker": [
+        {
+          "count": 1,
+          "level": 1
+        }
+      ],
+      "Woodworking Bench": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ],
+      "Chimney Kiln": [
+        {
+          "count": 0,
+          "level": 1
+        }
+      ]
+    },
+    "modules": {
+      "ecological_module": 1,
+      "kitchen_module": 2,
+      "resource_detector": 1,
+      "crafting_module": 1
+    },
+    "aniimo": "roster",
+    "roster": {
+      "members": [],
+      "residents": [
+        "Tidewhisper Sandcastle",
+        "Dewy House",
+        "Nimbus Bed",
+        "Starfall Hammock",
+        "Floral Windmill"
+      ],
+      "environment": {
+        "Heat Furnace": "Fire",
+        "Cooling Unit": "Ice",
+        "Sunlamp": "Light"
+      },
+      "personalities": {
+        "Mine": "Playful",
+        "Well": "Faithful",
+        "Tidewhisper Sandcastle": "Judicious",
+        "Dewy House": "Instinctive",
+        "Nimbus Bed": "Judicious",
+        "Starfall Hammock": "Faithful",
+        "Floral Windmill": "Nimble",
+        "Carousel Mill": "Tenacious",
+        "Crafting Table": "Judicious",
+        "Claw Game Cooker": "Practical",
+        "Jukebox Dryer": "Nimble",
+        "Simmering Pot": "Tenacious",
+        "Phonolfactory Table": "Instinctive",
+        "Bouncy Brew Keg": "Energetic",
+        "Blazing Stove": "Nimble",
+        "Pickling Jar": "Playful",
+        "Joy Wheel Loom": "Faithful",
+        "Woodworking Bench": "Energetic",
+        "Chimney Kiln": "Practical"
+      }
+    },
+    "aniimo_levels": {}
+  }
+}

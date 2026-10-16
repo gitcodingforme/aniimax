@@ -2,8 +2,9 @@
 // running it on the main thread would freeze the page's own rendering, which is what makes the
 // browser offer to kill the tab; every wasm call is dispatched through here instead, so the main
 // thread stays free to paint a progress indicator while a solve is in flight. See `web/app.js`'s
-// `callWorker` for the request/response contract this expects.
+// `callWorker` and solve.js's createChannel for the request/response contract this expects.
 import highsModule from './vendor/highs/highs.mjs';
+import { RANK_MIN_GAIN, onceUntilFailed } from './shared.js?v=fork-m10-1';
 
 // The page starts this worker as `worker.js?load=<page load time>` (see app.js), and the wasm
 // module is loaded with the same query and a revalidated fetch, so a page never pairs new page
@@ -21,16 +22,14 @@ const ready = import('./pkg/aniimax.js' + load).then(async (pkg) => {
 const HANDLER_NAMES = ['time_to_reach', 'get_version', 'get_all_items'];
 
 // HiGHS (https://highs.dev), compiled to WebAssembly. A fresh instance per solve, from bytes
-// fetched once, so one failed solve can't leave a broken instance behind for the next.
-let highsBytes = null;
+// fetched once, so one failed solve can't leave a broken instance behind for the next. A failed
+// fetch (offline, a deploy in progress) is not kept: the next solve fetches again.
+const highsBytes = onceUntilFailed(() => fetch(new URL('./vendor/highs/highs.wasm', import.meta.url)).then(r => {
+    if (!r.ok) throw new Error(`Could not load HiGHS (${r.status})`);
+    return r.arrayBuffer();
+}));
 async function newHighs() {
-    if (!highsBytes) {
-        highsBytes = fetch(new URL('./vendor/highs/highs.wasm', import.meta.url)).then(r => {
-            if (!r.ok) throw new Error(`Could not load HiGHS (${r.status})`);
-            return r.arrayBuffer();
-        });
-    }
-    return highsModule({ wasmBinary: await highsBytes, print: () => {}, printErr: line => console.warn(line) });
+    return highsModule({ wasmBinary: await highsBytes(), print: () => {}, printErr: line => console.warn(line) });
 }
 
 // Seconds HiGHS may search before settling for the best plan found so far.
@@ -225,6 +224,7 @@ async function rankImprovements(pkg, payload, report) {
         let coins = null;
         let proven = top.proven;
         // Only when the measure itself doesn't move does the Home Coins tiebreak matter.
+        // RANK_MIN_GAIN (shared.js): a smaller difference is as likely to be the solver's tolerances.
         if (measure !== 'coins' && top.objective <= baseTop.objective * (1 + RANK_MIN_GAIN)) {
             if (baseCoins === undefined) baseCoins = await coinsAt(base, baseTop.objective);
             const candidateCoins = await coinsAt(input, top.objective);
@@ -236,10 +236,6 @@ async function rankImprovements(pkg, payload, report) {
         report({ index, top: top.objective, coins, proven });
     }
 }
-
-// The smallest gain worth ranking, as a share of what the plan already makes: below it, a
-// difference is as likely to be the solver's tolerances as a real improvement.
-const RANK_MIN_GAIN = 1e-3;
 
 self.onmessage = async (event) => {
     const { id, type, payload } = event.data;

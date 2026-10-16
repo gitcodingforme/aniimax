@@ -3,7 +3,7 @@
 // web/coverage.js; the card contract is in web/panels.js. Nothing is fetched until the section is
 // first opened. web/data-sources.json is committed; web/verification.json exists only on my local
 // site (it is gitignored), so the public card shows the wiki and my values.csv rows only.
-import { coverageHtml, loadCoverage } from '../coverage.js?v=fork-m9-2';
+import { coverageHtml, loadCoverage } from '../coverage.js?v=fork-m10-1';
 
 export function mount(el, ctx) {
     ctx.addStylesheet('css/coverage.css');

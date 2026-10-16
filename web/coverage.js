@@ -1,5 +1,5 @@
-// "How sure is this data?": for each recipe, the best check behind its numbers. Pure (no DOM, no
-// imports); the card is web/cards/coverage.js and the tests are tests/coverage.test.mjs.
+// "How sure is this data?": for each recipe, the best check behind its numbers. Pure (no DOM; its
+// one import is shared.js); the card is web/cards/coverage.js and the tests are tests/coverage.test.mjs.
 //
 // Inputs
 //   items         the parsed get_all_items result (RecipeInfo in src/wasm.rs), one object per recipe:
@@ -24,6 +24,11 @@
 // Facility levels and RV costs (unlocks, output caps, upgrade costs, RV coin costs) get their own
 // table: the wiki values against ctx.config (FACILITIES unlocks, OUTPUT_CAPS, FACILITY_UPGRADE_COSTS,
 // LEVEL_UP_COSTS), the page's override-patched copies.
+
+import { escapeHtml } from './shared.js?v=fork-m10-1';
+
+// shared.js's escapeHtml, passed on for the card and the tests.
+export { escapeHtml };
 
 export const STATUSES = ['game', 'game-differs', 'wiki', 'wiki-differs', 'unverified', 'unchecked'];
 
@@ -298,10 +303,6 @@ export async function loadCoverage({ getItems, fetchImpl = globalThis.fetch?.bin
         ownerRows: sources.owner.length,
         notes,
     };
-}
-
-export function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
 
 // The card's markup for a loadCoverage model. `format` is ctx.format: every name and detail goes
