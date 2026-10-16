@@ -3,8 +3,8 @@
 // long it takes and what to run. Logic in web/goal-mode.js; the card contract is in web/panels.js.
 import {
     GOAL_KEY, atCurrentPlan, formatDays, goalItems, itemGoalInput, readGoal, rvSteps, startLevel, stepOutcome,
-} from '../goal-mode.js?v=fork-m9-1';
-import { summarizePlan } from '../plan-summary.js?v=fork-m9-1';
+} from '../goal-mode.js?v=fork-m9-2';
+import { summarizePlan } from '../plan-summary.js?v=fork-m9-2';
 
 const PER_CLICK = 5; // RV steps solved per click
 const TOP_ROWS = 4; // producing rows shown per step

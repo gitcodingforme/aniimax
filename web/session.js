@@ -12,8 +12,8 @@
 // Output caps are fan-wiki figures (OUTPUT_CAPS in facility-config.js), not checked in game. A row
 // whose cap (or batch size) is unknown counts as "never fills" and is listed apart.
 
-import { DEFAULT_ASSUMPTIONS, batchesUntilFull, outputCap, planRows } from './reminders.js?v=fork-m9-1';
-import { stripVariant } from './plan-summary.js?v=fork-m9-1';
+import { DEFAULT_ASSUMPTIONS, batchesUntilFull, outputCap, planRows } from './reminders.js?v=fork-m9-2';
+import { stripVariant } from './plan-summary.js?v=fork-m9-2';
 
 export const SESSION_KEY = 'aniimax-session-v1';
 export const DEFAULTS = Object.freeze({ mode: 'session', minutes: 40, hours: 8 });

@@ -12,7 +12,7 @@
 //          modules: { id: level }, aniimoLevels: { Ability: n },
 //          rosterLevels: { memberIndex: { Ability: n } } }
 
-import { diffPlans, summarizePlan } from './plan-summary.js?v=fork-m9-1';
+import { diffPlans, summarizePlan } from './plan-summary.js?v=fork-m9-2';
 
 // A whole number at least `min`, else null.
 const whole = (value, min = 0) => {

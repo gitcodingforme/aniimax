@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#0e1013">
     <title>Aniimax - Aniimo Production Optimizer</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
     <script>
         // Light or dark before the first paint: the saved choice (aniimax-theme-v1), else the
         // system's. toggleTheme at the end of the page keeps it up to date.
@@ -20,7 +23,7 @@
         })();
     </script>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="css/features.css?v=fork-m9-1">
+    <link rel="stylesheet" href="css/features.css?v=fork-m9-2">
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
@@ -509,7 +512,7 @@
                             <option value="three-quarters">75% of the grow time (upstream issue 14)</option>
                         </select>
                     </label>
-                    <p class="hint small">Output caps come from wikily.gg (docs/research/web-data-check.md), not from the game. The cap for level 1 Farmland, Woodland and Well is unknown; those rows get batch check-ins instead. Override a cap in data/overrides/structure.json (outputCaps).</p>
+                    <p class="hint small">Output caps come from fan sites (wikily.gg, GameWith, aniimotools, metabot) and are not verified in game. Override a cap in data/overrides/structure.json (outputCaps).</p>
                 </details>
                 <p id="reminders-empty" class="hint">Solve a plan, set up your homeland as it says, then press "I just set everything up per the plan".</p>
                 <div id="reminders-body" hidden>
@@ -530,6 +533,7 @@
                     </div>
                     <div class="config-actions">
                         <button type="button" id="ntfy-generate-btn" class="toggle-button small">Make a random topic</button>
+                        <button type="button" id="ntfy-test-btn" class="toggle-button small" title="Sends one message right now to the topic above, to check that your phone gets it.">Send a test push</button>
                         <button type="button" id="ntfy-send-btn" class="toggle-button small" title="Schedules each upcoming reminder on ntfy.sh; the ntfy app on your phone, subscribed to the topic, shows them at the right time even with this page closed.">Send to phone</button>
                         <button type="button" id="ntfy-cancel-btn" class="toggle-button small">Cancel sent reminders</button>
                         <button type="button" id="ics-download-btn" class="toggle-button small" title="One calendar event with an alarm per reminder; import it into any calendar app.">Download calendar (.ics)</button>
@@ -657,6 +661,23 @@
                     <li><strong>Homeland Layout</strong>: where to put each facility so the busiest are nearest the Storage Unit.</li>
                     <li><strong>Set a Goal</strong>: with Priorities, how long it takes to reach a target amount of Home Coins or any priority that's on, and what else you'll have by then.</li>
                 </ul>
+
+                <h3>New cards (fork)</h3>
+                <p>The cards marked "after the first plan" appear under the results once you've found a plan; the others are always on the page. Nothing in them solves until you click.</p>
+                <ul>
+                    <li><strong>Daily checklist</strong>: today's play session as one tick list (collect, water, replant, level up) from your reminders and the plan; it starts fresh every day.</li>
+                    <li><strong>Upgrade roadmap</strong> (after the first plan): what to upgrade next, with its cost, the extra Home Coins an hour and how fast it pays for itself.</li>
+                    <li><strong>How sure is this data?</strong>: for each recipe, where its numbers come from: your own checks in game, a fan wiki, or nothing yet.</li>
+                    <li><strong>Goal mode</strong> (after the first plan): "reach RV N" or "have K of an item", with how long it takes and what to run on the way.</li>
+                    <li><strong>What if</strong> (after the first plan): try a few changes on a copy of your plan and see it next to the real one; nothing you try here is saved.</li>
+                    <li><strong>Roster advisor</strong> (after the first plan, with My Aniimo): which of your Aniimo is the weakest link and which change to the team helps most.</li>
+                    <li><strong>Session planner</strong> (after the first plan): a plan for a short session ("40 minutes tonight") or for overnight, so nothing sits full while you're away.</li>
+                    <li><strong>Why am I behind?</strong>: what the plan predicted against what your snapshots show, with guesses at why when you fell short.</li>
+                    <li><strong>Streaks and milestones</strong>: snapshot streaks, the day you reached each RV level, and personal bests.</li>
+                    <li><strong>Compare homelands</strong>: your setup next to a friend's (profile file, pasted setup, share link or one of your snapshots); their side is never saved.</li>
+                    <li><strong>Offline mode</strong>: after one visit with internet, the site opens and plans without it. Add <code>?nosw</code> to the address to switch it off and clear the saved copy.</li>
+                    <li><strong>Google Calendar links</strong>: each reminder under "Next up" has a "Google" link that opens it as a new event in Google Calendar, one reminder at a time.</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -679,6 +700,8 @@
             const applyTheme = (light) => {
                 root.classList.toggle('light', light);
                 root.style.colorScheme = light ? 'light' : 'dark';
+                const meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.content = light ? '#f5f4ef' : '#0e1013';
                 const button = document.getElementById('themeToggle');
                 if (button) button.textContent = light ? 'dark' : 'light';
             };
@@ -739,6 +762,7 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-m9-1"></script>
+    <script type="module" src="app.js?v=fork-m9-2"></script>
+    <script type="module" src="sw-register.js?v=fork-m9-2"></script>
 </body>
 </html>

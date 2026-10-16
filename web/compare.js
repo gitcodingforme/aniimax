@@ -2,10 +2,10 @@
 // side's setup comes from a profile file, pasted setup JSON, a share link or one of my own earlier
 // snapshots, and lives in memory only. Pure functions only (no DOM, no storage); the config
 // (ctx.config) comes in as an argument. Tested in tests/compare.test.mjs.
-import { parseProfile } from './profile.js?v=fork-m9-1';
-import { diffSetups, isSnapshot } from './history.js?v=fork-m9-1';
-import { summarizePlan } from './plan-summary.js?v=fork-m9-1';
-import { effectiveSetup } from './setup-input.js?v=fork-m9-1';
+import { parseProfile } from './profile.js?v=fork-m9-2';
+import { diffSetups, isSnapshot } from './history.js?v=fork-m9-2';
+import { summarizePlan } from './plan-summary.js?v=fork-m9-2';
+import { effectiveSetup } from './setup-input.js?v=fork-m9-2';
 
 const isObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
 const hasTiers = value => isObject(value) && isObject(value.facilityTiers);

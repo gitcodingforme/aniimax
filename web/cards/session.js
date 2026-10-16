@@ -6,9 +6,9 @@
 import {
     SESSION_KEY, adaptPlan, aimInput, firstCollectBy, levelUpLosses, readSettings, rowRates, unknownCapRows, windowCoins,
     windowSecondsFor, writeSettings,
-} from '../session.js?v=fork-m9-1';
-import { planRows } from '../reminders.js?v=fork-m9-1';
-import { diffPlans, stripVariant, summarizePlan } from '../plan-summary.js?v=fork-m9-1';
+} from '../session.js?v=fork-m9-2';
+import { planRows } from '../reminders.js?v=fork-m9-2';
+import { diffPlans, stripVariant, summarizePlan } from '../plan-summary.js?v=fork-m9-2';
 
 const MAX_ROUNDS = 3;
 

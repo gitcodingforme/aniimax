@@ -3,8 +3,8 @@
 // (ctx.solver.findPlan) and shown next to the current plan. It never writes the saved profile or a
 // snapshot and keeps nothing in storage. Logic in web/what-if.js; the card contract is in web/panels.js.
 
-import { stripVariant } from '../plan-summary.js?v=fork-m9-1';
-import { applyEdits, buildableFacilities, editsFromForm, homeLevelFor, sideBySide, slugOf, warnings } from '../what-if.js?v=fork-m9-1';
+import { stripVariant } from '../plan-summary.js?v=fork-m9-2';
+import { applyEdits, buildableFacilities, editsFromForm, homeLevelFor, sideBySide, slugOf, warnings } from '../what-if.js?v=fork-m9-2';
 
 const MAX_ABILITY_LEVEL = 4; // MAX_ANIIMO_LEVEL in app.js and models.rs
 

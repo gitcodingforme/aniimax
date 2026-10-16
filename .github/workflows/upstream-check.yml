@@ -56,6 +56,11 @@ jobs:
             echo
             git log --format='- %h %ad %s' --date=short "$SYNCED"..FETCH_HEAD -- $WATCH
             echo
+            # Plain-words summary of the data/*.csv changes; never fails the job.
+            echo "## What changed, in words"
+            echo
+            python3 scripts/describe_data_diff.py --git "$SYNCED" FETCH_HEAD --max-lines 150 || echo "(describe_data_diff.py failed; see the file list above)"
+            echo
             echo "Merging this PR does not deploy: tag a \`v*\` release or run the Deploy workflow afterwards (see docs/runbooks/game-patched.md in the workspace)."
             echo
           } > /tmp/pr-body.md

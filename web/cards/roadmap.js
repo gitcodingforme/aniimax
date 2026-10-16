@@ -5,8 +5,8 @@
 
 import {
     emptyRoadmapStatus, nextBatch, remainingCount, roadmapCandidates, roadmapHomeLevel, scoreRoadmap,
-} from '../roadmap.js?v=fork-m9-1';
-import { summarizePlan } from '../plan-summary.js?v=fork-m9-1';
+} from '../roadmap.js?v=fork-m9-2';
+import { summarizePlan } from '../plan-summary.js?v=fork-m9-2';
 
 const BATCH = 20;
 

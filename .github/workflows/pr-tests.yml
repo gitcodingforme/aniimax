@@ -12,6 +12,8 @@ on:
       - 'web/**/*.mjs'
       - 'web/**/*.html'
       - 'web/**/*.css'
+      - 'web/**/*.json'
+      - 'web/**/*.webmanifest'
       - 'build-wasm.sh'
       - 'data/**'
       - 'scripts/**'

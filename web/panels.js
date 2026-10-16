@@ -14,8 +14,8 @@
 // imported: use ctx.config, which holds the copies with data/overrides/structure.json applied
 // (a second import would be a second, unpatched copy). Never import app.js, i18n.js or bus.js
 // either: use ctx.on / ctx.last.
-// Every relative import carries the same ?v= tag as app.js (today ?v=fork-m9-1); from
-// web/cards/ that is e.g. `import { summarizePlan } from '../plan-summary.js?v=fork-m9-1';`.
+// Every relative import carries the same ?v= tag as app.js (today ?v=fork-m9-2); from
+// web/cards/ that is e.g. `import { summarizePlan } from '../plan-summary.js?v=fork-m9-2';`.
 // Ids and input names inside a card are prefixed with the card name (`roadmap-target`).
 // Every localStorage access sits in try/catch. Never start a solve without a click; on a new
 // 'plan' value mark results stale, do not re-solve. Write plain English: the page translates

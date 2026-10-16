@@ -4,7 +4,26 @@ This is [gitcodingforme](https://github.com/gitcodingforme)'s personal fork of *
 
 - Original site: https://ae-bii.github.io/aniimax/
 - This fork's site: https://gitcodingforme.github.io/aniimax/
-- What this fork adds: a homeland profile ("Download profile" / "Load profile" save your whole setup as a JSON file you keep yourself, so it survives a cleared browser and moves between devices), a build stamp (`web/version.json`) showing which upstream game data a deployment carries, a weekly "Upstream check" workflow that opens a pull request when ae-bii's game data changes, an out-of-date banner on the site, an overrides folder (`data/overrides/`) for values verified in game that survive syncs (applied by `scripts/apply_overrides.py` at build time), CI that also runs on game-data changes, a History card (dated snapshots of the setup and the plan's prediction, RV-over-time chart, predicted vs actual pace, what changed between two snapshots, backup and restore), and a Reminders card (timers from the plan's batch times, delivered in the tab, as scheduled ntfy.sh pushes to a phone, or as a calendar file; unverified game behaviour is a set of switches), screenshot reading (`scripts/read_screenshots.py` sends game screenshots to a local Ollama vision model and the site shows a tick-box diff before applying anything), and a passive game watcher (`scripts/watch_game.py` captures the game window while you play, reads the known screens with the same local model and keeps the reading current; it never sends input to the game, and the local site offers the diff to review). Game data fixes found along the way are offered back upstream.
+- What this fork adds:
+  - Homeland profile: save, load, export and import your whole setup as a JSON file you keep yourself.
+  - Progress history: dated snapshots with the plan's prediction, RV-over-time chart, what changed, backup and restore.
+  - Reminders from the plan's batch times: in the browser tab, a calendar file (.ics), Google Calendar links, or ntfy.sh pushes to a phone.
+  - Setup checklist: tick off each facility as you set it up per the plan.
+  - Daily checklist: today's play session (collect, water, replant, level up) as one tick list.
+  - Upgrade roadmap: what to upgrade next, ranked by how fast it pays for itself.
+  - Goal mode: how long to reach an RV level or a stock of an item, and what to run.
+  - What if: try changes on a copy of the plan, side by side with the real one.
+  - Roster advisor: the weakest Aniimo on your own team and the change that helps most.
+  - Session planner: a plan for a short session or for overnight.
+  - Why am I behind?: actual progress against the plan's prediction, with guesses at the gap.
+  - Streaks and milestones: snapshot streaks, RV milestones and personal bests.
+  - Compare homelands: your setup next to a friend's, both solved.
+  - How sure is this data?: where each recipe's numbers come from (own check in game, fan wiki, or nothing yet).
+  - Passive game watcher (local only): `scripts/watch_game.py` reads game screens with a local Ollama model and offers a diff to review; it never sends input to the game. Screenshot reading (`scripts/read_screenshots.py`) works the same way.
+  - Self-verification of game data: the watcher checks the fork's numbers against what the game shows.
+  - Staying current: a weekly upstream sync pull request, a weekly fan-wiki cross-check, an out-of-date banner, a build stamp (`web/version.json`) and an overrides folder (`data/overrides/`) for values verified in game.
+  - Offline mode: after one online visit the site works without internet (`?nosw` switches it off).
+  - Game data fixes found along the way are offered back upstream.
 
 The original README follows.
 

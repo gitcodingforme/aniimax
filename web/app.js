@@ -8,33 +8,33 @@ import {
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, OUTPUT_CAPS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
     FACILITY_UPGRADE_COSTS, upgradeCost,
-} from './facility-config.js?v=fork-m9-1';
+} from './facility-config.js?v=fork-m9-2';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
-import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js?v=fork-m9-1';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m9-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-m9-1';
+import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js?v=fork-m9-2';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m9-2';
+import { applyStructureOverrides } from './overrides.js?v=fork-m9-2';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-m9-1';
+} from './upstream-check.js?v=fork-m9-2';
 import {
     addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-m9-1';
+} from './history.js?v=fork-m9-2';
 import {
-    DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown,
-    icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-m9-1';
-import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m9-1';
+    DEFAULT_ASSUMPTIONS, NTFY_SERVER, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown,
+    googleCalendarUrl, icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
+} from './reminders.js?v=fork-m9-2';
+import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m9-2';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-m9-1';
+} from './checklist.js?v=fork-m9-2';
 // Feature cards (web/cards/, see panels.js): the bus they listen on, their side solver, and the
 // loader that mounts them.
-import { publish, on, last } from './bus.js?v=fork-m9-1';
-import { createSolver } from './solve.js?v=fork-m9-1';
-import { mountCards, addStylesheet } from './panels.js?v=fork-m9-1';
+import { publish, on, last } from './bus.js?v=fork-m9-2';
+import { createSolver } from './solve.js?v=fork-m9-2';
+import { mountCards, addStylesheet } from './panels.js?v=fork-m9-2';
 
 let wasmReady = false;
 
@@ -1410,12 +1410,22 @@ function renderReminders() {
         ? 'Nothing left from this setup. Press the button again after your next setup.'
         : `${next.length} reminder${next.length === 1 ? '' : 's'} still to come: the first fill-up of every row, plus what else falls in the 24 hours after setup${events.length > next.length ? ` (${events.length - next.length} already passed)` : ''}.`;
     document.getElementById('reminders-events').innerHTML = next.slice(0, 15).map(e =>
-        `<li><strong>${escapeText(e.title)}</strong> ${formatCountdown(e.at - now)} (${formatProfileTime(e.at)})${e.approximate ? ' <span class="hint small">approx.</span>' : ''}</li>`).join('')
+        `<li><strong>${escapeText(e.title)}</strong> ${formatCountdown(e.at - now)} (${formatProfileTime(e.at)})${e.approximate ? ' <span class="hint small">approx.</span>' : ''}${googleCalendarLink(e)}</li>`).join('')
         + (next.length > 15 ? `<li class="hint">… and ${next.length - 15} more.</li>` : '');
 
     const sentPending = (timers.sent || []).filter(s => s.at > now).length;
     document.getElementById('ntfy-sent').textContent = timers.sent?.length
         ? `${timers.sent.length} sent to ntfy.sh topic "${timers.sentTopic}", ${sentPending} still to arrive.` : '';
+}
+
+// An "add to Google Calendar" link for one reminder (googleCalendarUrl in reminders.js), opened in
+// a new tab; empty when the event has no usable time.
+function googleCalendarLink(event) {
+    try {
+        return ` <a href="${escapeText(googleCalendarUrl(event))}" target="_blank" rel="noopener" class="hint small" title="Opens this reminder as a new event in Google Calendar">Google</a>`;
+    } catch (_) {
+        return '';
+    }
 }
 
 function renderNotificationState() {
@@ -1484,6 +1494,25 @@ async function sendRemindersToPhone() {
     } catch (error) {
         document.getElementById('ntfy-status').textContent = `Sending stopped: ${error.message}.`;
         console.warn('Could not send reminders to ntfy:', error);
+    }
+}
+
+// One message right now to the saved topic, to check that the phone gets pushes. Nothing is
+// stored, and nothing is sent without a valid topic.
+async function sendTestPush() {
+    const status = document.getElementById('ntfy-status');
+    const topic = document.getElementById('ntfy-topic').value.trim();
+    if (!isValidTopic(topic)) {
+        status.textContent = 'Enter an ntfy topic first (letters, digits, dashes, underscores), or make a random one.';
+        return;
+    }
+    status.textContent = `Sending a test to "${topic}"…`;
+    try {
+        await sendNtfy([{ eventAt: Date.now(), url: `${NTFY_SERVER}/${topic}`, headers: { 'X-Title': 'Aniimax test', 'X-Tags': 'bell' }, body: 'Aniimax test: push works' }]);
+        status.textContent = `Test sent to "${topic}". If your phone did not show it, check that the ntfy app is subscribed to exactly that topic.`;
+    } catch (error) {
+        status.textContent = `Test not sent: ${error.message}.`;
+        console.warn('Could not send the ntfy test:', error);
     }
 }
 
@@ -1575,6 +1604,7 @@ function attachReminderHandlers() {
         document.getElementById('ntfy-topic').value = settings.ntfyTopic;
         document.getElementById('ntfy-status').textContent = 'Topic made. Subscribe to it in the ntfy app (ntfy.sh) on your phone; anyone who knows the name can read it, so keep it to yourself.';
     });
+    document.getElementById('ntfy-test-btn').addEventListener('click', sendTestPush);
     document.getElementById('ntfy-send-btn').addEventListener('click', sendRemindersToPhone);
     document.getElementById('ntfy-cancel-btn').addEventListener('click', cancelSentReminders);
     document.getElementById('ics-download-btn').addEventListener('click', downloadCalendar);

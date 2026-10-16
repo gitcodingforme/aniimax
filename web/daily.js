@@ -2,7 +2,7 @@
 // different thing from the Setup checklist (checklist.js): that one resets when the plan changes,
 // this one starts fresh every local day. Pure functions only (no DOM, no storage); tested in
 // tests/daily.test.mjs. web/cards/daily.js draws it and keeps the ticks in localStorage under DAILY_KEY.
-import { DEFAULT_ASSUMPTIONS, buildEvents, planRows, pretty } from './reminders.js?v=fork-m9-1';
+import { DEFAULT_ASSUMPTIONS, buildEvents, planRows, pretty } from './reminders.js?v=fork-m9-2';
 
 export const DAILY_KEY = 'aniimax-daily-v1';
 export const GROUPS = Object.freeze(['Collect', 'Water', 'Replant', 'Level']);
