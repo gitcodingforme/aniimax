@@ -1,0 +1,62 @@
+/* Roster advisor card (web/cards/roster-advisor.js). Colours come from style.css's theme variables. */
+
+#roster-advisor-card .roster-advisor-table th.roster-advisor-num,
+#roster-advisor-card .roster-advisor-table td.roster-advisor-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* style.css highlights every table's first row; here only the weakest link stands out (the rules
+   below outrank this one, which :where keeps low). */
+#roster-advisor-card .roster-advisor-table tbody tr:where(:first-child) td {
+    color: inherit;
+    font-weight: normal;
+}
+
+#roster-advisor-card .roster-advisor-table tbody tr.roster-advisor-weakest td:first-child {
+    font-weight: bold;
+}
+
+#roster-advisor-card .roster-advisor-table tbody tr.roster-advisor-muted td {
+    color: var(--text-muted);
+}
+
+#roster-advisor-card .roster-advisor-table td.delta-up {
+    color: var(--success);
+}
+
+#roster-advisor-card .roster-advisor-table td.delta-down {
+    color: var(--error);
+}
+
+#roster-advisor-card .roster-advisor-note {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+#roster-advisor-card .roster-advisor-note.roster-advisor-over {
+    color: var(--warning);
+}
+
+#roster-advisor-card .roster-advisor-share {
+    margin: 0.25rem 0 0.5rem;
+    font-weight: bold;
+}
+
+#roster-advisor-card.roster-advisor-stale .roster-advisor-table,
+#roster-advisor-card.roster-advisor-stale .roster-advisor-share {
+    opacity: 0.55;
+}
+
+#roster-advisor-card.roster-advisor-stale .feature-status {
+    color: var(--warning);
+}
+
+@media (max-width: 600px) {
+    #roster-advisor-card .roster-advisor-table th,
+    #roster-advisor-card .roster-advisor-table td {
+        padding: 0.4rem 0.5rem;
+    }
+}
