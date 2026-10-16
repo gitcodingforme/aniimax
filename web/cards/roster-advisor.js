@@ -14,7 +14,7 @@
 import {
     ADVISOR_MIN_GAIN, bestShare, homeCapFor, measureFor, measureLabel, neededAbilities, rankRows, requirementsFromItems,
     rosterCandidates, stopsCheck, weakestLink,
-} from '../roster-advisor.js?v=fork-m10-1';
+} from '../roster-advisor.js?v=fork-m10-2';
 
 const MAX_CANDIDATES = 30;
 

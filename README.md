@@ -7,7 +7,7 @@ This is [gitcodingforme](https://github.com/gitcodingforme)'s personal fork of *
 - What this fork adds:
   - Homeland profile: save, load, export and import your whole setup as a JSON file you keep yourself.
   - Progress history: dated snapshots with the plan's prediction, RV-over-time chart, what changed, backup and restore.
-  - Reminders from the plan's batch times: in the browser tab, a calendar file (.ics), Google Calendar links, or ntfy.sh pushes to a phone.
+  - Reminders from the plan's batch times: in the browser tab, a calendar file (.ics), Google Calendar and Outlook links, or ntfy.sh pushes to a phone.
   - Setup checklist: tick off each facility as you set it up per the plan.
   - Daily checklist: today's play session (collect, water, replant, level up) as one tick list.
   - Upgrade roadmap: what to upgrade next, ranked by how fast it pays for itself.
@@ -24,6 +24,11 @@ This is [gitcodingforme](https://github.com/gitcodingforme)'s personal fork of *
   - Staying current: a weekly upstream sync pull request, a weekly fan-wiki cross-check, an out-of-date banner, a build stamp (`web/version.json`) and an overrides folder (`data/overrides/`) for values verified in game.
   - Offline mode: after one online visit the site works without internet (`?nosw` switches it off).
   - Game data fixes found along the way are offered back upstream.
+  - E-mode (experimental): from RV 12, plan with generator-powered facilities that need no Aniimo; the times and power numbers are fan data, not verified in game.
+  - Is everything working?: one card that checks the build, offline mode, storage, the last snapshot and backup, the watcher, reminders, notifications and the open game questions, and says what to do for each.
+  - Food reminder: an optional "refill the food bowl" reminder from the food energy you enter (an estimate from fan data).
+  - Next-session runbook: a checklist for a play session that answers the open game questions, in the owner's notes.
+  - Deploys: pushing to main deploys the site after the tests pass.
 
 The original README follows.
 

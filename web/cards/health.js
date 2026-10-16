@@ -9,8 +9,8 @@
 // contract.
 import {
     HEALTH_KEY, PROFILE_META_KEY, dismissBackup, healthLines, parseHealthState, summaryText,
-} from '../health.js?v=fork-m10-1';
-import { readCache } from '../upstream-check.js?v=fork-m10-1';
+} from '../health.js?v=fork-m10-2';
+import { readCache } from '../upstream-check.js?v=fork-m10-2';
 
 // A read that has not answered by then counts as "no answer", so the button never stays stuck.
 const READ_TIMEOUT_MS = 8000;

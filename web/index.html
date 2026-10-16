@@ -22,8 +22,8 @@
             } catch (e) { /* stay dark */ }
         })();
     </script>
-    <link rel="stylesheet" href="style.css?v=fork-m10-1">
-    <link rel="stylesheet" href="css/features.css?v=fork-m10-1">
+    <link rel="stylesheet" href="style.css?v=fork-m10-2">
+    <link rel="stylesheet" href="css/features.css?v=fork-m10-2">
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
@@ -34,7 +34,7 @@
             <button class="toggle-button" onclick="showFacilities()" id="facilitiesToggle">facilities</button>
             <button class="toggle-button" onclick="showMath()" id="mathToggle">math</button>
             <button class="toggle-button" onclick="showHelp()" id="helpToggle">help</button>
-            <button class="toggle-button" onclick="toggleTheme()" id="themeToggle">light</button>
+            <button class="toggle-button" onclick="toggleTheme()" id="themeToggle" aria-pressed="false">light</button>
         </div>
     </header>
     <p class="subtitle">aniimo homeland production optimizer</p>
@@ -75,6 +75,7 @@
                         </div>
                     </div>
                     <p id="verification-line" class="hint small" role="status" hidden></p>
+                    <p id="questions-line" class="hint" hidden></p>
                     <p id="reading-auto" class="hint" hidden>
                         <span id="reading-auto-text"></span>
                         <button type="button" id="reading-auto-review" class="toggle-button small">Review changes</button>
@@ -134,7 +135,7 @@
 
                     <div class="modules-grid">
                         <div class="module-card">
-                            <h4>Ecological Module <span class="info-icon" data-tooltip="Lv.1: Quick Wheat&#10;Lv.2: Quick Bamboo&#10;Lv.3: Quick Potato&#10;Lv.4: Quick Lemon&#10;Lv.5: Quick Rice&#10;Lv.6: Quick Maple Syrup&#10;Lv.7: Quick Strawberry&#10;Lv.8: Quick Coconut">?</span></h4>
+                            <h4>Ecological Module <span class="info-icon" tabindex="0" data-tooltip="Lv.1: Quick Wheat&#10;Lv.2: Quick Bamboo&#10;Lv.3: Quick Potato&#10;Lv.4: Quick Lemon&#10;Lv.5: Quick Rice&#10;Lv.6: Quick Maple Syrup&#10;Lv.7: Quick Strawberry&#10;Lv.8: Quick Coconut">?</span></h4>
                             <div class="input-field">
                                 <label for="ecological-module-level">Level</label>
                                 <input type="number" id="ecological-module-level" value="0" min="0" max="10">
@@ -142,7 +143,7 @@
                         </div>
 
                         <div class="module-card">
-                            <h4>Kitchen Module <span class="info-icon" data-tooltip="Lv.2: Premium Bread&#10;Lv.3: Premium Potato Soup&#10;Lv.4: Premium Sweet Rice Wine&#10;Lv.5: Premium Salted Lemon&#10;Lv.6: Premium Jello&#10;Lv.7: Premium Berry Chocolate Coconut Pudding">?</span></h4>
+                            <h4>Kitchen Module <span class="info-icon" tabindex="0" data-tooltip="Lv.2: Premium Bread&#10;Lv.3: Premium Potato Soup&#10;Lv.4: Premium Sweet Rice Wine&#10;Lv.5: Premium Salted Lemon&#10;Lv.6: Premium Jello&#10;Lv.7: Premium Berry Chocolate Coconut Pudding">?</span></h4>
                             <div class="input-field">
                                 <label for="kitchen-module-level">Level</label>
                                 <input type="number" id="kitchen-module-level" value="0" min="0" max="10">
@@ -150,7 +151,7 @@
                         </div>
 
                         <div class="module-card">
-                            <h4>Resource Detector <span class="info-icon" data-tooltip="Lv.1: Quick Well Water&#10;Lv.2: Quick Sea Salt&#10;Lv.3: Quick Aromathyst&#10;Lv.4: Quick Fresh Water&#10;Lv.5: Quick Wool&#10;Lv.6: Quick Deep Rock Spring Water&#10;Lv.7: Quick Natural Mineral Spring Water&#10;Lv.8: Quick Scales">?</span></h4>
+                            <h4>Resource Detector <span class="info-icon" tabindex="0" data-tooltip="Lv.1: Quick Well Water&#10;Lv.2: Quick Sea Salt&#10;Lv.3: Quick Aromathyst&#10;Lv.4: Quick Fresh Water&#10;Lv.5: Quick Wool&#10;Lv.6: Quick Deep Rock Spring Water&#10;Lv.7: Quick Natural Mineral Spring Water&#10;Lv.8: Quick Scales">?</span></h4>
                             <div class="input-field">
                                 <label for="resource-detector-level">Level</label>
                                 <input type="number" id="resource-detector-level" value="0" min="0" max="10">
@@ -158,12 +159,41 @@
                         </div>
 
                         <div class="module-card">
-                            <h4>Crafting Module <span class="info-icon" data-tooltip="Lv.1: Premium River-Washed Stones&#10;Lv.2: Premium Rose Freshener&#10;Lv.3: Advanced Lemon Incense&#10;Lv.4: Advanced Wind Chime&#10;Lv.5: Premium Soap&#10;Lv.6: Advanced Gemstone Dust&#10;Lv.7: Premium Mixed Perfume">?</span></h4>
+                            <h4>Crafting Module <span class="info-icon" tabindex="0" data-tooltip="Lv.1: Premium River-Washed Stones&#10;Lv.2: Premium Rose Freshener&#10;Lv.3: Advanced Lemon Incense&#10;Lv.4: Advanced Wind Chime&#10;Lv.5: Premium Soap&#10;Lv.6: Advanced Gemstone Dust&#10;Lv.7: Premium Mixed Perfume">?</span></h4>
                             <div class="input-field">
                                 <label for="crafting-module-level">Level</label>
                                 <input type="number" id="crafting-module-level" value="0" min="0" max="10">
                             </div>
                         </div>
+                    </div>
+
+                    <div class="emode-config">
+                        <h3>E-mode <span class="hint small">(from RV 12, experimental)</span></h3>
+                        <label class="reminder-option"><input type="checkbox" id="emode-on"> Plan with E-mode: facilities switched to electric power run without an Aniimo</label>
+                        <div class="input-row">
+                            <div class="input-field">
+                                <label for="emode-generator-level">Generator level</label>
+                                <select id="emode-generator-level">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                            <div class="input-field">
+                                <label for="emode-generator-count">Generators</label>
+                                <input type="number" id="emode-generator-count" value="1" min="0" max="3">
+                            </div>
+                            <div class="input-field">
+                                <label for="emode-supply">Power supply</label>
+                                <select id="emode-supply">
+                                    <option value="100">100%</option>
+                                    <option value="120">120% (faster, less power)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="hint small">Experimental: E-mode times and power numbers are fan data, not verified in game.</p>
                     </div>
                 </div>
 
@@ -239,7 +269,7 @@
             </section>
 
             <section class="results-section" id="results-section" style="display: none;">
-                <div id="error-message" class="card error-message" style="display: none;"></div>
+                <div id="error-message" class="card error-message" role="alert" style="display: none;"></div>
 
                 <div id="results-content">
                     <div class="card aniimo-card" id="aniimo-card">
@@ -295,6 +325,7 @@
                         <div id="priority-rates"></div>
                         </div>
                         <p class="plan-proof" id="plan-explored-hint"></p>
+                        <p id="plan-power" class="hint" hidden></p>
                         <p class="plan-unverified" id="plan-unverified" style="display: none;"></p>
                         <p class="plan-skipped" id="plan-skipped" style="display: none;"></p>
                     </div>
@@ -468,6 +499,7 @@
                 </div>
             </section>
 
+            <section class="card production-steps feature-card" id="health-card" hidden></section>
             <section class="card production-steps feature-card" id="coverage-card" hidden></section>
             <section class="card production-steps feature-card" id="insight-card" hidden></section>
             <section class="card production-steps feature-card" id="streaks-card" hidden></section>
@@ -506,6 +538,14 @@
                     <label class="reminder-option"><input type="checkbox" id="assume-plots-resow"> Staffed plots are re-sown after a harvest until the plot's store is full <span class="hint small">(fan wikis; not verified)</span></label>
                     <label class="reminder-option"><input type="checkbox" id="assume-first-batch"> Also remind me when the first batch of each row is done</label>
                     <label class="reminder-option"><input type="checkbox" id="assume-watering"> Crops ask for water twice as they grow <span class="hint small">(moments approximate)</span></label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-workers-fed" checked> Workers are kept fed (no food cost is subtracted)</label>
+                    <div class="input-row">
+                        <div class="input-field">
+                            <label for="assume-food-energy">Food energy in the bowl now (optional, for a refill reminder)</label>
+                            <input type="number" id="assume-food-energy" min="0" step="1" placeholder="optional">
+                        </div>
+                    </div>
+                    <p class="hint small">Food: fan sites say each working Aniimo eats about 10 food energy a minute; not verified in game, so the refill time is an estimate.</p>
                     <label class="reminder-option">Second watering at
                         <select id="assume-second-watering">
                             <option value="two-thirds">two thirds of the grow time (the engine's model)</option>
@@ -514,6 +554,7 @@
                     </label>
                     <p class="hint small">Output caps come from fan sites (wikily.gg, GameWith, aniimotools, metabot) and are not verified in game. Override a cap in data/overrides/structure.json (outputCaps).</p>
                 </details>
+                <p id="reminders-food-note" class="hint small" hidden></p>
                 <p id="reminders-empty" class="hint">Solve a plan, set up your homeland as it says, then press "I just set everything up per the plan".</p>
                 <div id="reminders-body" hidden>
                     <p id="reminders-started" class="hint"></p>
@@ -555,11 +596,11 @@
     </div>
 
     <!-- Facilities Modal -->
-    <div id="facilitiesModal" class="modal" onclick="closeFacilitiesOnBackdrop(event)">
+    <div id="facilitiesModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="facilities-modal-title" onclick="closeFacilitiesOnBackdrop(event)">
         <div class="modal-content wide">
             <div class="modal-header">
-                <h2>Facility Recipes</h2>
-                <button class="close-button" onclick="closeFacilities()">&times;</button>
+                <h2 id="facilities-modal-title">Facility Recipes</h2>
+                <button type="button" class="close-button" onclick="closeFacilities()" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="hint">Every recipe in the game data, grouped by facility. This is a reference table, not tied to your owned facility counts or levels.</p>
@@ -570,11 +611,11 @@
     </div>
 
     <!-- Math Modal -->
-    <div id="mathModal" class="modal" onclick="closeMathOnBackdrop(event)">
+    <div id="mathModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="math-modal-title" onclick="closeMathOnBackdrop(event)">
         <div class="modal-content modal-wide">
             <div class="modal-header">
-                <h2>How It Works</h2>
-                <button class="close-button" onclick="closeMath()">&times;</button>
+                <h2 id="math-modal-title">How It Works</h2>
+                <button type="button" class="close-button" onclick="closeMath()" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
                 <h3>The Model</h3>
@@ -627,11 +668,11 @@
     </script>
 
     <!-- Help Modal -->
-    <div id="helpModal" class="modal" onclick="closeHelpOnBackdrop(event)">
+    <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="help-modal-title" onclick="closeHelpOnBackdrop(event)">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>How to Use</h2>
-                <button class="close-button" onclick="closeHelp()">&times;</button>
+                <h2 id="help-modal-title">How to Use</h2>
+                <button type="button" class="close-button" onclick="closeHelp()" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
                 <h3>1. Tell It What You've Built</h3>
@@ -676,7 +717,10 @@
                     <li><strong>Streaks and milestones</strong>: snapshot streaks, the day you reached each RV level, and personal bests.</li>
                     <li><strong>Compare homelands</strong>: your setup next to a friend's (profile file, pasted setup, share link or one of your snapshots); their side is never saved.</li>
                     <li><strong>Offline mode</strong>: after one visit with internet, the site opens and plans without it. To switch it off for a visit and clear the saved copy, open the site with <code>?nosw</code> on the end of its address (for example <code>.../aniimax/?nosw</code>).</li>
-                    <li><strong>Google Calendar links</strong>: each reminder under "Next up" has a "Google" link that opens it as a new event in Google Calendar, one reminder at a time.</li>
+                    <li><strong>Is everything working?</strong>: shows the build, offline mode, storage, last snapshot and backup, watcher, reminders, notifications and open game questions, one line each with what to do; it only reads and changes nothing.</li>
+                    <li><strong>Calendar links</strong>: each reminder under "Next up" has a "Google" and an "Outlook" link that open it as a new event in Google Calendar or Outlook on the web, one reminder at a time.</li>
+                    <li><strong>E-mode</strong> (experimental, Advanced setup, from RV 12): tick it and enter your generators, and the plan may switch some facilities to electric power, where they run without an Aniimo; those rows carry an "E" tag and a line under the rate says how much power they use. The E-mode times and power numbers come from fan sites and have not been checked in game.</li>
+                    <li><strong>Food reminder</strong> (Reminders, under the assumptions): enter the food energy in your workers' bowl and the reminders add one to refill it, from how many Aniimo the plan keeps working. The rate they eat at is fan data, not checked in game, so treat the time as an estimate.</li>
                 </ul>
             </div>
         </div>
@@ -703,7 +747,10 @@
                 const meta = document.querySelector('meta[name="theme-color"]');
                 if (meta) meta.content = light ? '#f5f4ef' : '#0e1013';
                 const button = document.getElementById('themeToggle');
-                if (button) button.textContent = light ? 'dark' : 'light';
+                if (button) {
+                    button.textContent = light ? 'dark' : 'light';
+                    button.setAttribute('aria-pressed', String(light));
+                }
             };
             window.toggleTheme = function() {
                 const light = !root.classList.contains('light');
@@ -721,48 +768,85 @@
             applyTheme(root.classList.contains('light'));
         })();
         
+        // The three modals (help, math, facilities; app.js's showFacilities and closeFacilities use
+        // these too). Opening one moves the keyboard focus to its close button and remembers what
+        // had it; closing gives it back. While one is open, Tab stays inside it and Escape closes it.
+        const modalOpeners = {};
+        const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        window.openModal = function(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            if (!modal.classList.contains('show')) modalOpeners[id] = document.activeElement;
+            modal.classList.add('show');
+            const target = modal.querySelector('.close-button') || modal.querySelector(FOCUSABLE);
+            if (target) target.focus();
+        };
+
+        window.closeModal = function(id) {
+            const modal = document.getElementById(id);
+            if (!modal || !modal.classList.contains('show')) return;
+            modal.classList.remove('show');
+            const opener = modalOpeners[id];
+            delete modalOpeners[id];
+            if (opener && opener.isConnected && typeof opener.focus === 'function') opener.focus();
+        };
+
         window.showHelp = function() {
-            document.getElementById('helpModal').classList.add('show');
+            openModal('helpModal');
         }
-        
+
         window.closeHelp = function() {
-            document.getElementById('helpModal').classList.remove('show');
+            closeModal('helpModal');
         }
-        
+
         window.closeHelpOnBackdrop = function(event) {
             if (event.target.id === 'helpModal') {
                 closeHelp();
             }
         }
-        
+
         window.showMath = function() {
-            document.getElementById('mathModal').classList.add('show');
+            openModal('mathModal');
             // Trigger MathJax to render
             if (window.MathJax) {
                 MathJax.typesetPromise();
             }
         }
-        
+
         window.closeMath = function() {
-            document.getElementById('mathModal').classList.remove('show');
+            closeModal('mathModal');
         }
-        
+
         window.closeMathOnBackdrop = function(event) {
             if (event.target.id === 'mathModal') {
                 closeMath();
             }
         }
-        
-        // Close modal on Escape key
+
+        // Escape closes the open modal; Tab and Shift+Tab go round inside it.
         document.addEventListener('keydown', (e) => {
+            const open = document.querySelector('.modal.show');
+            if (!open) return;
             if (e.key === 'Escape') {
-                closeHelp();
-                closeMath();
-                closeFacilities();
+                e.preventDefault();
+                closeModal(open.id);
+                return;
+            }
+            if (e.key !== 'Tab') return;
+            const items = [...open.querySelectorAll(FOCUSABLE)].filter(el => !el.disabled && el.getClientRects().length > 0);
+            if (items.length === 0) return;
+            const first = items[0], last = items[items.length - 1];
+            const inside = open.contains(document.activeElement);
+            if (e.shiftKey && (!inside || document.activeElement === first)) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+                e.preventDefault();
+                first.focus();
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-m10-1"></script>
-    <script type="module" src="sw-register.js?v=fork-m10-1"></script>
+    <script type="module" src="app.js?v=fork-m10-2"></script>
+    <script type="module" src="sw-register.js?v=fork-m10-2"></script>
 </body>
 </html>

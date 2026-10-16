@@ -2,10 +2,10 @@
 // side's setup comes from a profile file, pasted setup JSON, a share link or one of my own earlier
 // snapshots, and lives in memory only. Pure functions only (no DOM, no storage); the config
 // (ctx.config) comes in as an argument. Tested in tests/compare.test.mjs.
-import { parseProfile } from './profile.js?v=fork-m10-1';
-import { diffSetups, isSnapshot } from './history.js?v=fork-m10-1';
-import { summarizePlan } from './plan-summary.js?v=fork-m10-1';
-import { effectiveSetup } from './setup-input.js?v=fork-m10-1';
+import { parseProfile } from './profile.js?v=fork-m10-2';
+import { diffSetups, isSnapshot } from './history.js?v=fork-m10-2';
+import { summarizePlan } from './plan-summary.js?v=fork-m10-2';
+import { effectiveSetup } from './setup-input.js?v=fork-m10-2';
 
 // Shown when the chooser has nothing in it yet.
 export const NOTHING_LOADED = 'Load a profile, paste a setup or pick a snapshot first.';

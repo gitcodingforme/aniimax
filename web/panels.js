@@ -10,13 +10,13 @@
 // Pure logic lives in web/<name>.js, styles in web/css/<name>.css loaded with
 // ctx.addStylesheet('css/<name>.css'), tests in tests/<name>.test.mjs (node:test, assert/strict).
 // Logic modules import only pure modules (reminders.js, history.js, profile.js, plan-summary.js,
-// share-config.js, setup-input.js, and shared.js, the one copy of each rule the page and the
-// worker use too) and take data and solver functions as arguments. facility-config.js is NOT
+// share-config.js, setup-input.js, upstream-check.js, food.js, and shared.js, the one copy of each
+// rule the page and the worker use too) and take data and solver functions as arguments. facility-config.js is NOT
 // imported: use ctx.config, which holds the copies with data/overrides/structure.json applied
 // (a second import would be a second, unpatched copy). Never import app.js, i18n.js or bus.js
 // either: use ctx.on / ctx.last.
-// Every relative import carries the same ?v= tag as app.js (today ?v=fork-m10-1); from
-// web/cards/ that is e.g. `import { summarizePlan } from '../plan-summary.js?v=fork-m10-1';`.
+// Every relative import carries the same ?v= tag as app.js (today ?v=fork-m10-2); from
+// web/cards/ that is e.g. `import { summarizePlan } from '../plan-summary.js?v=fork-m10-2';`.
 // Ids and input names inside a card are prefixed with the card name (`roadmap-target`).
 // Every localStorage access sits in try/catch. Never start a solve without a click; on a new
 // 'plan' value mark results stale, do not re-solve. Write plain English: the page translates
@@ -27,7 +27,8 @@
 //   config: { FACILITIES, FACILITY_CATEGORIES, OUTPUT_CAPS, LEVEL_UP_COSTS, LEVEL_UP_CHAINS,
 //     MODULE_MAX_LEVELS, MAX_HOME_LEVEL, ANIIMO_MAX, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS,
 //     FACILITY_UPGRADE_COSTS, upgradeCost(facility, from, to), simpleSetup(rv),
-//     abilities: [ability names], modules: [module ids], moduleNames: { id: display name } }
+//     EMODE (the E-mode constants, fan data), abilities: [ability names], modules: [module ids],
+//     moduleNames: { id: display name } }
 //     (the page's own, override-patched objects: read them, never change them),
 //   on(topic, fn, { replay = true }) -> unsubscribe, last(topic),
 //   getSetup() (a JSON copy of the saved inputs, currentConfig() in app.js), getRoster(),
@@ -50,12 +51,15 @@
 // }
 // Topics: 'plan' is { plan, input, setup, tab, context, setupHash, solvedAt } or null (no plan
 // on screen, or the solve failed); 'history' is the snapshot list; 'timers' the reminders or
-// null. Each has a value from startup, so on() with replay always calls back at once.
+// null. Each has a value from startup, so on() with replay always calls back at once. 'coins' is
+// the watcher's coin series ([{ t, coins }], oldest first), published when the once-a-minute
+// coins.json poll finds a change; it has no value until then (a replay gives undefined), and a
+// card uses it only as a cue to redraw, reading the points from ctx.getCoinSeries().
 
 // The page's own ?v= tag (from how app.js imported this file), passed on to cards and styles.
 const tag = new URL(import.meta.url).search;
 
-export const CARDS = ['daily', 'roadmap', 'coverage', 'goal-mode', 'what-if', 'roster-advisor', 'session', 'insight', 'streaks', 'compare'];
+export const CARDS = ['daily', 'roadmap', 'coverage', 'goal-mode', 'what-if', 'roster-advisor', 'session', 'insight', 'streaks', 'compare', 'health'];
 
 // Mounts every card whose container is on the page. Resolves with the names that mounted.
 export async function mountCards(ctx, {

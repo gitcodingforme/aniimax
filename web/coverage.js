@@ -25,7 +25,7 @@
 // table: the wiki values against ctx.config (FACILITIES unlocks, OUTPUT_CAPS, FACILITY_UPGRADE_COSTS,
 // LEVEL_UP_COSTS), the page's override-patched copies.
 
-import { escapeHtml } from './shared.js?v=fork-m10-1';
+import { escapeHtml } from './shared.js?v=fork-m10-2';
 
 // shared.js's escapeHtml, passed on for the card and the tests.
 export { escapeHtml };

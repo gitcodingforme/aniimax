@@ -4,7 +4,7 @@
 // thread stays free to paint a progress indicator while a solve is in flight. See `web/app.js`'s
 // `callWorker` and solve.js's createChannel for the request/response contract this expects.
 import highsModule from './vendor/highs/highs.mjs';
-import { RANK_MIN_GAIN, onceUntilFailed } from './shared.js?v=fork-m10-1';
+import { RANK_MIN_GAIN, onceUntilFailed } from './shared.js?v=fork-m10-2';
 
 // The page starts this worker as `worker.js?load=<page load time>` (see app.js), and the wasm
 // module is loaded with the same query and a revalidated fetch, so a page never pairs new page

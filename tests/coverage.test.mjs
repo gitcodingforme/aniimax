@@ -236,7 +236,7 @@ function fakeNode(tag = 'div') {
 }
 
 test('test_the_card_loads_only_when_opened_and_offers_a_retry', async () => {
-    const { mount } = await import('../web/cards/coverage.js?v=fork-m10-1');
+    const { mount } = await import('../web/cards/coverage.js?v=fork-m10-2');
     const details = fakeNode('details');
     const body = fakeNode();
     const el = { ...fakeNode('section'), querySelector: sel => ({ '#coverage-details': details, '#coverage-body': body })[sel] };

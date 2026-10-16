@@ -312,7 +312,8 @@ p {
     position: relative;
 }
 
-.info-icon:hover {
+.info-icon:hover,
+.info-icon:focus-visible {
     border-color: var(--text);
     color: var(--text);
 }
@@ -346,7 +347,8 @@ p {
     line-height: 1.4;
 }
 
-[data-tooltip]:hover::after {
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
     opacity: 1;
     visibility: visible;
 }
@@ -1410,6 +1412,14 @@ footer {
 .tag.unverified {
     border: 1px solid var(--warning);
     color: var(--warning);
+}
+
+/* E-mode rows: the facility runs on generator power. The colours come from the theme variables,
+   so the tag reads in both themes. */
+.tag.emode {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 /* Collapsible explanations */

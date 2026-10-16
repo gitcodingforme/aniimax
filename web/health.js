@@ -4,7 +4,7 @@
 // `text` says what is true, `hint` says what to do about it. Nothing here reads the page, the
 // network or storage: web/cards/health.js gathers the readings and draws the lines. Tested in
 // tests/health.test.mjs.
-import { bannerText, newerUpstreamChanges } from './upstream-check.js?v=fork-m10-1';
+import { bannerText, newerUpstreamChanges } from './upstream-check.js?v=fork-m10-2';
 
 export const HEALTH_KEY = 'aniimax-health-v1';
 export const PROFILE_META_KEY = 'aniimax-profile-meta-v1';

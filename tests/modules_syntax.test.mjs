@@ -151,7 +151,7 @@ const UNTAGGED = {
     // i18n.js holds the page's language state, so there has to be ONE copy of it. app.js and
     // math-translation.js both import it without a tag; a tagged import in either would load a
     // second copy that never hears about a language change.
-    'app.js': ['./i18n.js', './math-translation.js', './turn-jobs.js'],
+    'app.js': ['./i18n.js', './math-translation.js'],
     'math-translation.js': ['./i18n.js', './math-retypeset.js'],
     // The vendored HiGHS solver: not our code, never changes with a release, served as it is.
     'worker.js': ['./vendor/highs/highs.mjs'],

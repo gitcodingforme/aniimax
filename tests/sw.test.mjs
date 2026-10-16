@@ -139,8 +139,8 @@ test('test_route_for_sends_each_kind_of_request_to_its_route', () => {
     ]) assert.equal(route(path), 'network-first', path);
 
     for (const path of [
-        'app.js?v=fork-m10-1', 'i18n.js', 'style.css', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
-        'icons/icon-192.png', 'manifest.webmanifest', 'sw-register.js?v=fork-m10-1',
+        'app.js?v=fork-m10-2', 'i18n.js', 'style.css', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
+        'icons/icon-192.png', 'manifest.webmanifest', 'sw-register.js?v=fork-m10-2',
     ]) assert.equal(route(path), 'swr', path);
 
     assert.equal(route('version.json', { method: 'POST' }), 'bypass');
@@ -163,7 +163,7 @@ test('test_cache_key_strips_load_and_keeps_v', () => {
     const { SW } = loadWorker();
     assert.equal(SW.cacheKey(`${SCOPE}worker.js?load=1760000000000`), `${SCOPE}worker.js`);
     assert.equal(SW.cacheKey(`${SCOPE}pkg/aniimax.js?load=1&v=2`), `${SCOPE}pkg/aniimax.js?v=2`);
-    assert.equal(SW.cacheKey(`${SCOPE}app.js?v=fork-m10-1`), `${SCOPE}app.js?v=fork-m10-1`);
+    assert.equal(SW.cacheKey(`${SCOPE}app.js?v=fork-m10-2`), `${SCOPE}app.js?v=fork-m10-2`);
     assert.equal(SW.cacheKey(`${SCOPE}a.js?v=1&load=2&x=a%20b#frag`), `${SCOPE}a.js?v=1&x=a%20b`);
     assert.equal(SW.pageKey(`${SCOPE}index.html?sw=on#config=abc`), SCOPE);
     assert.equal(SW.keyFor(navigation('./?nosw'), SCOPE), SCOPE);

@@ -4,7 +4,7 @@
 // card contract.
 import {
     DAILY_KEY, allDone, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, staleTimersNote, tickAll, timeLabel, toggle, untickDay, writeState,
-} from '../daily.js?v=fork-m10-1';
+} from '../daily.js?v=fork-m10-2';
 
 // The list is rebuilt this often so lines turn overdue by themselves while the page stays open.
 const REFRESH_MS = 60 * 1000;

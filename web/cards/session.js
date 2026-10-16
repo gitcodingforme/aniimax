@@ -6,9 +6,9 @@
 import {
     SESSION_KEY, adaptPlan, aimInput, firstCollectBy, levelUpLosses, readSettings, rowRates, shouldStop, unknownCapRows, windowCoins,
     windowSecondsFor, writeSettings,
-} from '../session.js?v=fork-m10-1';
-import { planRows } from '../reminders.js?v=fork-m10-1';
-import { diffPlans, stripVariant, summarizePlan } from '../plan-summary.js?v=fork-m10-1';
+} from '../session.js?v=fork-m10-2';
+import { planRows } from '../reminders.js?v=fork-m10-2';
+import { diffPlans, stripVariant, summarizePlan } from '../plan-summary.js?v=fork-m10-2';
 
 const MAX_ROUNDS = 3;
 
@@ -159,7 +159,8 @@ export function mount(el, ctx) {
             <td class="session-num">${escape(number(c.before))}</td><td class="session-num">${escape(number(c.after))}</td>
         </tr>`).join('');
         return `<div class="feature-scroll"><table class="session-diff">
-            <thead><tr><th>Facility</th><th>Makes</th><th class="session-num">Now</th><th class="session-num">Adapted</th></tr></thead>
+            <caption class="visually-hidden">What each facility makes now and in the adapted plan</caption>
+            <thead><tr><th scope="col">Facility</th><th scope="col">Makes</th><th scope="col" class="session-num">Now</th><th scope="col" class="session-num">Adapted</th></tr></thead>
             <tbody>${body}</tbody>
         </table></div>`;
     }

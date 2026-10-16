@@ -124,6 +124,8 @@ test('test_the_saved_setup_keeps_its_shape', () => {
         'resource-detector-level', 'crafting-module-level',
         'rate-unit', 'season-on', 'layout-sim-on', 'season-currency-per-day',
         'aniimo-best', 'aniimo-minimum', 'aniimo-custom',
+        // Milestone 10: the E-mode inputs ride in the saved setup (so in profiles and share links).
+        'emode-on', 'emode-generator-level', 'emode-generator-count', 'emode-supply',
     ]);
     assert.match(declaration('currentConfig').text,
         /const data = \{ facilityTiers, levelUpStock, skippedRecipes: \[\.\.\.skippedRecipes\], unlockedSpecial: \[\.\.\.unlockedSpecial\], priorities: priorityOrder, aniimoLevels, roster \};/);

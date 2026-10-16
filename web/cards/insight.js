@@ -5,8 +5,8 @@
 // snapshot or not; the points themselves are always read from ctx.getCoinSeries(), so a profile
 // import or a cleared log never leaves old points on screen.
 
-import { gaps as findGaps, gapsWithin, guesses, intervals } from '../insight.js?v=fork-m10-1';
-import { planRows } from '../reminders.js?v=fork-m10-1';
+import { gaps as findGaps, gapsWithin, guesses, intervals } from '../insight.js?v=fork-m10-2';
+import { planRows } from '../reminders.js?v=fork-m10-2';
 
 const SHORTFALL_BELOW = 0.9;
 const MAX_GUESSES = 5;
@@ -53,13 +53,14 @@ export function mount(el, ctx) {
             </tr>`;
         }).join('');
         tableEl.innerHTML = `<table class="insight-table">
+            <caption class="visually-hidden">Predicted and actual Home Coins an hour between snapshots</caption>
             <thead><tr>
-                <th>Between snapshots</th>
-                <th class="insight-num">Hours</th>
-                <th class="insight-num" title="What the plan said when the first snapshot was saved">Plan coins/h</th>
-                <th class="insight-num" title="Coins gained an hour, counting only stretches where the balance rose">Actual coins/h</th>
-                <th class="insight-num">% of plan</th>
-                <th>Based on</th>
+                <th scope="col">Between snapshots</th>
+                <th scope="col" class="insight-num">Hours</th>
+                <th scope="col" class="insight-num" title="What the plan said when the first snapshot was saved">Plan coins/h</th>
+                <th scope="col" class="insight-num" title="Coins gained an hour, counting only stretches where the balance rose">Actual coins/h</th>
+                <th scope="col" class="insight-num">% of plan</th>
+                <th scope="col">Based on</th>
             </tr></thead>
             <tbody>${body}</tbody>
         </table>`;

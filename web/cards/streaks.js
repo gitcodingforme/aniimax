@@ -2,7 +2,7 @@
 // Reads the history through ctx; stores nothing. It redraws on 'history' and on 'coins' (a cue that
 // the watcher's coin points changed, since the best actual coins/h comes from them); the points
 // themselves are always read from ctx.getCoinSeries(), never kept from the topic.
-import { chips, localDay, summarize } from '../streaks.js?v=fork-m10-1';
+import { chips, localDay, summarize } from '../streaks.js?v=fork-m10-2';
 
 const MAX_MILESTONES = 8;
 

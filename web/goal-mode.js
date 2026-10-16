@@ -9,8 +9,8 @@
 // RV step; an item goal is one solve with that item as the only cost. `priorities: []` is what the
 // page sends for its Level up strategy (activePriorities() in app.js), so nothing else is chased.
 // `config` is ctx.config (see web/panels.js).
-import { coveringHomeLevel, playerHomeLevel, stripVariant, summarizePlan } from './plan-summary.js?v=fork-m10-1';
-import { tierCount, tierLevel } from './shared.js?v=fork-m10-1';
+import { coveringHomeLevel, playerHomeLevel, stripVariant, summarizePlan } from './plan-summary.js?v=fork-m10-2';
+import { tierCount, tierLevel } from './shared.js?v=fork-m10-2';
 
 export const GOAL_KEY = 'aniimax-goal-mode-v1';
 

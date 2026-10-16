@@ -13,15 +13,15 @@
 // ignoring the plan's priorities and level-up pace. The base's `top` is the same solve for the
 // setup as it stands, so `(top - baseTop) * 3600` is extra Home Coins an hour.
 
-import { coveringHomeLevel, playerHomeLevel, setupAtHomeLevel } from './plan-summary.js?v=fork-m10-1';
-import { tierCount } from './shared.js?v=fork-m10-1';
+import { coveringHomeLevel, playerHomeLevel, setupAtHomeLevel } from './plan-summary.js?v=fork-m10-2';
+import { tierCount } from './shared.js?v=fork-m10-2';
 
 // The smallest gain worth showing, as a share of the base (RANK_MIN_GAIN in worker.js and app.js):
 // below it, a difference is as likely to be the solver's tolerances as a real improvement.
 export const ROADMAP_MIN_GAIN = 1e-3;
 
 // How many of a facility `tiers` hold, and the highest level among them: shared.js's, passed on.
-export { tierCount, tierLevel } from './shared.js?v=fork-m10-1';
+export { tierCount, tierLevel } from './shared.js?v=fork-m10-2';
 
 // The value for RV level `homeLevel` in a per-RV list, keeping the last value past its end.
 function atHomeLevel(list, homeLevel) {

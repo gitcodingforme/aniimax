@@ -61,7 +61,7 @@ test('test_no_card_stylesheet_removes_the_focus_outline_and_each_styles_focus_vi
 
 test('test_what_if_takes_the_top_aniimo_level_from_shared_js', () => {
     const source = code(read('cards/what-if.js'));
-    assert.match(source, /import \{ MAX_ANIIMO_LEVEL \} from '\.\.\/shared\.js\?v=fork-m10-1'/);
+    assert.match(source, /import \{ MAX_ANIIMO_LEVEL \} from '\.\.\/shared\.js\?v=fork-m10-2'/);
     assert.doesNotMatch(source, /MAX_ABILITY_LEVEL/);
     assert.doesNotMatch(code(read('what-if.js')), /MAX_ABILITY_LEVEL/);
 });

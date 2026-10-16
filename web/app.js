@@ -7,40 +7,42 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, OUTPUT_CAPS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-    FACILITY_UPGRADE_COSTS, upgradeCost,
-} from './facility-config.js?v=fork-m10-1';
-import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
-import { createShareUrl, readShareHash, shareableSetup, urlWithoutShare } from './share-config.js?v=fork-m10-1';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m10-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-m10-1';
+    FACILITY_UPGRADE_COSTS, upgradeCost, EMODE,
+} from './facility-config.js?v=fork-m10-2';
+import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js?v=fork-m10-2';
+import { createShareUrl, readShareHash, shareableSetup, urlWithoutShare } from './share-config.js?v=fork-m10-2';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m10-2';
+import { applyStructureOverrides } from './overrides.js?v=fork-m10-2';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-m10-1';
+} from './upstream-check.js?v=fork-m10-2';
 import {
     addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-m10-1';
+} from './history.js?v=fork-m10-2';
 import {
     DEFAULT_ASSUMPTIONS, NTFY_SERVER, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, effectiveCycle, formatCountdown,
-    googleCalendarUrl, icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-m10-1';
-import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m10-1';
+    foodNote, googleCalendarUrl, icsCalendar, isValidTopic, ntfyRequests, outlookCalendarUrl, outputCap, planRows as reminderRows, sendNtfy,
+    suggestTopic, upcoming,
+} from './reminders.js?v=fork-m10-2';
+import { workingAniimo } from './food.js?v=fork-m10-2';
+import { applyChanges, parseReading, proposeChanges, questionsSummary, verificationSummary } from './screenshot-import.js?v=fork-m10-2';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-m10-1';
+} from './checklist.js?v=fork-m10-2';
 // Feature cards (web/cards/, see panels.js): the bus they listen on, their side solver, and the
 // loader that mounts them.
-import { publish, on, last } from './bus.js?v=fork-m10-1';
-import { createChannel, createSolver } from './solve.js?v=fork-m10-1';
-import { mountCards, addStylesheet } from './panels.js?v=fork-m10-1';
+import { publish, on, last } from './bus.js?v=fork-m10-2';
+import { createChannel, createSolver } from './solve.js?v=fork-m10-2';
+import { mountCards, addStylesheet } from './panels.js?v=fork-m10-2';
 import {
     ENVIRONMENT_BUILDING_ABILITY, MAX_ANIIMO_LEVEL, PACE_UNIT_SECONDS, PRIORITY_TARGETS as PRIORITY_IDS, RANK_MIN_GAIN,
     defaultLevelFor, escapeHtml, measureFor, onceUntilFailed, tierCount, tierLevel,
-} from './shared.js?v=fork-m10-1';
-import { coveringHomeLevel } from './plan-summary.js?v=fork-m10-1';
-import { aniimoInputFromSetup, migrateSetup, planInputFromSetup, savedChoices } from './setup-input.js?v=fork-m10-1';
+} from './shared.js?v=fork-m10-2';
+import { coveringHomeLevel } from './plan-summary.js?v=fork-m10-2';
+import { aniimoInputFromSetup, migrateSetup, planInputFromSetup, savedChoices } from './setup-input.js?v=fork-m10-2';
 
 let wasmReady = false;
 
@@ -282,7 +284,7 @@ function renderTierRows(name) {
                 <input type="number" class="tier-level" value="${tier.level}" min="1" max="10">
             </div>
             `}
-            ${showRemove ? '<button type="button" class="tier-remove-btn" title="Remove this level">&times;</button>' : ''}
+            ${showRemove ? `<button type="button" class="tier-remove-btn" title="Remove this level" aria-label="${escapeText(`Remove ${name} level ${tier.level}`)}">&times;</button>` : ''}
         </div>
     `).join('');
 }
@@ -296,7 +298,7 @@ function renderFacilityCards() {
     grid.innerHTML = FACILITY_CATEGORIES.map(category => {
         const cards = FACILITIES.filter(f => f.category === category).map(f => `
             <div class="facility-card">
-                <h4>${f.name} <span class="info-icon" data-tooltip="${f.tooltip}">?</span></h4>
+                <h4>${f.name} <span class="info-icon" tabindex="0" data-tooltip="${f.tooltip}">?</span></h4>
                 <div class="facility-tiers" data-facility="${f.name}"></div>
                 ${f.hasLevels === false ? '' : '<button type="button" class="add-tier-btn" data-facility="' + f.name + '">+ Add level</button>'}
             </div>
@@ -390,7 +392,8 @@ function getPersistedFieldIds() {
         'ecological-module-level', 'kitchen-module-level',
         'resource-detector-level', 'crafting-module-level',
         'rate-unit', 'season-on', 'layout-sim-on', 'season-currency-per-day',
-        'aniimo-best', 'aniimo-minimum', 'aniimo-custom'
+        'aniimo-best', 'aniimo-minimum', 'aniimo-custom',
+        'emode-on', 'emode-generator-level', 'emode-generator-count', 'emode-supply'
     ];
 }
 
@@ -510,9 +513,14 @@ function loadInputsFromStorage(data) {
             }));
     }
     getPersistedFieldIds().forEach(id => {
-        if (!(id in data)) return;
         const el = document.getElementById(id);
         if (!el) return;
+        // A setup from before E-mode (an older profile, share link or save) leaves it off, even if
+        // the box was ticked before it loaded.
+        if (!(id in data)) {
+            if (id === 'emode-on') el.checked = false;
+            return;
+        }
         if (el.type === 'checkbox' || el.type === 'radio') {
             el.checked = !!data[id];
         } else {
@@ -995,6 +1003,8 @@ async function checkLocalCoins() {
         if (series.length !== coinSeriesPoints.length || last?.t !== shown?.t || last?.coins !== shown?.coins) {
             coinSeriesPoints = series;
             renderCoinChart();
+            // A cue for the cards (insight, streaks) to redraw; they read the points from getCoinSeries().
+            publish('coins', coinSeriesPoints);
         }
         return true;
     } catch (error) {
@@ -1008,13 +1018,19 @@ async function checkLocalVerification() {
     try {
         const response = await fetch(LOCAL_VERIFICATION_URL, { cache: 'no-store' });
         if (!response.ok) {
-            if (response.status === 404) document.getElementById('verification-line').hidden = true;
+            if (response.status === 404) {
+                document.getElementById('verification-line').hidden = true;
+                document.getElementById('questions-line').hidden = true;
+            }
             return response.status !== 404;
         }
-        const line = verificationSummary(await response.json());
-        const el = document.getElementById('verification-line');
-        el.textContent = line;
-        el.hidden = line === '';
+        // Parsed once: the same file gives the verification line and the open game questions line.
+        const data = await response.json();
+        [['verification-line', verificationSummary(data)], ['questions-line', questionsSummary(data)]].forEach(([id, line]) => {
+            const el = document.getElementById(id);
+            el.textContent = line;
+            el.hidden = line === '';
+        });
         return true;
     } catch (error) {
         return true; // a bad file, or a network blip: keep looking
@@ -1140,6 +1156,8 @@ function readReminderSettings() {
         const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
         const assumptions = { ...DEFAULT_ASSUMPTIONS, ...(saved.assumptions && typeof saved.assumptions === 'object' ? saved.assumptions : {}) };
         if (!(assumptions.secondWatering in WATERING_POINTS)) assumptions.secondWatering = DEFAULT_ASSUMPTIONS.secondWatering;
+        assumptions.workersFed = assumptions.workersFed !== false;
+        assumptions.foodEnergy = foodEnergyOf(assumptions.foodEnergy);
         return {
             tab: !!saved.tab,
             ntfyTopic: typeof saved.ntfyTopic === 'string' ? saved.ntfyTopic : '',
@@ -1148,6 +1166,12 @@ function readReminderSettings() {
     } catch (e) {
         return { tab: false, ntfyTopic: '', assumptions: { ...DEFAULT_ASSUMPTIONS } };
     }
+}
+
+// The food energy the player entered: a positive number, else null (no refill reminder).
+function foodEnergyOf(value) {
+    const n = typeof value === 'number' ? value : String(value ?? '').trim() === '' ? NaN : Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function writeReminderSettings(settings) {
@@ -1186,7 +1210,7 @@ function reminderEvents(timers = readTimers()) {
     const { assumptions } = readReminderSettings();
     return buildEvents(timers.rows, {
         startedAt: timers.startedAt, assumptions, levelUpSeconds: timers.levelUpSeconds, levelUpTarget: timers.levelUpTarget,
-        caps: OUTPUT_CAPS,
+        caps: OUTPUT_CAPS, workers: timers.workers, foodEnergy: timers.foodEnergy,
     });
 }
 
@@ -1295,6 +1319,7 @@ function setUpPerPlan() {
         return false;
     }
     const existing = readTimers();
+    const { assumptions } = readReminderSettings();
     if (existing && !window.confirm('Replace the current reminders with new ones starting now? Reminders already sent to your phone are not cancelled by this (use "Cancel sent reminders" first if you want that).')) return false;
     writeTimers({
         startedAt: new Date().toISOString(),
@@ -1302,6 +1327,9 @@ function setUpPerPlan() {
         rows,
         levelUpSeconds: lastPlan.level_up?.seconds > 0 ? lastPlan.level_up.seconds : null,
         levelUpTarget: planContext?.levelUp ? planContext.target : null,
+        // The food bowl as it was at setup: how many Aniimo eat from it (food.js) and the energy entered.
+        workers: workingAniimo(rows, { setup: selectedAniimoSetup(), tab: selectedSetupTab(), roster }),
+        foodEnergy: assumptions.foodEnergy,
         sent: existing?.sent || [],
         sentTopic: existing?.sentTopic || null,
     });
@@ -1336,6 +1364,13 @@ function renderReminders() {
     document.getElementById('assume-watering').checked = settings.assumptions.wateringPrompts;
     document.getElementById('assume-second-watering').value = settings.assumptions.secondWatering;
     document.getElementById('assume-first-batch').checked = settings.assumptions.firstBatch !== false;
+    document.getElementById('assume-workers-fed').checked = settings.assumptions.workersFed;
+    const energyEl = document.getElementById('assume-food-energy');
+    // Not rewritten while the player is typing in it.
+    if (document.activeElement !== energyEl) energyEl.value = settings.assumptions.foodEnergy ?? '';
+    const note = foodNote(settings);
+    document.getElementById('reminders-food-note').textContent = note ? `${note}.` : '';
+    document.getElementById('reminders-food-note').hidden = !note;
     document.getElementById('channel-tab').checked = settings.tab;
     document.getElementById('ntfy-topic').value = settings.ntfyTopic;
     renderNotificationState();
@@ -1353,7 +1388,7 @@ function renderReminders() {
     };
     document.getElementById('reminders-rows').innerHTML = `<table><thead><tr><th>On</th><th>Facility</th><th>Making</th><th>Batch</th><th>Store</th><th>Started at</th></tr></thead><tbody>${
         timers.rows.map((r, i) => `<tr><td><input type="checkbox" data-row="${i}" class="reminder-row-on" ${r.on === false ? '' : 'checked'} aria-label="Remind about ${escapeText(r.facility)}"></td>`
-            + `<td>${r.count}× ${escapeText(r.facility)}${r.level ? ` <span class="hint small">Lv.${r.level}</span>` : ''}</td><td>${escapeText(prettyItem(r.item))}${r.kind === 'processor' && r.leadSeconds > r.cycleSeconds ? ' <span class="hint small">(first batch after ingredients)</span>' : ''}</td>`
+            + `<td>${r.count}× ${escapeText(r.facility)}${r.level ? ` <span class="hint small">Lv.${r.level}</span>` : ''}</td><td>${escapeText(prettyItem(r.item))}${r.electric ? ' <span class="hint small">(E-mode)</span>' : ''}${r.kind === 'processor' && r.leadSeconds > r.cycleSeconds ? ' <span class="hint small">(first batch after ingredients)</span>' : ''}</td>`
             + `<td>${r.cycleSeconds < 60 ? `${Math.round(r.cycleSeconds)}s` : formatSeconds(r.cycleSeconds)}${effectiveCycle(r) > r.cycleSeconds * 1.05 ? ` <span class="hint small">(one every ${effectiveCycle(r) < 60 ? `${Math.round(effectiveCycle(r))}s` : formatSeconds(effectiveCycle(r))}: waits for ingredients)</span>` : ''}</td>`
             + `<td>${storeCell(r)}</td>`
             + `<td><input type="datetime-local" data-row="${i}" class="reminder-row-start" value="${toLocalInputValue(r.startedAt || timers.startedAt)}"></td></tr>`).join('')
@@ -1366,7 +1401,7 @@ function renderReminders() {
         ? 'Nothing left from this setup. Press the button again after your next setup.'
         : `${next.length} reminder${next.length === 1 ? '' : 's'} still to come: the first fill-up of every row, plus what else falls in the 24 hours after setup${events.length > next.length ? ` (${events.length - next.length} already passed)` : ''}.`;
     document.getElementById('reminders-events').innerHTML = next.slice(0, 15).map(e =>
-        `<li><strong>${escapeText(e.title)}</strong> ${formatCountdown(e.at - now)} (${formatProfileTime(e.at)})${e.approximate ? ' <span class="hint small">approx.</span>' : ''}${googleCalendarLink(e)}</li>`).join('')
+        `<li><strong>${escapeText(e.title)}</strong> ${formatCountdown(e.at - now)} (${formatProfileTime(e.at)})${e.approximate ? ' <span class="hint small">approx.</span>' : ''}${googleCalendarLink(e)}${outlookCalendarLink(e)}</li>`).join('')
         + (next.length > 15 ? `<li class="hint">… and ${next.length - 15} more.</li>` : '');
 
     const sentPending = (timers.sent || []).filter(s => s.at > now).length;
@@ -1379,6 +1414,15 @@ function renderReminders() {
 function googleCalendarLink(event) {
     try {
         return ` <a href="${escapeText(googleCalendarUrl(event))}" target="_blank" rel="noopener" class="hint small" title="Opens this reminder as a new event in Google Calendar">Google</a>`;
+    } catch (_) {
+        return '';
+    }
+}
+
+// The same for Outlook on the web (outlookCalendarUrl in reminders.js).
+function outlookCalendarLink(event) {
+    try {
+        return ` <a href="${escapeText(outlookCalendarUrl(event))}" target="_blank" rel="noopener" class="hint small" title="Opens this reminder as a new event in Outlook on the web">Outlook</a>`;
     } catch (_) {
         return '';
     }
@@ -1523,13 +1567,19 @@ function attachReminderHandlers() {
         writeTimers(timers);
         renderReminders();
     });
-    [['assume-processors-repeat', 'processorsRepeat'], ['assume-plots-resow', 'plotsResow'], ['assume-watering', 'wateringPrompts'], ['assume-first-batch', 'firstBatch']].forEach(([id, key]) => {
+    [['assume-processors-repeat', 'processorsRepeat'], ['assume-plots-resow', 'plotsResow'], ['assume-watering', 'wateringPrompts'], ['assume-first-batch', 'firstBatch'], ['assume-workers-fed', 'workersFed']].forEach(([id, key]) => {
         document.getElementById(id).addEventListener('change', event => {
             const settings = readReminderSettings();
             settings.assumptions[key] = event.target.checked;
             writeReminderSettings(settings);
             renderReminders();
         });
+    });
+    document.getElementById('assume-food-energy').addEventListener('input', event => {
+        const settings = readReminderSettings();
+        settings.assumptions.foodEnergy = foodEnergyOf(event.target.value);
+        writeReminderSettings(settings);
+        renderReminders();
     });
     document.getElementById('assume-second-watering').addEventListener('change', event => {
         const settings = readReminderSettings();
@@ -2146,7 +2196,7 @@ function homelandPieces(plan, input) {
 
     // For every facility type, recipes allowed to take turns share a unit only when there are not
     // enough owned units to give each recipe its own. No facility names are special-cased here.
-    const turnAllocations = allocateTurnFacilities(steps, facility => tierCount(input.facilities[facility]), takesTurns);
+    const turnAllocations = allocateTurnFacilities(steps, facility => tierCount(input.facilities[facility]), takesTurns, plan?.power);
     turnAllocations.forEach((allocations, facility) => {
         const footprint = FACILITY_FOOTPRINTS[facility];
         if (!footprint) {
@@ -3601,6 +3651,16 @@ function getPlanInputValues() {
     return input;
 }
 
+// E-mode (Advanced setup, from RV 12, experimental): `{ generators: [{ level, count }], supply }`
+// with supply '100' or '120', or undefined when the box is off, there is no generator, or the page
+// is in Simple mode, so a plan input without E-mode stays exactly as it was. The rule is
+// setup-input.js's emodeOf, which getPlanInputValues already runs on the four saved fields
+// (emode-on, emode-generator-level, emode-generator-count, emode-supply); this only asks it, so
+// there is one copy. displayPlan uses it to tell whether E-mode was asked for.
+function emodeInput() {
+    return getPlanInputValues().emode;
+}
+
 // parseInt/parseFloat that fall back to `fallback` only when the input doesn't parse to a number
 // at all (blank/invalid); unlike `value || fallback`, these correctly keep a legitimate 0 (e.g.
 // "I own zero of this facility"), which `||` would silently discard since 0 is falsy in JS.
@@ -3810,6 +3870,8 @@ function abilityDot(name, level, note) {
 
 function aniimoLabel(step) {
     const a = step.aniimo;
+    // E-mode rows run on generator power: no Aniimo works them.
+    if (step.electric) return '<span class="hint small">none (E-mode)</span>';
     if (!a) {
         // Crops and trees: the abilities their planting and harvesting jobs need.
         const tasks = step.aniimo_tasks || [];
@@ -3870,7 +3932,7 @@ function planRows(rows) {
                     <tr class="status-${step.status}">
                         <td data-label="Facility">${step.facility}</td>
                         <td data-label="Count">${step.facility_count}</td>
-                        <td data-label="Producing">${step.item_name ? prettyItem(step.item_name) : '-'}${unverifiedRowKeys.has(`${step.facility}|${step.item_name}`) ? '<span class="tag unverified" title="Not yet checked in game">unverified</span>' : ''}${step.item_name && step.status === 'producing' ? `<button type="button" class="skip-row" data-skip="${step.item_name}" title="Can't make this? Skip it and plan again" aria-label="Skip ${prettyItem(step.item_name)} and plan again">✕</button>` : ''}</td>
+                        <td data-label="Producing">${step.item_name ? prettyItem(step.item_name) : '-'}${unverifiedRowKeys.has(`${step.facility}|${step.item_name}`) ? '<span class="tag unverified" title="Not yet checked in game">unverified</span>' : ''}${step.electric ? '<span class="tag emode" title="E-mode: runs on electric power, no Aniimo">E</span>' : ''}${step.item_name && step.status === 'producing' ? `<button type="button" class="skip-row" data-skip="${step.item_name}" title="Can't make this? Skip it and plan again" aria-label="Skip ${prettyItem(step.item_name)} and plan again">✕</button>` : ''}</td>
                         <td data-label="Aniimo">${aniimoLabel(step)}</td>
                         <td data-label="Why">${prettyReason(step.reason)}</td>
                     </tr>
@@ -4442,7 +4504,9 @@ function renderFacilityPlan(plan) {
     const steps = redistributeTurnFacilityRows(
         plan.coin_items || [],
         facility => tierCount(lastPlanInput?.facilities?.[facility]),
-        takesTurns
+        takesTurns,
+        // E-mode units are pooled apart from the manual ones, sized from the plan's power report.
+        plan.power
     );
 
     if (steps.length === 0) {
@@ -4649,6 +4713,16 @@ function updateRateUnitDisplays() {
     }
 }
 
+// The plan's E-mode line from its `power` report ({ used, budget, supply, units: [{ facility, level,
+// count, draw }] }, present whenever the generators give a budget above 0, even when no unit runs
+// on power): "E-mode: 255 W of 600 W used at 100% supply; 3 electric units". '' without a report.
+function powerLine(power) {
+    if (!power || typeof power !== 'object' || !(Number(power.budget) > 0)) return '';
+    const units = (Array.isArray(power.units) ? power.units : []).reduce((sum, u) => sum + (Number(u?.count) > 0 ? Number(u.count) : 0), 0);
+    const watts = n => formatNumber(Math.round(Number(n) || 0));
+    return `E-mode: ${watts(power.used)} W of ${watts(power.budget)} W used at ${Number(power.supply) === 120 ? 120 : 100}% supply; ${units} electric unit${units === 1 ? '' : 's'}`;
+}
+
 // Render a successfully computed plan: rate summary + facility plan table. Goal-independent,
 // called once per Calculate click (or facility/currency/module change), not on every goal
 // keystroke.
@@ -4697,6 +4771,14 @@ function displayPlan(plan) {
         const reason = plan.fallback_reason ? ` (${plan.fallback_reason})` : '';
         explored.textContent = `The exact planner couldn't run${reason}, so this plan comes from the backup planner and may not be the very best. Reloading the page usually fixes this.`;
     }
+
+    const power = document.getElementById('plan-power');
+    // E-mode as the plan was asked for (the input it was solved with; the form's, before any solve).
+    const askedEmode = lastPlanInput ? lastPlanInput.emode : emodeInput();
+    const backup = plan.proven_optimal !== true && plan.proven_optimal !== false;
+    const powerText = powerLine(plan.power) || (askedEmode && backup ? 'The backup planner does not use E-mode, so this plan has no electric units.' : '');
+    power.textContent = powerText;
+    power.hidden = powerText === '';
 
     const unverifiedEl = document.getElementById('plan-unverified');
     const unverified = plan.unverified || [];
@@ -5053,7 +5135,7 @@ function renderRecipeTables(recipes) {
             const cell = (label, value) => `<td data-label="${label}"${value === '-' ? ' class="empty"' : ''}>${value}</td>`;
             const rows = byFacility.get(f.name).map(r => `
                 <tr${r.verified === false ? ' class="unverified"' : ''}>
-                    <td class="recipe-name">${prettyItem(r.name)}${SPECIAL_NAMES.has(r.name) ? ' <span class="tag special" title="Takes a rare currency to unlock">special</span>' : ''}${r.season ? ` <span class="tag special" title="${SEASON.name} only">season</span>` : ''}${r.verified === false ? ' <span class="info-icon" data-tooltip="Not yet checked in game.">?</span>' : ''}</td>
+                    <td class="recipe-name">${prettyItem(r.name)}${SPECIAL_NAMES.has(r.name) ? ' <span class="tag special" title="Takes a rare currency to unlock">special</span>' : ''}${r.season ? ` <span class="tag special" title="${SEASON.name} only">season</span>` : ''}${r.verified === false ? ' <span class="info-icon" tabindex="0" data-tooltip="Not yet checked in game.">?</span>' : ''}</td>
                     ${cell('Level', r.facility_level)}
                     ${cell('Inputs', formatRecipeInputs(r))}
                     ${cell('Yield', formatRecipeYield(r))}
@@ -5075,10 +5157,10 @@ function renderRecipeTables(recipes) {
                                     <th>Level</th>
                                     <th>Inputs</th>
                                     <th>Yield</th>
-                                    <th>Time <span class="info-icon" data-tooltip="Grow time for crops and trees, before watering takes an eighth off it twice. Everything else lists workload: at 100% Efficiency a processor gets through one workload a second, a gathering facility 1.25 on a level-2 recipe and 1.5 on a level-3 one. An Aniimo at the level a recipe needs works at 100%; higher levels are faster, up to level 4 (at a processor, 300% one level above, then +100% per level; at gathering facilities each level adds half a workload a second, reading as +50% on a level-1 recipe, +40% on a level-2 one and +33% on a level-3 one).">?</span></th>
+                                    <th>Time <span class="info-icon" tabindex="0" data-tooltip="Grow time for crops and trees, before watering takes an eighth off it twice. Everything else lists workload: at 100% Efficiency a processor gets through one workload a second, a gathering facility 1.25 on a level-2 recipe and 1.5 on a level-3 one. An Aniimo at the level a recipe needs works at 100%; higher levels are faster, up to level 4 (at a processor, 300% one level above, then +100% per level; at gathering facilities each level adds half a workload a second, reading as +50% on a level-1 recipe, +40% on a level-2 one and +33% on a level-3 one).">?</span></th>
                                     <th>Sell</th>
                                     <th>Module</th>
-                                    <th>Aniimo <span class="info-icon" data-tooltip="The lowest ability level that can make this, and the best Aniimo for it: level 4, the top, with the facility's personality (+20% speed). For crops and trees, the ability each job needs, in order.">?</span></th>
+                                    <th>Aniimo <span class="info-icon" tabindex="0" data-tooltip="The lowest ability level that can make this, and the best Aniimo for it: level 4, the top, with the facility's personality (+20% speed). For crops and trees, the ability each job needs, in order.">?</span></th>
                                 </tr>
                             </thead>
                             <tbody>${rows}</tbody>
@@ -5098,7 +5180,8 @@ function renderRecipeTables(recipes) {
 }
 
 window.showFacilities = async function() {
-    document.getElementById('facilitiesModal').classList.add('show');
+    // openModal (index.html) moves the focus into the dialog and remembers what opened it.
+    window.openModal('facilitiesModal');
     if (recipesRendered) return;
     if (!wasmReady) {
         document.getElementById('facilities-loading-hint').textContent = 'Optimizer not ready. Please wait...';
@@ -5117,7 +5200,7 @@ window.showFacilities = async function() {
 }
 
 window.closeFacilities = function() {
-    document.getElementById('facilitiesModal').classList.remove('show');
+    window.closeModal('facilitiesModal');
 }
 
 window.closeFacilitiesOnBackdrop = function(event) {
@@ -5135,7 +5218,7 @@ let pageConfigMemo = null;
 function pageConfig() {
     pageConfigMemo ||= Object.freeze({
         FACILITIES, FACILITY_CATEGORIES, OUTPUT_CAPS, LEVEL_UP_COSTS, LEVEL_UP_CHAINS, MODULE_MAX_LEVELS, MAX_HOME_LEVEL,
-        ANIIMO_MAX, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, FACILITY_UPGRADE_COSTS, upgradeCost, simpleSetup,
+        ANIIMO_MAX, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, FACILITY_UPGRADE_COSTS, upgradeCost, simpleSetup, EMODE,
         abilities: ABILITIES.map(a => a.name),
         modules: Object.keys(MODULE_MAX_LEVELS),
         moduleNames: { ...MODULE_NAMES },

@@ -14,12 +14,12 @@
 // src/exact.rs, so the level-up takes 86400 / top seconds). `coins` ({ base, value }, per second)
 // comes only when the measure doesn't move: the most Home Coins while keeping it.
 
-import { playerHomeLevel } from './plan-summary.js?v=fork-m10-1';
-import { ABILITY_DEFAULTS, PACE_UNIT_SECONDS, RANK_MIN_GAIN } from './shared.js?v=fork-m10-1';
+import { playerHomeLevel } from './plan-summary.js?v=fork-m10-2';
+import { ABILITY_DEFAULTS, PACE_UNIT_SECONDS, RANK_MIN_GAIN } from './shared.js?v=fork-m10-2';
 
 // What a change is measured by, and the level-up pace unit: shared.js's, passed on for the card
 // and the tests.
-export { PACE_UNIT_SECONDS, measureFor } from './shared.js?v=fork-m10-1';
+export { PACE_UNIT_SECONDS, measureFor } from './shared.js?v=fork-m10-2';
 
 // The smallest change worth showing, as a share of the base (RANK_MIN_GAIN in shared.js).
 export const ADVISOR_MIN_GAIN = RANK_MIN_GAIN;

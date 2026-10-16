@@ -13,8 +13,8 @@ function element(id) {
     };
 }
 
-test('test_the_card_list_matches_the_ten_containers', () => {
-    assert.deepEqual(CARDS, ['daily', 'roadmap', 'coverage', 'goal-mode', 'what-if', 'roster-advisor', 'session', 'insight', 'streaks', 'compare']);
+test('test_the_card_list_matches_the_eleven_containers', () => {
+    assert.deepEqual(CARDS, ['daily', 'roadmap', 'coverage', 'goal-mode', 'what-if', 'roster-advisor', 'session', 'insight', 'streaks', 'compare', 'health']);
 });
 
 test('test_cards_mount_with_the_context_and_are_shown', async () => {

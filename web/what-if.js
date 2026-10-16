@@ -12,10 +12,10 @@
 //          modules: { id: level }, aniimoLevels: { Ability: n },
 //          rosterLevels: { memberIndex: { Ability: n } } }
 
-import { diffPlans, playerHomeLevel, summarizePlan } from './plan-summary.js?v=fork-m10-1';
+import { diffPlans, playerHomeLevel, summarizePlan } from './plan-summary.js?v=fork-m10-2';
 
 // The lowest RV level that allows every facility and module an input owns (app.js's rule).
-export { coveringHomeLevel } from './plan-summary.js?v=fork-m10-1';
+export { coveringHomeLevel } from './plan-summary.js?v=fork-m10-2';
 
 // A whole number at least `min`, else null.
 const whole = (value, min = 0) => {
