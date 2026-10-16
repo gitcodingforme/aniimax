@@ -339,3 +339,63 @@ export async function cancelNtfy(sent, topic, fetchImpl = globalThis.fetch, serv
     }
     return { ok, failed };
 }
+
+// --- calendar links (Google, Outlook on the web) ------------------------------------------------
+
+export const GOOGLE_CALENDAR_URL = 'https://calendar.google.com/calendar/render';
+export const OUTLOOK_CALENDAR_URL = 'https://outlook.live.com/calendar/0/deeplink/compose';
+export const DEFAULT_EVENT_MINUTES = 5;
+
+// The start and end of an event in ms. An event with no usable time cannot become a link.
+function calendarSpan(event, durationMinutes) {
+    const start = toMs(event?.at);
+    if (!Number.isFinite(start)) throw new Error('a calendar link needs the time of the reminder');
+    const minutes = Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : DEFAULT_EVENT_MINUTES;
+    return { start, end: start + minutes * 60 * 1000 };
+}
+
+// The event text for a calendar entry: approximate moments say so, because the entry is a fixed
+// time and the game's real moment can differ. A body that already says so is left as it is.
+function calendarDetails(event) {
+    const body = String(event?.body ?? '');
+    return event?.approximate && !/approximate/i.test(body) ? `${body} (approximate)` : body;
+}
+
+// An "add to Google Calendar" link: one click opens a pre-filled event for the signed-in account.
+// Times are UTC (YYYYMMDDTHHMMSSZ) so the link is the same in every time zone.
+export function googleCalendarUrl(event, { durationMinutes = DEFAULT_EVENT_MINUTES, location = '' } = {}) {
+    const { start, end } = calendarSpan(event, durationMinutes);
+    let url = `${GOOGLE_CALENDAR_URL}?action=TEMPLATE`
+        + `&text=${encodeURIComponent(String(event.title ?? ''))}`
+        + `&dates=${icsStamp(start)}/${icsStamp(end)}`
+        + `&details=${encodeURIComponent(calendarDetails(event))}`;
+    if (location) url += `&location=${encodeURIComponent(String(location))}`;
+    return url;
+}
+
+// The same for Outlook on the web (outlook.live.com), which takes ISO times. `path` and `rru` are
+// the two extra parameters its compose page expects from a link.
+export function outlookCalendarUrl(event, { durationMinutes = DEFAULT_EVENT_MINUTES, location = '' } = {}) {
+    const { start, end } = calendarSpan(event, durationMinutes);
+    const iso = ms => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    let url = `${OUTLOOK_CALENDAR_URL}?subject=${encodeURIComponent(String(event.title ?? ''))}`
+        + `&startdt=${encodeURIComponent(iso(start))}`
+        + `&enddt=${encodeURIComponent(iso(end))}`
+        + `&body=${encodeURIComponent(calendarDetails(event))}`;
+    if (location) url += `&location=${encodeURIComponent(String(location))}`;
+    return url + `&path=${encodeURIComponent('/calendar/action/compose')}&rru=addevent`;
+}
+
+// One entry per event for the reminders list: the event and its Google link. An event that
+// cannot become a link (no usable time) is skipped, so one bad event does not hide the rest.
+export function calendarLinks(events, options) {
+    const links = [];
+    for (const event of events || []) {
+        try {
+            links.push({ event, google: googleCalendarUrl(event, options) });
+        } catch (_) {
+            // skipped
+        }
+    }
+    return links;
+}
