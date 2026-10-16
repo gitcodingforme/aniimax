@@ -1,0 +1,131 @@
+/* Session planner card (web/cards/session.js). Colours come from style.css's theme variables;
+   shared classes (feature-actions, feature-compare, feature-chips, delta-up/down) from features.css. */
+
+#session-card .session-modes {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    align-items: center;
+    gap: 0.4rem 1rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+#session-card .session-modes legend {
+    padding: 0 0.3rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+#session-card .session-mode,
+#session-card .session-length,
+#session-card .session-aim {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+#session-card .session-length input {
+    width: 5rem;
+}
+
+/* The length that does not apply to the chosen mode is dimmed (it stays usable: focusing it
+   switches the mode). */
+#session-card:not(.session-overnight) #session-hours,
+#session-card.session-overnight #session-minutes {
+    opacity: 0.55;
+}
+
+#session-card .session-aim {
+    margin: 0.25rem 0;
+}
+
+#session-card .session-col {
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+}
+
+#session-card .session-col h3,
+#session-card .session-heading {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 0.95rem;
+}
+
+#session-card .session-heading {
+    margin-top: 1rem;
+}
+
+#session-card .session-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+}
+
+#session-card .session-facts dt {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+#session-card .session-facts dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+#session-card .session-note {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+#session-card .session-sub {
+    margin: 0.6rem 0 0.2rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+#session-card .session-diff th.session-num,
+#session-card .session-diff td.session-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* style.css highlights every table's first row; a list of changes has no "best" row. */
+#session-card .session-diff tbody tr:where(:first-child) td {
+    color: inherit;
+    font-weight: normal;
+}
+
+#session-card .session-warning {
+    margin: 0.5rem 0;
+    padding: 0.4rem 0.6rem;
+    border-left: 3px solid var(--warning);
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+#session-card.session-stale #session-result {
+    opacity: 0.55;
+}
+
+#session-card.session-stale .feature-status {
+    color: var(--warning);
+}
+
+@media (max-width: 600px) {
+    #session-card .session-modes {
+        grid-template-columns: auto;
+    }
+
+    #session-card .session-diff th,
+    #session-card .session-diff td {
+        padding: 0.4rem 0.5rem;
+    }
+}
