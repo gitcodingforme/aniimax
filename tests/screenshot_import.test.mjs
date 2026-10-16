@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { applyChanges, parseReading, proposeChanges, verificationSummary } from '../web/screenshot-import.js';
+import { applyChanges, parseReading, proposeChanges, questionsSummary, verificationSummary } from '../web/screenshot-import.js';
 
 const current = {
     facilityTiers: { Farmland: [{ count: 4, level: 2 }], Mine: [{ count: 1, level: 1 }] },
@@ -111,4 +111,46 @@ test('test_verification_summary_ignores_bad_data', () => {
         { format: 'aniimax-verification', observations: 3, agree: 3 }]) {
         assert.equal(verificationSummary(bad), '');
     }
+});
+
+test('test_verification_summary_mentions_unclear_only_when_the_file_carries_a_count', () => {
+    const data = { format: 'aniimax-verification', version: 1, observations: 9, agree: 6, disagree: 1, unknown: 1, report: 'screenshots/verification.md' };
+    assert.equal(verificationSummary({ ...data, unclear: 1 }), 'Verified against 9 observations from the watcher: 6 agree, 1 disagree, 1 unknown, 1 unclear (report: screenshots/verification.md)');
+    assert.match(verificationSummary({ ...data, unclear: 0 }), /1 unknown, 0 unclear \(report: /);
+    // No count, or one that is not a whole number: the line is exactly what it was before.
+    const before = 'Verified against 9 observations from the watcher: 6 agree, 1 disagree, 1 unknown (report: screenshots/verification.md)';
+    for (const odd of [undefined, null, '2', -1, 1.5, NaN]) {
+        assert.equal(verificationSummary({ ...data, unclear: odd }), before);
+    }
+});
+
+test('test_questions_summary_is_one_plain_sentence_from_counts', () => {
+    const verification = { format: 'aniimax-verification', questions: { total: 19, answered: 3, evidence: 4, open: 12 } };
+    assert.equal(questionsSummary(verification), '3 of 19 game questions answered, 4 waiting for you to check');
+    // Works on the questions block alone inside any object, and says "question" for a single one.
+    assert.equal(questionsSummary({ questions: { total: 1, answered: 0, evidence: 1, open: 0 } }), '0 of 1 game question answered, 1 waiting for you to check');
+    assert.equal(questionsSummary({ questions: { total: 19, answered: 0, evidence: 0, open: 19 } }), '0 of 19 game questions answered, 0 waiting for you to check');
+    assert.equal(questionsSummary({ questions: { total: 19, answered: 19, evidence: 0, open: 0 } }), '19 of 19 game questions answered, 0 waiting for you to check');
+});
+
+test('test_questions_summary_is_empty_for_missing_or_malformed_data', () => {
+    const good = { total: 19, answered: 3, evidence: 4, open: 12 };
+    for (const bad of [null, undefined, 'text', 5, [], {}, { questions: null }, { questions: 'many' }, { questions: [] },
+        { questions: { ...good, total: 0, answered: 0, evidence: 0, open: 0 } },
+        { questions: { ...good, total: '19' } },
+        { questions: { ...good, answered: 2.5 } },
+        { questions: { ...good, evidence: -1 } },
+        { questions: { ...good, open: NaN } },
+        { questions: { total: 19, answered: 3, evidence: 4 } },
+        { questions: { ...good, answered: 20, evidence: 0, open: 0 } },
+        { questions: { ...good, answered: 10, evidence: 10, open: 0 } }]) {
+        assert.equal(questionsSummary(bad), '');
+    }
+});
+
+test('test_questions_summary_prints_counts_only', () => {
+    // Anything else in the block (a stray question text, a value) must never reach the line.
+    const line = questionsSummary({ questions: { total: 19, answered: 3, evidence: 4, open: 12, text: 'Q1 my secret', value: 'Basil 123456' } });
+    assert.equal(line, '3 of 19 game questions answered, 4 waiting for you to check');
+    assert.doesNotMatch(line, /secret|Basil|123456/);
 });

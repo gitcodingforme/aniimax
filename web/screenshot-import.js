@@ -116,12 +116,29 @@ export function applyChanges(current, meta, changes, selectedIds) {
 
 // One line for Profile details from verification.json, which scripts/verify_data.py writes next to
 // the local site: how many facts the watcher saw on facility panels and how they compare with this
-// site's data. '' when the file is not a usable summary, so nothing is shown.
+// site's data. '' when the file is not a usable summary, so nothing is shown. `unclear` is optional:
+// facts the watcher saw only once and could not judge (open the panel again); when the file carries
+// a usable count it is mentioned after `unknown`, otherwise the line is exactly as it was before.
 export function verificationSummary(data) {
     if (!data || data.format !== 'aniimax-verification') return '';
     const counts = ['observations', 'agree', 'disagree', 'unknown'].map(key => data[key]);
     if (!counts.every(n => Number.isInteger(n) && n >= 0) || counts[0] === 0) return '';
     const [observations, agree, disagree, unknown] = counts;
     const report = typeof data.report === 'string' && data.report ? data.report : 'screenshots/verification.md';
-    return `Verified against ${observations} observation${observations === 1 ? '' : 's'} from the watcher: ${agree} agree, ${disagree} disagree, ${unknown} unknown (report: ${report})`;
+    const unclearText = Number.isInteger(data.unclear) && data.unclear >= 0 ? `, ${data.unclear} unclear` : '';
+    return `Verified against ${observations} observation${observations === 1 ? '' : 's'} from the watcher: ${agree} agree, ${disagree} disagree, ${unknown} unknown${unclearText} (report: ${report})`;
+}
+
+// One line for Profile details from the `questions` counts in verification.json (the open game
+// questions in scripts/game_questions.json: how many are answered, how many have facts captured and
+// are waiting for the owner to check, how many have not been seen yet). Counts only, so nothing
+// personal can be in it. '' when the counts are missing or not usable, so nothing is shown.
+export function questionsSummary(verification) {
+    const q = verification && typeof verification === 'object' ? verification.questions : null;
+    if (!q || typeof q !== 'object' || Array.isArray(q)) return '';
+    const counts = ['total', 'answered', 'evidence', 'open'].map(key => q[key]);
+    if (!counts.every(n => Number.isInteger(n) && n >= 0)) return '';
+    const [total, answered, evidence] = counts;
+    if (total === 0 || answered + evidence > total) return '';
+    return `${answered} of ${total} game question${total === 1 ? '' : 's'} answered, ${evidence} waiting for you to check`;
 }
