@@ -1,0 +1,77 @@
+/* "Is everything working?" card (web/cards/health.js). Colours come from the variables in
+   style.css's :root and .light blocks, so both themes work. The badge words (OK, Needs a look, Note)
+   carry the meaning as well as the colour. */
+
+#health-card .health-lines {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+#health-card .health-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.4rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: 8px;
+    background: var(--surface-2);
+}
+
+#health-card .health-badge {
+    flex: 0 0 auto;
+    min-width: 5.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding-top: 0.1rem;
+}
+
+#health-card .health-body {
+    flex: 1 1 14rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow-wrap: anywhere;
+}
+
+#health-card .health-text {
+    color: var(--text);
+}
+
+#health-card .health-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+#health-card .health-line .toggle-button {
+    flex: 0 0 auto;
+}
+
+#health-card .health-ok {
+    border-left-color: var(--success);
+}
+
+#health-card .health-ok .health-badge {
+    color: var(--success);
+}
+
+#health-card .health-warn {
+    border-left-color: var(--warning);
+}
+
+#health-card .health-warn .health-badge {
+    color: var(--warning);
+}
+
+#health-card .health-info {
+    border-left-color: var(--text-muted);
+}
+
+#health-card .health-info .health-badge {
+    color: var(--text-muted);
+}
