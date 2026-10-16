@@ -4,7 +4,7 @@
 // web/compare.js and web/setup-input.js; the card contract is in web/panels.js.
 
 import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText, NOTHING_LOADED, planMoved, shouldStop } from '../compare.js?v=fork-m9-2';
-import { aniimoTabOf, planInputFromSetup, sameInput } from '../setup-input.js?v=fork-m9-2';
+import { aniimoTabOf, differingKeys, planInputFromSetup } from '../setup-input.js?v=fork-m9-2';
 import { formatSeconds, setupHash } from '../history.js?v=fork-m9-2';
 import { readShareHash } from '../share-config.js?v=fork-m9-2';
 
@@ -74,17 +74,19 @@ export function mount(el, ctx) {
     // for the setup as it is now. A difference means app.js and setup-input.js have drifted apart.
     function selfCheck() {
         const last = ctx.last('plan');
-        let drifted = false;
+        let message = '';
         try {
             const setup = ctx.getSetup();
             if (last?.input && last.setupHash === setupHash(setup)) {
-                drifted = !sameInput(planInputFromSetup(setup, ctx.config, { aniimoTab: last.tab }), last.input);
+                const keys = differingKeys(planInputFromSetup(setup, ctx.config, { aniimoTab: last.tab }), last.input);
+                if (keys.length) message = `The compare tool's input differs from the page's; results may be off. It differs in: ${keys.join(', ')}.`;
             }
         } catch (error) {
             console.warn('compare self-check failed', error);
-            drifted = true;
+            message = `The compare tool could not check its input against the page's; results may be off (${error?.message || 'error'}).`;
         }
-        warningEl.hidden = !drifted;
+        warningEl.textContent = message;
+        warningEl.hidden = !message;
     }
 
     async function resolveOther() {

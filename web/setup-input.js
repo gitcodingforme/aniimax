@@ -255,3 +255,11 @@ function stableJson(value) {
 export function sameInput(a, b) {
     return stableJson(JSON.parse(JSON.stringify(a ?? null))) === stableJson(JSON.parse(JSON.stringify(b ?? null)));
 }
+
+// The top-level keys whose values differ between two plan inputs (sorted), for the compare card's
+// drift warning: ['level_up', 'priorities'] says where setup-input.js and app.js disagree.
+export function differingKeys(a, b) {
+    const x = JSON.parse(JSON.stringify(a ?? {}));
+    const y = JSON.parse(JSON.stringify(b ?? {}));
+    return [...new Set([...Object.keys(x), ...Object.keys(y)])].sort().filter(key => stableJson(x[key]) !== stableJson(y[key]));
+}
