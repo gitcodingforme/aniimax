@@ -1,0 +1,84 @@
+/* Goal mode card (web/cards/goal-mode.js). Colours come from style.css's theme variables. */
+
+/* .input-row sets display: flex, which would otherwise win over the hidden attribute. */
+#goal-mode-card [hidden] {
+    display: none !important;
+}
+
+#goal-mode-card .tabs {
+    margin: 0.5rem 0 0.75rem;
+}
+
+#goal-mode-card .goal-mode-row {
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+#goal-mode-card .goal-mode-check {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 1;
+    padding-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+#goal-mode-card .goal-mode-table td {
+    vertical-align: top;
+}
+
+#goal-mode-card .goal-mode-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* style.css highlights every table's first row; this table has no best row (:where keeps it low). */
+#goal-mode-card .goal-mode-table tbody tr:where(:first-child) td {
+    color: inherit;
+    font-weight: normal;
+}
+
+#goal-mode-card .goal-mode-table .feature-chips {
+    margin: 0;
+}
+
+#goal-mode-card .goal-mode-note {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+#goal-mode-card .goal-mode-total {
+    font-weight: bold;
+    margin: 0.5rem 0 0.25rem;
+}
+
+#goal-mode-card .goal-mode-bad,
+#goal-mode-card tr.goal-mode-bad td {
+    color: var(--warning);
+}
+
+#goal-mode-card.goal-mode-stale #goal-mode-results {
+    opacity: 0.55;
+}
+
+#goal-mode-card.goal-mode-stale .feature-status {
+    color: var(--warning);
+}
+
+@media (max-width: 600px) {
+    #goal-mode-card .goal-mode-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    #goal-mode-card .goal-mode-table th,
+    #goal-mode-card .goal-mode-table td {
+        padding: 0.4rem 0.5rem;
+    }
+}
