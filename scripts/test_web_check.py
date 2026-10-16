@@ -393,10 +393,12 @@ class WorkflowTest(unittest.TestCase):
     def test_schedule_permissions_and_token(self):
         text = (REPO / ".github" / "workflows" / "web-check.yml").read_text(encoding="utf-8")
         for part in ("cron: '41 7 * * 2'", "workflow_dispatch:", "contents: read", "issues: write", "group: web-check",
-                     "cancel-in-progress: false", "timeout-minutes: 20", "actions/checkout@v4", "GH_TOKEN: ${{ github.token }}",
+                     "cancel-in-progress: false", "timeout-minutes: 20", "GH_TOKEN: ${{ github.token }}",
                      "scripts/apply_overrides.py", "set +e", "GITHUB_STEP_SUMMARY", "::warning::sites unreachable or page shape changed"):
             self.assertIn(part, text)
         self.assertNotIn("secrets.", text)
+        # The checkout action is pinned to a commit, with its tag in a trailing comment.
+        self.assertRegex(text, r"actions/checkout@[0-9a-f]{40} # v4[.0-9]*\s")
 
 
 if __name__ == "__main__":
