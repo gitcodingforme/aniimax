@@ -348,8 +348,11 @@ async function mountCard(t, { files = {}, storage = memoryStorage(), navigator, 
     t.mock.timers.enable({ apis: ['Date'], now: NOW });
     const warnings = [];
     const errors = [];
-    t.mock.method(console, 'warn', (...args) => { warnings.push(args); });
-    t.mock.method(console, 'error', (...args) => { errors.push(args); });
+    // Node's own warnings (Node 22 prints "ExperimentalWarning: The MockTimers API..." through
+    // console.error) are not the card's.
+    const fromNode = (args) => args.some((a) => /ExperimentalWarning|--trace-warnings/.test(String(a)));
+    t.mock.method(console, 'warn', (...args) => { if (!fromNode(args)) warnings.push(args); });
+    t.mock.method(console, 'error', (...args) => { if (!fromNode(args)) errors.push(args); });
     const fetchFn = fetchImpl || fetchStub(files);
     t.after(installGlobals({
         localStorage: storage,
