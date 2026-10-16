@@ -44,6 +44,8 @@ Usage (from the repository root):
 
 Defaults: screenshots/observations.jsonl in, screenshots/verification.md and verification.json out;
 with --web-dir the JSON summary is also copied there as verification.json (the local site reads it).
+The summary's `rows` (see summary_rows) feed the site's "How sure is this data?" card; they name only
+facility, item, column, key, status and day, never frames, times of day or values read off the screen.
 Standard library only.
 """
 from __future__ import annotations
@@ -358,6 +360,57 @@ def confirmed_unverified(verdicts: list[dict], unverified: list[dict]) -> list[d
     return out
 
 
+SUMMARY_STATUSES = ("agree", "disagree")
+DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def summary_rows(verdicts: list[dict]) -> list[dict]:
+    """The verdicts merged per value, for the site's "How sure is this data?" card (web/cards/coverage.js):
+    [{facility, item, column, key, status, day}], sorted.
+
+      card columns  each judged column of an item card (agree or disagree; a `listed` column and the
+                    facility column are skipped), key "". A card whose item is a row of another
+                    facility's file has no columns and counts as a "recipe" disagreement.
+      unlock        column "unlock", item "", key "<facility level>".
+      recipe        the recipe in a facility's box: column "recipe", item = the recipe, key "".
+
+    Unknown verdicts are skipped (nothing was compared). A value seen with one status keeps it; seen
+    both agreeing and disagreeing (a misread, or the game changed) it becomes "conflict". `day` is the
+    last day it was seen (YYYY-MM-DD, or "" when the observation had no usable time).
+    PRIVACY: web/verification.json carries these rows and the site shows them, so a row never holds a
+    frame name, a time of day or a value read off the screen."""
+    merged: dict[tuple[str, str, str, str], dict] = {}
+
+    def add(facility, item, column, key, status, t) -> None:
+        if status not in SUMMARY_STATUSES or not isinstance(facility, str) or not facility:
+            return
+        entry = merged.setdefault((facility, str(item or ""), column, str(key if key is not None else "")), {"statuses": set(), "day": ""})
+        entry["statuses"].add(status)
+        seen = day(t)
+        if DAY.fullmatch(seen):
+            entry["day"] = max(entry["day"], seen)
+
+    for v in verdicts:
+        obs = v.get("obs") or {}
+        fact, facility, t = obs.get("fact"), obs.get("facility"), obs.get("t")
+        if fact == "card":
+            for c in v.get("columns") or []:
+                if c.get("column") != "facility":
+                    add(facility, obs.get("item"), str(c.get("column")), "", c.get("status"), t)
+            if not v.get("columns") and v.get("status") == "disagree":
+                add(facility, obs.get("item"), "recipe", "", "disagree", t)
+        elif fact == "unlock":
+            add(facility, "", "unlock", obs.get("facility_level"), v.get("status"), t)
+        elif fact == "recipe":
+            add(facility, obs.get("recipe"), "recipe", "", v.get("status"), t)
+    rows = []
+    for (facility, item, column, key), entry in sorted(merged.items()):
+        statuses = entry["statuses"]
+        rows.append({"facility": facility, "item": item, "column": column, "key": key,
+                     "status": "conflict" if len(statuses) > 1 else next(iter(statuses)), "day": entry["day"]})
+    return rows
+
+
 VALUES_HEADER = "file, match, column, value, upstream_value, verified_on, note"
 EMODE_HEADER = "item, facility, emode_seconds, source, fetched_on"
 
@@ -495,6 +548,7 @@ def run(root: Path, observations: Path, out_md: Path, out_json: Path, web_json: 
                "cards": {"seen": len(cards), **{s: sum(1 for v in cards if v["status"] == s) for s in ("agree", "disagree", "unknown")},
                          "unverified_confirmed": [u["name"] for u in confirmed_unverified(verdicts, unverified) if u["confirmed"]],
                          "unverified_total": len(unverified)},
+               "rows": summary_rows(verdicts),
                "report": report}
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_md.write_text(render(verdicts, updated, unlocks, unverified), encoding="utf-8")

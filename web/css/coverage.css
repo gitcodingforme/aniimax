@@ -1,0 +1,90 @@
+/* "How sure is this data?" card (web/cards/coverage.js). Colours come from the variables in
+   style.css's :root and .light blocks, so both themes work. */
+
+.coverage-details > summary {
+    cursor: pointer;
+    width: fit-content;
+    user-select: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.coverage-details > summary:hover {
+    color: var(--text);
+}
+
+.coverage-body h3 {
+    font-size: 0.95rem;
+    margin: 1rem 0 0.4rem;
+}
+
+.coverage-chips .coverage-chip::before {
+    content: '';
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-right: 0.35rem;
+    border-radius: 50%;
+    background: var(--text-muted);
+}
+
+.coverage-chips .coverage-is-game::before,
+.coverage-chips .coverage-is-wiki::before {
+    background: var(--success);
+}
+
+.coverage-chips .coverage-is-game {
+    border-color: var(--success);
+}
+
+.coverage-chips .coverage-is-game-differs::before,
+.coverage-chips .coverage-is-wiki-differs::before {
+    background: var(--error);
+}
+
+.coverage-chips .coverage-is-unverified::before {
+    background: var(--warning);
+}
+
+.coverage-table {
+    font-size: 0.8rem;
+}
+
+.coverage-table th.coverage-num,
+.coverage-table td.coverage-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* style.css makes the first row of every table bold; this table has no lead row. */
+.coverage-table tbody tr:first-child td {
+    font-weight: normal;
+    white-space: normal;
+}
+
+.coverage-table td:first-child {
+    white-space: nowrap;
+}
+
+.coverage-zero {
+    color: var(--text-muted);
+}
+
+.coverage-differs {
+    padding-left: 1.1rem;
+    margin: 0.25rem 0;
+    font-size: 0.85rem;
+}
+
+.coverage-differs li {
+    margin: 0.2rem 0;
+}
+
+.coverage-differs .coverage-is-game-differs,
+.coverage-differs .coverage-is-wiki-differs {
+    color: var(--error);
+}
+
+.coverage-footnote {
+    margin: 0.5rem 0 0;
+}

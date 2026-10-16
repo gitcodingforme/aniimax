@@ -325,5 +325,72 @@ class VerifyDataTest(unittest.TestCase):
         self.assertIn("No item card seen yet", self.report())
 
 
+
+class SummaryRowsTest(unittest.TestCase):
+    """The per-value rows in verification.json, which the site's "How sure is this data?" card reads."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = make_root(Path(self._tmp.name))
+
+    def test_rows_hold_no_frame_time_or_screen_value(self):
+        summary = run_with(self.root, [
+            card("Farmland", "rose", 4, "40m 0s", environment="Cool", frame="stock-secret-frame.png", t="2026-10-15T15:51:44Z"),
+            card("Simmering Pot", "rose_concentrate", 2, "1m 48s", frame="stock-secret-frame.png"),   # time listed: no row for it
+            unlock("Chimney Kiln", 3, 14, frame="facility-secret-frame.png", t="2026-10-14T09:08:07Z"),
+            recipe("Chimney Kiln", "coarse_sifted_ore", "2s", frame="facility-secret-frame.png"),
+            unlock("Not A Facility", 2, 5),                                                            # unknown: no row
+        ])
+        rows = summary["rows"]
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertEqual(set(row), {"facility", "item", "column", "key", "status", "day"}, row)
+            self.assertRegex(row["day"], r"^\d{4}-\d{2}-\d{2}$")
+        text = json.dumps(rows)
+        for secret in ("secret-frame", "15:51", "09:08", "T1", "40m", "2400", "Cool", "1m 48s", '"14"', "frame", "screen"):
+            self.assertNotIn(secret, text)
+        self.assertIn({"facility": "Farmland", "item": "rose", "column": "production_time", "key": "", "status": "agree", "day": "2026-10-15"}, rows)
+        self.assertIn({"facility": "Chimney Kiln", "item": "", "column": "unlock", "key": "3", "status": "agree", "day": "2026-10-14"}, rows)
+        self.assertIn({"facility": "Chimney Kiln", "item": "coarse_sifted_ore", "column": "recipe", "key": "", "status": "agree", "day": "2026-10-15"}, rows)
+        self.assertNotIn("facility", {r["column"] for r in rows}, "the facility column is never a row")
+        self.assertNotIn("time", {r["column"] for r in rows}, "a listed column is never a row")
+        self.assertNotIn("Not A Facility", {r["facility"] for r in rows})
+
+    def test_a_value_seen_agreeing_and_disagreeing_becomes_a_conflict(self):
+        summary = run_with(self.root, [
+            card("Farmland", "rose", 4, "40m 0s", environment="Cool", t="2026-10-14T10:00:00Z"),
+            card("Farmland", "rose", 4, "41m 0s", environment="Cool", t="2026-10-16T10:00:00Z"),   # production_time disagrees this time
+            unlock("Carousel Mill", 4, 13), unlock("Carousel Mill", 4, 12),                        # a misread: one agrees, one does not
+            unlock("Chimney Kiln", 4, 19), unlock("Chimney Kiln", 4, 19, t="2026-10-16T08:00:00Z"),  # disagrees twice: stays disagree
+            card("Farmland", "wheatmeal", 1, "54s"),                                               # another facility's row: a recipe disagreement
+        ])
+        by = {(r["facility"], r["item"], r["column"], r["key"]): r for r in summary["rows"]}
+        self.assertEqual(by[("Farmland", "rose", "production_time", "")]["status"], "conflict")
+        self.assertEqual(by[("Farmland", "rose", "production_time", "")]["day"], "2026-10-16", "the last day it was seen")
+        self.assertEqual(by[("Farmland", "rose", "facility_level", "")]["status"], "agree")
+        self.assertEqual(by[("Farmland", "rose", "environment", "")]["status"], "agree")
+        self.assertEqual(by[("Carousel Mill", "", "unlock", "4")]["status"], "conflict")
+        self.assertEqual(by[("Chimney Kiln", "", "unlock", "4")], {"facility": "Chimney Kiln", "item": "", "column": "unlock", "key": "4", "status": "disagree", "day": "2026-10-16"})
+        self.assertEqual(by[("Farmland", "wheatmeal", "recipe", "")]["status"], "disagree")
+        self.assertEqual(len(summary["rows"]), len(by), "one row per value")
+
+    def test_the_web_copy_carries_the_rows_and_stays_version_1(self):
+        web_json = self.root / "web" / "verification.json"
+        run_with(self.root, [card("Bouncy Brew Keg", "ginseng_water", 3, workload=162), unlock("Chimney Kiln", 3, 14)], web_json=web_json)
+        data = json.loads(web_json.read_text(encoding="utf-8"))
+        self.assertEqual((data["format"], data["version"]), ("aniimax-verification", 1))
+        self.assertEqual({(r["column"], r["status"]) for r in data["rows"]}, {("facility_level", "agree"), ("workload", "agree"), ("unlock", "agree")})
+        self.assertEqual(data["rows"], json.loads((self.root / "screenshots" / "verification.json").read_text(encoding="utf-8"))["rows"])
+
+    def test_summary_rows_survives_odd_verdicts(self):
+        rows = vd.summary_rows([
+            {"obs": {"fact": "card", "facility": "Farmland", "item": "rose", "t": "not a time"}, "status": "agree",
+             "columns": [{"column": "facility_level", "screen": 4, "data": "4", "status": "agree"}]},
+            {"obs": {"fact": "unlock", "facility": None, "facility_level": 2}, "status": "agree"},
+            {"obs": {}, "status": "agree"},
+        ])
+        self.assertEqual(rows, [{"facility": "Farmland", "item": "rose", "column": "facility_level", "key": "", "status": "agree", "day": ""}])
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,592 @@
+kind, facility, key, column, value, source, url, checked_on
+# Values from fan sites (wikily.gg), read for docs/research/web-data-check.md on 2026-10-16. INFERRED: a fan
+# site is not the game, so a match is corroboration, not VERIFIED. scripts/build_sources.py turns this file and
+# the active rows of data/overrides/values.csv into web/data-sources.json for the site's "How sure is this data?" card.
+# kind: recipe (key = the item name as in data/*.csv; column facility_level, workload or production_time),
+#   unlock (key = facility level, column needs_rv = the RV level it needs), cap (key = facility level, column
+#   output_cap = the output capacity), upgrade_cost (key = facility level, column coins = Home Coins to reach it
+#   from the level below) or rv_cost (facility RV, key = RV level, column coins = its Home Coin cost; from the
+#   'Need RV level N?' notes on the facility pages, so url is the facility list).
+# value is in the data's units: seconds, workload, coins or a count. Lines starting with # are comments.
+# Rows: 310 recipe, 84 unlock, 84 cap, 84 upgrade_cost, 19 rv_cost.
+recipe, Aniipod Maker, aniipod, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+recipe, Aniipod Maker, aniipod, workload, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+recipe, Aniipod Maker, aniipod_mega, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+recipe, Aniipod Maker, aniipod_mega, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+recipe, Blazing Stove, cherry_blossom_rice_ball, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, cherry_blossom_rice_ball, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, cranberry_chocolate, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, cranberry_chocolate, workload, 405, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, creamy_potato_soup, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, creamy_potato_soup, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, ginseng_chestnut_cake, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, ginseng_chestnut_cake, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, jello, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, jello, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, premium_jello, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, premium_jello, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, premium_potato_soup, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, premium_potato_soup, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, rich_grape_compote, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, rich_grape_compote, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, soy_sauce_fried_rice, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, soy_sauce_fried_rice, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, soy_sauce_tofu, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, soy_sauce_tofu, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, steamed_vermicelli_roll, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, steamed_vermicelli_roll, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, strawberry_candy, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, strawberry_candy, workload, 324, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, strawberry_cream_puff, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, strawberry_cream_puff, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, sugar_roasted_chestnuts, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, sugar_roasted_chestnuts, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, tanghulu, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Blazing Stove, tanghulu, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+recipe, Bouncy Brew Keg, agave_drink, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, agave_drink, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, apple_juice, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, apple_juice, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, coconut_cocoa, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, coconut_cocoa, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, coconut_cooler, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, coconut_cooler, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, cranberry_juice, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, cranberry_juice, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, ginseng_water, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, ginseng_water, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, grape_juice, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, grape_juice, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, grape_lemon_drink, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, grape_lemon_drink, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, hot_cocoa, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, hot_cocoa, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, orange_flower_dew, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, orange_flower_dew, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, potato_kvass, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, potato_kvass, workload, 270, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, strawberry_juice, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, strawberry_juice, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, sugarcane_juice, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, sugarcane_juice, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, toasted_rice_green_tea, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, toasted_rice_green_tea, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, walnut_milk, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, walnut_milk, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, wheat_tea, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Bouncy Brew Keg, wheat_tea, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+recipe, Carousel Mill, cocoa_powder, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, cocoa_powder, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, coconut_milk, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, coconut_milk, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, coconut_oil, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, coconut_oil, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, ginseng_powder, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, ginseng_powder, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, milled_rice, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, milled_rice, workload, 54, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, refined_flour, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, refined_flour, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, rice_drink, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, rice_drink, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, wheatmeal, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Carousel Mill, wheatmeal, workload, 54, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+recipe, Chimney Kiln, coarse_sifted_ore, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+recipe, Chimney Kiln, coarse_sifted_ore, workload, 34, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+recipe, Chimney Kiln, refined_ore, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+recipe, Chimney Kiln, refined_ore, workload, 41, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+recipe, Claw Game Cooker, apple_candy, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, apple_candy, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, apple_tart, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, apple_tart, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, berry_chocolate_coconut_pudding, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, berry_chocolate_coconut_pudding, workload, 567, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, bread, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, bread, workload, 108, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, caramel_nut_chips, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, caramel_nut_chips, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, coconut_cookie, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, coconut_cookie, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, maple_candy_roasted_potatoes, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, maple_candy_roasted_potatoes, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, premium_berry_chocolate_coconut_pudding, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, premium_berry_chocolate_coconut_pudding, workload, 567, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, premium_bread, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, premium_bread, workload, 108, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, rose_shortbread, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Claw Game Cooker, rose_shortbread, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+recipe, Crafting Table, advanced_gemstone_dust, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, advanced_gemstone_dust, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, advanced_wind_chime, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, advanced_wind_chime, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, bamboo_ware, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, bamboo_ware, workload, 54, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, bouquet, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, bouquet, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, doll, facility_level, 8, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, doll, workload, 324, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, dream_catcher, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, dream_catcher, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, dye, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, dye, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, flowers_in_a_bottle, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, flowers_in_a_bottle, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, gemstone_dust, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, gemstone_dust, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, lavender_sachet, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, lavender_sachet, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, pearl_necklace, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, pearl_necklace, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, porcelain, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, porcelain, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, pottery, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, pottery, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, premium_river_washed_stones, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, premium_river_washed_stones, workload, 108, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, premium_rose_freshener, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, premium_rose_freshener, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, river_washed_stones, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, river_washed_stones, workload, 108, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, rose_freshener, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, rose_freshener, workload, 203, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, rubber_duck, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, rubber_duck, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, shell_ornament, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, shell_ornament, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, star_wish_lantern, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, star_wish_lantern, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, wood_sculpture, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, wood_sculpture, workload, 54, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, woven_toy, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Crafting Table, woven_toy, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+recipe, Dance Pad Polisher, growth_bud, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+recipe, Dance Pad Polisher, growth_bud, workload, 1200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+recipe, Dance Pad Polisher, growth_fruit, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+recipe, Dance Pad Polisher, growth_fruit, workload, 5400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+recipe, Dewy House, aromathyst, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house, 2026-10-16
+recipe, Dewy House, aromathyst, workload, 2250, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house, 2026-10-16
+recipe, Farmland, agave, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, agave, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, cotton, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, cotton, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, cranberry, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, cranberry, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, lavender, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, lavender, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, potato, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, potato, production_time, 640, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, premium_wheat, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, premium_wheat, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, rice, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, rice, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, rose, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, rose, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, soybean, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, soybean, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, strawberry, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, strawberry, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, sugarcane, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, sugarcane, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, wheat, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Farmland, wheat, production_time, 240, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+recipe, Floral Windmill, scales, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/floral-windmill, 2026-10-16
+recipe, Floral Windmill, scales, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/floral-windmill, 2026-10-16
+recipe, Joy Wheel Loom, cotton_fabric, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+recipe, Joy Wheel Loom, cotton_fabric, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+recipe, Joy Wheel Loom, cotton_thread, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+recipe, Joy Wheel Loom, cotton_thread, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+recipe, Joy Wheel Loom, palm_rope, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+recipe, Joy Wheel Loom, palm_rope, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+recipe, Jukebox Dryer, dried_apple_slices, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_apple_slices, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_bean_curd, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_bean_curd, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_cherry_blossom, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_cherry_blossom, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_cranberries, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_cranberries, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_flowers, facility_level, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_flowers, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_ginseng, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_ginseng, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_grapes, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_grapes, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_strawberries, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, dried_strawberries, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, nuts, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, nuts, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, potato_chips, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, potato_chips, workload, 54, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, shredded_coconut, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Jukebox Dryer, shredded_coconut, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+recipe, Mine, quartz_ore, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+recipe, Mine, quartz_ore, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+recipe, Mine, rock, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+recipe, Mine, rock, workload, 900, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+recipe, Mine, shell, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+recipe, Mine, shell, workload, 2250, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+recipe, Nimbus Bed, petals, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+recipe, Nimbus Bed, petals, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+recipe, Nimbus Bed, wool, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+recipe, Nimbus Bed, wool, workload, 2250, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+recipe, Phonolfactory Table, advanced_lemon_incense, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, advanced_lemon_incense, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, bamboo_joss_stick, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, bamboo_joss_stick, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, cherry_incense, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, cherry_incense, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, herbal_ginseng_aroma, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, herbal_ginseng_aroma, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, lemon_incense, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, lemon_incense, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, lotion, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, lotion, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, mixed_perfume, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, mixed_perfume, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, orange_flower_incense, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, orange_flower_incense, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, premium_mixed_perfume, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, premium_mixed_perfume, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, premium_soap, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Phonolfactory Table, premium_soap, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+recipe, Pickling Jar, candied_strawberries, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, candied_strawberries, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, cider_vinegar, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, cider_vinegar, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, premium_salted_lemon, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, premium_salted_lemon, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, premium_sweet_rice_wine, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, premium_sweet_rice_wine, workload, 270, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, rice_vinegar, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, rice_vinegar, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, salted_cherry_blossom, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, salted_cherry_blossom, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, salted_lemon, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, salted_lemon, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, soy_sauce, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Pickling Jar, soy_sauce, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+recipe, Simmering Pot, agave_syrup, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, agave_syrup, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, cranberry_jam, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, cranberry_jam, workload, 324, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, ginseng_porridge, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, ginseng_porridge, workload, 162, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, grape_jam, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, grape_jam, workload, 81, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, malt_sugar, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, malt_sugar, workload, 243, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, maple_candy_apple_jam, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, maple_candy_apple_jam, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, plain_rice_porridge, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, plain_rice_porridge, workload, 108, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, rose_concentrate, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, rose_concentrate, workload, 135, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, strawberry_jam, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Simmering Pot, strawberry_jam, workload, 68, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+recipe, Starfall Hammock, star, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/starfall-hammock, 2026-10-16
+recipe, Starfall Hammock, star, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/starfall-hammock, 2026-10-16
+recipe, Tidewhisper Sandcastle, pearl, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+recipe, Tidewhisper Sandcastle, pearl, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+recipe, Tidewhisper Sandcastle, sea_salt, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+recipe, Tidewhisper Sandcastle, sea_salt, workload, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+recipe, Well, deep_rock_spring_water, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+recipe, Well, deep_rock_spring_water, workload, 2700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+recipe, Well, well_water, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+recipe, Well, well_water, workload, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+recipe, Woodland, apple, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, apple, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, chestnut, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, chestnut, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, cocoa, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, cocoa, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, coconut, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, coconut, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, lemon, facility_level, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, lemon, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, maple_syrup, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, maple_syrup, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, natural_rubber, facility_level, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, natural_rubber, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, orange_flower, facility_level, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, orange_flower, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, palm_bark, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, palm_bark, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, walnut, facility_level, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, walnut, production_time, 2400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, willow_wood, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodland, willow_wood, production_time, 640, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+recipe, Woodworking Bench, laminated_beams, facility_level, 3, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+recipe, Woodworking Bench, laminated_beams, workload, 41, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+recipe, Woodworking Bench, rough_lumber, facility_level, 1, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+recipe, Woodworking Bench, rough_lumber, workload, 34, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+unlock, Aniipod Maker, 2, needs_rv, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+unlock, Aniipod Maker, 3, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+unlock, Blazing Stove, 2, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+unlock, Blazing Stove, 3, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+unlock, Blazing Stove, 4, needs_rv, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+unlock, Blazing Stove, 5, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+unlock, Bouncy Brew Keg, 2, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+unlock, Bouncy Brew Keg, 3, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+unlock, Bouncy Brew Keg, 4, needs_rv, 17, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+unlock, Bouncy Brew Keg, 5, needs_rv, 19, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+unlock, Carousel Mill, 2, needs_rv, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+unlock, Carousel Mill, 3, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+unlock, Carousel Mill, 4, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+unlock, Carousel Mill, 5, needs_rv, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+unlock, Carousel Mill, 6, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+unlock, Chimney Kiln, 2, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+unlock, Chimney Kiln, 3, needs_rv, 14, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+unlock, Chimney Kiln, 4, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+unlock, Claw Game Cooker, 2, needs_rv, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+unlock, Claw Game Cooker, 3, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+unlock, Claw Game Cooker, 4, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+unlock, Claw Game Cooker, 5, needs_rv, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+unlock, Claw Game Cooker, 6, needs_rv, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+unlock, Claw Game Cooker, 7, needs_rv, 19, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+unlock, Crafting Table, 2, needs_rv, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Crafting Table, 3, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Crafting Table, 4, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Crafting Table, 5, needs_rv, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Crafting Table, 6, needs_rv, 15, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Crafting Table, 7, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Crafting Table, 8, needs_rv, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+unlock, Dance Pad Polisher, 2, needs_rv, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+unlock, Dance Pad Polisher, 3, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+unlock, Dewy House, 2, needs_rv, 11, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house, 2026-10-16
+unlock, Farmland, 2, needs_rv, 2, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+unlock, Farmland, 3, needs_rv, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+unlock, Farmland, 4, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+unlock, Farmland, 5, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+unlock, Farmland, 6, needs_rv, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+unlock, Farmland, 7, needs_rv, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+unlock, Joy Wheel Loom, 2, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+unlock, Joy Wheel Loom, 3, needs_rv, 15, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+unlock, Joy Wheel Loom, 4, needs_rv, 19, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+unlock, Jukebox Dryer, 2, needs_rv, 5, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+unlock, Jukebox Dryer, 3, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+unlock, Jukebox Dryer, 4, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+unlock, Jukebox Dryer, 5, needs_rv, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+unlock, Jukebox Dryer, 6, needs_rv, 14, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+unlock, Jukebox Dryer, 7, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+unlock, Mine, 2, needs_rv, 6, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+unlock, Mine, 3, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+unlock, Mine, 4, needs_rv, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+unlock, Mine, 5, needs_rv, 15, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+unlock, Mine, 6, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+unlock, Nimbus Bed, 2, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+unlock, Nimbus Bed, 3, needs_rv, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+unlock, Phonolfactory Table, 2, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+unlock, Phonolfactory Table, 3, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+unlock, Phonolfactory Table, 4, needs_rv, 14, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+unlock, Phonolfactory Table, 5, needs_rv, 17, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+unlock, Phonolfactory Table, 6, needs_rv, 19, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+unlock, Pickling Jar, 2, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+unlock, Pickling Jar, 3, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+unlock, Pickling Jar, 4, needs_rv, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+unlock, Pickling Jar, 5, needs_rv, 19, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+unlock, Simmering Pot, 2, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+unlock, Simmering Pot, 3, needs_rv, 9, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+unlock, Simmering Pot, 4, needs_rv, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+unlock, Simmering Pot, 5, needs_rv, 15, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+unlock, Simmering Pot, 6, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+unlock, Tidewhisper Sandcastle, 2, needs_rv, 8, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+unlock, Tidewhisper Sandcastle, 3, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+unlock, Well, 2, needs_rv, 8, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+unlock, Well, 3, needs_rv, 11, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+unlock, Well, 4, needs_rv, 13, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+unlock, Well, 5, needs_rv, 17, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+unlock, Woodland, 2, needs_rv, 4, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+unlock, Woodland, 3, needs_rv, 7, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+unlock, Woodland, 4, needs_rv, 11, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+unlock, Woodland, 5, needs_rv, 14, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+unlock, Woodland, 6, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+unlock, Woodworking Bench, 2, needs_rv, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+unlock, Woodworking Bench, 3, needs_rv, 14, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+unlock, Woodworking Bench, 4, needs_rv, 18, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+cap, Aniipod Maker, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+cap, Aniipod Maker, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+cap, Blazing Stove, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+cap, Blazing Stove, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+cap, Blazing Stove, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+cap, Blazing Stove, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+cap, Bouncy Brew Keg, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+cap, Bouncy Brew Keg, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+cap, Bouncy Brew Keg, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+cap, Bouncy Brew Keg, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+cap, Carousel Mill, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+cap, Carousel Mill, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+cap, Carousel Mill, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+cap, Carousel Mill, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+cap, Carousel Mill, 6, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+cap, Chimney Kiln, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+cap, Chimney Kiln, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+cap, Chimney Kiln, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+cap, Claw Game Cooker, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+cap, Claw Game Cooker, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+cap, Claw Game Cooker, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+cap, Claw Game Cooker, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+cap, Claw Game Cooker, 6, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+cap, Claw Game Cooker, 7, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+cap, Crafting Table, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Crafting Table, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Crafting Table, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Crafting Table, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Crafting Table, 6, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Crafting Table, 7, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Crafting Table, 8, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+cap, Dance Pad Polisher, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+cap, Dance Pad Polisher, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+cap, Dewy House, 2, output_cap, 240, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house, 2026-10-16
+cap, Farmland, 2, output_cap, 10, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+cap, Farmland, 3, output_cap, 15, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+cap, Farmland, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+cap, Farmland, 5, output_cap, 25, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+cap, Farmland, 6, output_cap, 30, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+cap, Farmland, 7, output_cap, 35, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+cap, Joy Wheel Loom, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+cap, Joy Wheel Loom, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+cap, Joy Wheel Loom, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+cap, Jukebox Dryer, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+cap, Jukebox Dryer, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+cap, Jukebox Dryer, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+cap, Jukebox Dryer, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+cap, Jukebox Dryer, 6, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+cap, Jukebox Dryer, 7, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+cap, Mine, 2, output_cap, 200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+cap, Mine, 3, output_cap, 200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+cap, Mine, 4, output_cap, 200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+cap, Mine, 5, output_cap, 200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+cap, Mine, 6, output_cap, 200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+cap, Nimbus Bed, 2, output_cap, 120, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+cap, Nimbus Bed, 3, output_cap, 120, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+cap, Phonolfactory Table, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+cap, Phonolfactory Table, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+cap, Phonolfactory Table, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+cap, Phonolfactory Table, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+cap, Phonolfactory Table, 6, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+cap, Pickling Jar, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+cap, Pickling Jar, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+cap, Pickling Jar, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+cap, Pickling Jar, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+cap, Simmering Pot, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+cap, Simmering Pot, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+cap, Simmering Pot, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+cap, Simmering Pot, 5, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+cap, Simmering Pot, 6, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+cap, Tidewhisper Sandcastle, 2, output_cap, 460, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+cap, Tidewhisper Sandcastle, 3, output_cap, 460, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+cap, Well, 2, output_cap, 300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+cap, Well, 3, output_cap, 340, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+cap, Well, 4, output_cap, 340, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+cap, Well, 5, output_cap, 340, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+cap, Woodland, 2, output_cap, 12, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+cap, Woodland, 3, output_cap, 16, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+cap, Woodland, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+cap, Woodland, 5, output_cap, 24, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+cap, Woodland, 6, output_cap, 28, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+cap, Woodworking Bench, 2, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+cap, Woodworking Bench, 3, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+cap, Woodworking Bench, 4, output_cap, 20, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+upgrade_cost, Aniipod Maker, 2, coins, 4200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+upgrade_cost, Aniipod Maker, 3, coins, 24000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+upgrade_cost, Blazing Stove, 2, coins, 16300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+upgrade_cost, Blazing Stove, 3, coins, 61000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+upgrade_cost, Blazing Stove, 4, coins, 240000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+upgrade_cost, Blazing Stove, 5, coins, 680000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+upgrade_cost, Bouncy Brew Keg, 2, coins, 14000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+upgrade_cost, Bouncy Brew Keg, 3, coins, 61000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+upgrade_cost, Bouncy Brew Keg, 4, coins, 270000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+upgrade_cost, Bouncy Brew Keg, 5, coins, 720000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+upgrade_cost, Carousel Mill, 2, coins, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+upgrade_cost, Carousel Mill, 3, coins, 16000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+upgrade_cost, Carousel Mill, 4, coins, 81000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+upgrade_cost, Carousel Mill, 5, coins, 320000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+upgrade_cost, Carousel Mill, 6, coins, 910000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+upgrade_cost, Chimney Kiln, 2, coins, 16300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+upgrade_cost, Chimney Kiln, 3, coins, 75000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+upgrade_cost, Chimney Kiln, 4, coins, 340000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+upgrade_cost, Claw Game Cooker, 2, coins, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+upgrade_cost, Claw Game Cooker, 3, coins, 8200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+upgrade_cost, Claw Game Cooker, 4, coins, 31000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+upgrade_cost, Claw Game Cooker, 5, coins, 143000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+upgrade_cost, Claw Game Cooker, 6, coins, 480000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+upgrade_cost, Claw Game Cooker, 7, coins, 960000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+upgrade_cost, Crafting Table, 2, coins, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Crafting Table, 3, coins, 8200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Crafting Table, 4, coins, 31000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Crafting Table, 5, coins, 143000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Crafting Table, 6, coins, 340000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Crafting Table, 7, coins, 910000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Crafting Table, 8, coins, 1450000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+upgrade_cost, Dance Pad Polisher, 2, coins, 2900, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+upgrade_cost, Dance Pad Polisher, 3, coins, 12000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+upgrade_cost, Dewy House, 2, coins, 269000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house, 2026-10-16
+upgrade_cost, Farmland, 2, coins, 60, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+upgrade_cost, Farmland, 3, coins, 700, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+upgrade_cost, Farmland, 4, coins, 6200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+upgrade_cost, Farmland, 5, coins, 23500, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+upgrade_cost, Farmland, 6, coins, 107000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+upgrade_cost, Farmland, 7, coins, 480000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, 2026-10-16
+upgrade_cost, Joy Wheel Loom, 2, coins, 16300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+upgrade_cost, Joy Wheel Loom, 3, coins, 85000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+upgrade_cost, Joy Wheel Loom, 4, coins, 360000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+upgrade_cost, Jukebox Dryer, 2, coins, 1800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+upgrade_cost, Jukebox Dryer, 3, coins, 8200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+upgrade_cost, Jukebox Dryer, 4, coins, 36000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+upgrade_cost, Jukebox Dryer, 5, coins, 143000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+upgrade_cost, Jukebox Dryer, 6, coins, 300000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+upgrade_cost, Jukebox Dryer, 7, coins, 910000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+upgrade_cost, Mine, 2, coins, 4200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+upgrade_cost, Mine, 3, coins, 31000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+upgrade_cost, Mine, 4, coins, 143000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+upgrade_cost, Mine, 5, coins, 340000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+upgrade_cost, Mine, 6, coins, 910000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+upgrade_cost, Nimbus Bed, 2, coins, 81000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+upgrade_cost, Nimbus Bed, 3, coins, 320000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, 2026-10-16
+upgrade_cost, Phonolfactory Table, 2, coins, 12300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+upgrade_cost, Phonolfactory Table, 3, coins, 27000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+upgrade_cost, Phonolfactory Table, 4, coins, 149000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+upgrade_cost, Phonolfactory Table, 5, coins, 400000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+upgrade_cost, Phonolfactory Table, 6, coins, 720000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+upgrade_cost, Pickling Jar, 2, coins, 16300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+upgrade_cost, Pickling Jar, 3, coins, 61000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+upgrade_cost, Pickling Jar, 4, coins, 240000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+upgrade_cost, Pickling Jar, 5, coins, 720000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+upgrade_cost, Simmering Pot, 2, coins, 12300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+upgrade_cost, Simmering Pot, 3, coins, 16000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+upgrade_cost, Simmering Pot, 4, coins, 72000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+upgrade_cost, Simmering Pot, 5, coins, 230000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+upgrade_cost, Simmering Pot, 6, coins, 910000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+upgrade_cost, Tidewhisper Sandcastle, 2, coins, 9800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+upgrade_cost, Tidewhisper Sandcastle, 3, coins, 81000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, 2026-10-16
+upgrade_cost, Well, 2, coins, 20000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+upgrade_cost, Well, 3, coins, 98000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+upgrade_cost, Well, 4, coins, 240000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+upgrade_cost, Well, 5, coins, 720000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+upgrade_cost, Woodland, 2, coins, 400, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+upgrade_cost, Woodland, 3, coins, 8200, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+upgrade_cost, Woodland, 4, coins, 49000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+upgrade_cost, Woodland, 5, coins, 199000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+upgrade_cost, Woodland, 6, coins, 910000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, 2026-10-16
+upgrade_cost, Woodworking Bench, 2, coins, 16300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+upgrade_cost, Woodworking Bench, 3, coins, 75000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+upgrade_cost, Woodworking Bench, 4, coins, 340000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+rv_cost, RV, 2, coins, 140, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 3, coins, 800, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 4, coins, 2900, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 5, coins, 7300, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 6, coins, 32000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 7, coins, 69000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 8, coins, 180000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 9, coins, 260000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 10, coins, 510000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 11, coins, 680000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 12, coins, 1060000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 13, coins, 1930000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 14, coins, 2620000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 15, coins, 3760000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 16, coins, 4900000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 17, coins, 8630000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 18, coins, 11600000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 19, coins, 17100000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16
+rv_cost, RV, 20, coins, 20800000, wikily.gg, https://wikily.gg/aniimo/homeland-crafting/facilities, 2026-10-16

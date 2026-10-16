@@ -1,0 +1,5821 @@
+{
+  "format": "aniimax-data-sources",
+  "generatedFrom": [
+    "data/sources/web_sources.csv",
+    "data/overrides/values.csv"
+  ],
+  "owner": [],
+  "version": 1,
+  "web": [
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Aniipod Maker",
+      "key": "aniipod",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Aniipod Maker",
+      "key": "aniipod",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Aniipod Maker",
+      "key": "aniipod_mega",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Aniipod Maker",
+      "key": "aniipod_mega",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "cherry_blossom_rice_ball",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "cherry_blossom_rice_ball",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "cranberry_chocolate",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "cranberry_chocolate",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 405
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "creamy_potato_soup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "creamy_potato_soup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "ginseng_chestnut_cake",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "ginseng_chestnut_cake",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "jello",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "jello",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "premium_jello",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "premium_jello",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "premium_potato_soup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "premium_potato_soup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "rich_grape_compote",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "rich_grape_compote",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "soy_sauce_fried_rice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "soy_sauce_fried_rice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "soy_sauce_tofu",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "soy_sauce_tofu",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "steamed_vermicelli_roll",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "steamed_vermicelli_roll",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "strawberry_candy",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "strawberry_candy",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 324
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "strawberry_cream_puff",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "strawberry_cream_puff",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "sugar_roasted_chestnuts",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "sugar_roasted_chestnuts",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Blazing Stove",
+      "key": "tanghulu",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Blazing Stove",
+      "key": "tanghulu",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "agave_drink",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "agave_drink",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "apple_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "apple_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "coconut_cocoa",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "coconut_cocoa",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "coconut_cooler",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "coconut_cooler",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "cranberry_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "cranberry_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "ginseng_water",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "ginseng_water",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "grape_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "grape_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "grape_lemon_drink",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "grape_lemon_drink",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "hot_cocoa",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "hot_cocoa",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "orange_flower_dew",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "orange_flower_dew",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "potato_kvass",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "potato_kvass",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 270
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "strawberry_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "strawberry_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "sugarcane_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "sugarcane_juice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "toasted_rice_green_tea",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "toasted_rice_green_tea",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "walnut_milk",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "walnut_milk",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Bouncy Brew Keg",
+      "key": "wheat_tea",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Bouncy Brew Keg",
+      "key": "wheat_tea",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "cocoa_powder",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "cocoa_powder",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "coconut_milk",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "coconut_milk",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "coconut_oil",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "coconut_oil",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "ginseng_powder",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "ginseng_powder",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "milled_rice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "milled_rice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 54
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "refined_flour",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "refined_flour",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "rice_drink",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "rice_drink",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Carousel Mill",
+      "key": "wheatmeal",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Carousel Mill",
+      "key": "wheatmeal",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 54
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Chimney Kiln",
+      "key": "coarse_sifted_ore",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Chimney Kiln",
+      "key": "coarse_sifted_ore",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 34
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Chimney Kiln",
+      "key": "refined_ore",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Chimney Kiln",
+      "key": "refined_ore",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 41
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "apple_candy",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "apple_candy",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "apple_tart",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "apple_tart",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "berry_chocolate_coconut_pudding",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "berry_chocolate_coconut_pudding",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 567
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "bread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "bread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 108
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "caramel_nut_chips",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "caramel_nut_chips",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "coconut_cookie",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "coconut_cookie",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "maple_candy_roasted_potatoes",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "maple_candy_roasted_potatoes",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "premium_berry_chocolate_coconut_pudding",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "premium_berry_chocolate_coconut_pudding",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 567
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "premium_bread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "premium_bread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 108
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Claw Game Cooker",
+      "key": "rose_shortbread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Claw Game Cooker",
+      "key": "rose_shortbread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "advanced_gemstone_dust",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "advanced_gemstone_dust",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "advanced_wind_chime",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "advanced_wind_chime",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "bamboo_ware",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "bamboo_ware",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 54
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "bouquet",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "bouquet",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "doll",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 8
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "doll",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 324
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "dream_catcher",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "dream_catcher",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "dye",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "dye",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "flowers_in_a_bottle",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "flowers_in_a_bottle",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "gemstone_dust",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "gemstone_dust",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "lavender_sachet",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "lavender_sachet",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "pearl_necklace",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "pearl_necklace",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "porcelain",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "porcelain",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "pottery",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "pottery",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "premium_river_washed_stones",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "premium_river_washed_stones",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 108
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "premium_rose_freshener",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "premium_rose_freshener",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "river_washed_stones",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "river_washed_stones",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 108
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "rose_freshener",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "rose_freshener",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 203
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "rubber_duck",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "rubber_duck",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "shell_ornament",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "shell_ornament",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "star_wish_lantern",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "star_wish_lantern",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "wood_sculpture",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "wood_sculpture",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 54
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Crafting Table",
+      "key": "woven_toy",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Crafting Table",
+      "key": "woven_toy",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Dance Pad Polisher",
+      "key": "growth_bud",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Dance Pad Polisher",
+      "key": "growth_bud",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 1200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Dance Pad Polisher",
+      "key": "growth_fruit",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Dance Pad Polisher",
+      "key": "growth_fruit",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 5400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Dewy House",
+      "key": "aromathyst",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Dewy House",
+      "key": "aromathyst",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house",
+      "value": 2250
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "agave",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "agave",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "cotton",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "cotton",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "cranberry",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "cranberry",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "lavender",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "lavender",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "potato",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "potato",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 640
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "premium_wheat",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "premium_wheat",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "rice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "rice",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "rose",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "rose",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "soybean",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "soybean",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "strawberry",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "strawberry",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "sugarcane",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "sugarcane",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Farmland",
+      "key": "wheat",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Farmland",
+      "key": "wheat",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 240
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Floral Windmill",
+      "key": "scales",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/floral-windmill",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Floral Windmill",
+      "key": "scales",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/floral-windmill",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Joy Wheel Loom",
+      "key": "cotton_fabric",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Joy Wheel Loom",
+      "key": "cotton_fabric",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Joy Wheel Loom",
+      "key": "cotton_thread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Joy Wheel Loom",
+      "key": "cotton_thread",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Joy Wheel Loom",
+      "key": "palm_rope",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Joy Wheel Loom",
+      "key": "palm_rope",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_apple_slices",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_apple_slices",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_bean_curd",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_bean_curd",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_cherry_blossom",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_cherry_blossom",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_cranberries",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_cranberries",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_flowers",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_flowers",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_ginseng",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_ginseng",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_grapes",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_grapes",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "dried_strawberries",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "dried_strawberries",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "nuts",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "nuts",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "potato_chips",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "potato_chips",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 54
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Jukebox Dryer",
+      "key": "shredded_coconut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Jukebox Dryer",
+      "key": "shredded_coconut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Mine",
+      "key": "quartz_ore",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Mine",
+      "key": "quartz_ore",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Mine",
+      "key": "rock",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Mine",
+      "key": "rock",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 900
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Mine",
+      "key": "shell",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Mine",
+      "key": "shell",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 2250
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Nimbus Bed",
+      "key": "petals",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Nimbus Bed",
+      "key": "petals",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Nimbus Bed",
+      "key": "wool",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Nimbus Bed",
+      "key": "wool",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 2250
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "advanced_lemon_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "advanced_lemon_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "bamboo_joss_stick",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "bamboo_joss_stick",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "cherry_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "cherry_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "herbal_ginseng_aroma",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "herbal_ginseng_aroma",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "lemon_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "lemon_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "lotion",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "lotion",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "mixed_perfume",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "mixed_perfume",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "orange_flower_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "orange_flower_incense",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "premium_mixed_perfume",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "premium_mixed_perfume",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Phonolfactory Table",
+      "key": "premium_soap",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Phonolfactory Table",
+      "key": "premium_soap",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "candied_strawberries",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "candied_strawberries",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "cider_vinegar",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "cider_vinegar",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "premium_salted_lemon",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "premium_salted_lemon",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "premium_sweet_rice_wine",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "premium_sweet_rice_wine",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 270
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "rice_vinegar",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "rice_vinegar",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "salted_cherry_blossom",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "salted_cherry_blossom",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "salted_lemon",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "salted_lemon",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Pickling Jar",
+      "key": "soy_sauce",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Pickling Jar",
+      "key": "soy_sauce",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "agave_syrup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "agave_syrup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "cranberry_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "cranberry_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 324
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "ginseng_porridge",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "ginseng_porridge",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 162
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "grape_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "grape_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 81
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "malt_sugar",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "malt_sugar",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 243
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "maple_candy_apple_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "maple_candy_apple_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "plain_rice_porridge",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "plain_rice_porridge",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 108
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "rose_concentrate",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "rose_concentrate",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 135
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Simmering Pot",
+      "key": "strawberry_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Simmering Pot",
+      "key": "strawberry_jam",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 68
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Starfall Hammock",
+      "key": "star",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/starfall-hammock",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Starfall Hammock",
+      "key": "star",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/starfall-hammock",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "pearl",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "pearl",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "sea_salt",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "sea_salt",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Well",
+      "key": "deep_rock_spring_water",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Well",
+      "key": "deep_rock_spring_water",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 2700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Well",
+      "key": "well_water",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Well",
+      "key": "well_water",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "apple",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "apple",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "chestnut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "chestnut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "cocoa",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "cocoa",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "coconut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "coconut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "lemon",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "lemon",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "maple_syrup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "maple_syrup",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "natural_rubber",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "natural_rubber",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "orange_flower",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "orange_flower",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "palm_bark",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "palm_bark",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "walnut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "walnut",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 2400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodland",
+      "key": "willow_wood",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "production_time",
+      "facility": "Woodland",
+      "key": "willow_wood",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 640
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodworking Bench",
+      "key": "laminated_beams",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 3
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Woodworking Bench",
+      "key": "laminated_beams",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 41
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "facility_level",
+      "facility": "Woodworking Bench",
+      "key": "rough_lumber",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 1
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "workload",
+      "facility": "Woodworking Bench",
+      "key": "rough_lumber",
+      "kind": "recipe",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 34
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Aniipod Maker",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Aniipod Maker",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Blazing Stove",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Blazing Stove",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Blazing Stove",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Blazing Stove",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Bouncy Brew Keg",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Bouncy Brew Keg",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Bouncy Brew Keg",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 17
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Bouncy Brew Keg",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 19
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Carousel Mill",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Carousel Mill",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Carousel Mill",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Carousel Mill",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Carousel Mill",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Chimney Kiln",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Chimney Kiln",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 14
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Chimney Kiln",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Claw Game Cooker",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Claw Game Cooker",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Claw Game Cooker",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Claw Game Cooker",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Claw Game Cooker",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Claw Game Cooker",
+      "key": "7",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 19
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 15
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "7",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Crafting Table",
+      "key": "8",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Dance Pad Polisher",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Dance Pad Polisher",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Dewy House",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house",
+      "value": 11
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Farmland",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 2
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Farmland",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Farmland",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Farmland",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Farmland",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Farmland",
+      "key": "7",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Joy Wheel Loom",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Joy Wheel Loom",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 15
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Joy Wheel Loom",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 19
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Jukebox Dryer",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 5
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Jukebox Dryer",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Jukebox Dryer",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Jukebox Dryer",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Jukebox Dryer",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 14
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Jukebox Dryer",
+      "key": "7",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Mine",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 6
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Mine",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Mine",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Mine",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 15
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Mine",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Nimbus Bed",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Nimbus Bed",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Phonolfactory Table",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Phonolfactory Table",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Phonolfactory Table",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 14
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Phonolfactory Table",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 17
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Phonolfactory Table",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 19
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Pickling Jar",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Pickling Jar",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Pickling Jar",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Pickling Jar",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 19
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Simmering Pot",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Simmering Pot",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 9
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Simmering Pot",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Simmering Pot",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 15
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Simmering Pot",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 8
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Well",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 8
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Well",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 11
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Well",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 13
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Well",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 17
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodland",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 4
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodland",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 7
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodland",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 11
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodland",
+      "key": "5",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 14
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodland",
+      "key": "6",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodworking Bench",
+      "key": "2",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodworking Bench",
+      "key": "3",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 14
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "needs_rv",
+      "facility": "Woodworking Bench",
+      "key": "4",
+      "kind": "unlock",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 18
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Aniipod Maker",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Aniipod Maker",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Blazing Stove",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Blazing Stove",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Blazing Stove",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Blazing Stove",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Bouncy Brew Keg",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Bouncy Brew Keg",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Bouncy Brew Keg",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Bouncy Brew Keg",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Carousel Mill",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Carousel Mill",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Carousel Mill",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Carousel Mill",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Carousel Mill",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Chimney Kiln",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Chimney Kiln",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Chimney Kiln",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Claw Game Cooker",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Claw Game Cooker",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Claw Game Cooker",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Claw Game Cooker",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Claw Game Cooker",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Claw Game Cooker",
+      "key": "7",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "7",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Crafting Table",
+      "key": "8",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Dance Pad Polisher",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Dance Pad Polisher",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Dewy House",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house",
+      "value": 240
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Farmland",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 10
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Farmland",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 15
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Farmland",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Farmland",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 25
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Farmland",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 30
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Farmland",
+      "key": "7",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 35
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Joy Wheel Loom",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Joy Wheel Loom",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Joy Wheel Loom",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Jukebox Dryer",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Jukebox Dryer",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Jukebox Dryer",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Jukebox Dryer",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Jukebox Dryer",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Jukebox Dryer",
+      "key": "7",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Mine",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Mine",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Mine",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Mine",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Mine",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Nimbus Bed",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 120
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Nimbus Bed",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 120
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Phonolfactory Table",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Phonolfactory Table",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Phonolfactory Table",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Phonolfactory Table",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Phonolfactory Table",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Pickling Jar",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Pickling Jar",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Pickling Jar",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Pickling Jar",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Simmering Pot",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Simmering Pot",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Simmering Pot",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Simmering Pot",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Simmering Pot",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 460
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 460
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Well",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Well",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 340
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Well",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 340
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Well",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 340
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodland",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 12
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodland",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 16
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodland",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodland",
+      "key": "5",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 24
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodland",
+      "key": "6",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 28
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodworking Bench",
+      "key": "2",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodworking Bench",
+      "key": "3",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "output_cap",
+      "facility": "Woodworking Bench",
+      "key": "4",
+      "kind": "cap",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 20
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Aniipod Maker",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 4200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Aniipod Maker",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker",
+      "value": 24000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Blazing Stove",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 16300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Blazing Stove",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 61000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Blazing Stove",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 240000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Blazing Stove",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove",
+      "value": 680000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Bouncy Brew Keg",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 14000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Bouncy Brew Keg",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 61000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Bouncy Brew Keg",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 270000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Bouncy Brew Keg",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg",
+      "value": 720000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Carousel Mill",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Carousel Mill",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 16000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Carousel Mill",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 81000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Carousel Mill",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 320000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Carousel Mill",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill",
+      "value": 910000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Chimney Kiln",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 16300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Chimney Kiln",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 75000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Chimney Kiln",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln",
+      "value": 340000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Claw Game Cooker",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Claw Game Cooker",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 8200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Claw Game Cooker",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 31000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Claw Game Cooker",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 143000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Claw Game Cooker",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 480000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Claw Game Cooker",
+      "key": "7",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker",
+      "value": 960000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 8200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 31000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 143000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 340000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "7",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 910000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Crafting Table",
+      "key": "8",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table",
+      "value": 1450000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Dance Pad Polisher",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 2900
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Dance Pad Polisher",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher",
+      "value": 12000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Dewy House",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house",
+      "value": 269000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Farmland",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 60
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Farmland",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 700
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Farmland",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 6200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Farmland",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 23500
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Farmland",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 107000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Farmland",
+      "key": "7",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/farmland",
+      "value": 480000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Joy Wheel Loom",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 16300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Joy Wheel Loom",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 85000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Joy Wheel Loom",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom",
+      "value": 360000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Jukebox Dryer",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 1800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Jukebox Dryer",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 8200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Jukebox Dryer",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 36000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Jukebox Dryer",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 143000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Jukebox Dryer",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 300000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Jukebox Dryer",
+      "key": "7",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer",
+      "value": 910000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Mine",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 4200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Mine",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 31000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Mine",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 143000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Mine",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 340000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Mine",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/mine",
+      "value": 910000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Nimbus Bed",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 81000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Nimbus Bed",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed",
+      "value": 320000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Phonolfactory Table",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 12300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Phonolfactory Table",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 27000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Phonolfactory Table",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 149000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Phonolfactory Table",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 400000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Phonolfactory Table",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table",
+      "value": 720000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Pickling Jar",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 16300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Pickling Jar",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 61000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Pickling Jar",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 240000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Pickling Jar",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar",
+      "value": 720000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Simmering Pot",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 12300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Simmering Pot",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 16000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Simmering Pot",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 72000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Simmering Pot",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 230000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Simmering Pot",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot",
+      "value": 910000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 9800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Tidewhisper Sandcastle",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle",
+      "value": 81000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Well",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 20000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Well",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 98000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Well",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 240000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Well",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/well",
+      "value": 720000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodland",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 400
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodland",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 8200
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodland",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 49000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodland",
+      "key": "5",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 199000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodland",
+      "key": "6",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodland",
+      "value": 910000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodworking Bench",
+      "key": "2",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 16300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodworking Bench",
+      "key": "3",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 75000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "Woodworking Bench",
+      "key": "4",
+      "kind": "upgrade_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench",
+      "value": 340000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "2",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 140
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "3",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 800
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "4",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 2900
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "5",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 7300
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "6",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 32000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "7",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 69000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "8",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 180000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "9",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 260000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "10",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 510000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "11",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 680000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "12",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 1060000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "13",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 1930000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "14",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 2620000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "15",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 3760000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "16",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 4900000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "17",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 8630000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "18",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 11600000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "19",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 17100000
+    },
+    {
+      "checked_on": "2026-10-16",
+      "column": "coins",
+      "facility": "RV",
+      "key": "20",
+      "kind": "rv_cost",
+      "source": "wikily.gg",
+      "url": "https://wikily.gg/aniimo/homeland-crafting/facilities",
+      "value": 20800000
+    }
+  ]
+}
