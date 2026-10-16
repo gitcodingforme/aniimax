@@ -1,0 +1,5 @@
+#streaks-card .streaks-milestones { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+#streaks-card .streaks-milestones li { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border); padding: 0.25rem 0; }
+#streaks-card .streaks-day { color: var(--text-muted); }
+#streaks-card .streaks-empty { color: var(--text-muted); margin: 0.5rem 0 0; }
+#streaks-card h3 { margin: 0.75rem 0 0; font-size: 1rem; }
