@@ -53,10 +53,18 @@ function toMs(value) {
 // when `recipes` (the recipe list from get_all_items, or app.js's recipeIndex) and `facilities`
 // (the setup sent to the solver, `{ name: [{count, level}] }`) are given, how much a batch makes
 // and which facility level makes it. Both are needed to know when the output store fills up.
+//
+// Two times per row: `cycleSeconds` is how long one batch takes with every ingredient on hand
+// ("a batch takes X"), and `effectiveCycleSeconds` is the real time between finished batches on
+// each unit under the plan. A processor waits for what its suppliers make, so a 9-second recipe
+// fed 12 items an hour finishes one batch every 5 minutes, and its store fills that slowly. It
+// comes from the plan's output rate (see processorInterval), is never less than cycleSeconds, and
+// equals it for crops and gatherers, which work at their own pace.
 export function planRows(plan, { recipes = null, facilities = null } = {}) {
     const streams = plan?.income_streams || [];
-    return (plan?.coin_items || [])
-        .filter(s => s && s.status === 'producing' && s.item_name && s.cycle_time > 0 && s.facility_count > 0)
+    const steps = (plan?.coin_items || [])
+        .filter(s => s && s.status === 'producing' && s.item_name && s.cycle_time > 0 && s.facility_count > 0);
+    const rows = steps
         .map(s => {
             const kind = s.facility === 'Farmland' || s.facility === 'Woodland' ? 'crop' : s.is_grower ? 'gatherer' : 'processor';
             const stream = streams.find(p => p.item_name === s.item_name);
@@ -68,6 +76,8 @@ export function planRows(plan, { recipes = null, facilities = null } = {}) {
                 item: s.item_name,
                 kind,
                 cycleSeconds: s.cycle_time,
+                // Seconds between finished batches on each unit; set below for processors.
+                effectiveCycleSeconds: s.cycle_time,
                 count: s.facility_count,
                 busy: Number.isFinite(s.busy_units) ? s.busy_units : s.facility_count,
                 // Seconds until this processor's first batch can be done: the engine's lead time is the
@@ -81,6 +91,68 @@ export function planRows(plan, { recipes = null, facilities = null } = {}) {
                 startedAt: null,
             };
         });
+    const sold = soldRates(plan, rows);
+    rows.forEach((row, i) => {
+        if (row.kind === 'processor') row.effectiveCycleSeconds = processorInterval(row, steps[i].busy_units, sold[i]);
+    });
+    return rows;
+}
+
+// An item's name without the plan's variant suffixes (as plan-summary.js's stripVariant).
+function baseItem(name) {
+    return typeof name === 'string' ? name.replace(/__by\d+$/, '').replace(/__uncovered$/, '') : name;
+}
+
+// Units a second the plan sells of each row's item, in `rows` order: income_streams'
+// units_per_second, plus byproduct_rates (`[name, per second, lead]`) of the same name. A stream
+// several rows make is split between them by facility count, the rows at the stream's own facility
+// first (as session.js's rowRates splits the coins).
+function soldRates(plan, rows) {
+    const out = rows.map(() => 0);
+    const sources = [];
+    for (const s of Array.isArray(plan?.income_streams) ? plan.income_streams : []) {
+        if (s && Number(s.units_per_second) > 0) sources.push({ item: baseItem(s.item_name), facility: s.facility, perSecond: Number(s.units_per_second) });
+    }
+    for (const b of Array.isArray(plan?.byproduct_rates) ? plan.byproduct_rates : []) {
+        if (Array.isArray(b) && Number(b[1]) > 0) sources.push({ item: baseItem(b[0]), facility: null, perSecond: Number(b[1]) });
+    }
+    const all = rows.map((_, i) => i);
+    for (const source of sources) {
+        let makers = all.filter(i => baseItem(rows[i].item) === source.item && rows[i].facility === source.facility);
+        if (makers.length === 0) makers = all.filter(i => baseItem(rows[i].item) === source.item);
+        const weight = i => (rows[i].count > 0 ? rows[i].count : 1);
+        const weights = makers.reduce((sum, i) => sum + weight(i), 0);
+        for (const i of makers) out[i] += source.perSecond * weight(i) / weights;
+    }
+    return out;
+}
+
+// Seconds between finished batches on each unit of a processor row. First choice is the plan's
+// busy_units (how many of its units are busy on average): it is per row and counts what the row
+// makes for other recipes too. Else what the plan sells of its item, `count × yield / units per
+// second` (one batch per unit per interval). Else the batch time. Never less than the batch time.
+function processorInterval(row, busyUnits, soldPerSecond) {
+    const busy = Number(busyUnits);
+    let interval = row.cycleSeconds;
+    if (Number.isFinite(busy) && busy > 0) interval = row.cycleSeconds * row.count / busy;
+    else if (soldPerSecond > 0) interval = row.count * (row.yieldPerBatch || 1) / soldPerSecond;
+    return Math.max(row.cycleSeconds, interval);
+}
+
+// Seconds between finished batches for a row: its effectiveCycleSeconds, never less than its batch
+// time, and the batch time for rows saved before the field existed.
+export function effectiveCycle(row) {
+    const cycle = Number(row?.cycleSeconds);
+    const effective = Number(row?.effectiveCycleSeconds);
+    return Number.isFinite(effective) && effective > cycle ? effective : cycle;
+}
+
+// A duration for a reminder's text: "45s", "10m", "1h 40m".
+function spanText(seconds) {
+    const total = Math.round(seconds);
+    if (total < 60) return `${total}s`;
+    const h = Math.floor(total / 3600), m = Math.round((total % 3600) / 60);
+    return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
 }
 
 function findRecipe(recipes, item, facility) {
@@ -128,7 +200,10 @@ export function batchesUntilFull(cap, yieldPerBatch) {
 
 // Every reminder for the next `horizonSeconds` after `startedAt`, sorted by time. The main event
 // of a repeating row is "collect before the store is full": the row's cap (from `caps`, by its
-// level) divided by what a batch makes, times the batch time. Optionally the first batch gets its
+// level) divided by what a batch makes, times the time between finished batches (effectiveCycle,
+// which for a processor short of ingredients is longer than its batch time). Batch k is done
+// `wait + k × interval` after setup, `wait` being a processor's wait for its first ingredients;
+// session.js's fillSeconds uses the same moment. Optionally the first batch gets its
 // own event, and crops their watering prompts. A row with no known cap falls back to the old
 // "check in every K cycles", so each row stays under `maxPerRow`, which by default shares
 // DEFAULT_DAILY_BUDGET between the rows that are on (at least 1 each).
@@ -148,7 +223,8 @@ export function buildEvents(rows, {
         if (row.on === false || !(row.cycleSeconds > 0)) continue;
         const start = row.startedAt ? toMs(row.startedAt) : t0;
         if (!Number.isFinite(start)) continue;
-        const cycle = row.cycleSeconds * 1000;
+        const cycle = row.cycleSeconds * 1000;      // one batch (a crop's grow time, for watering)
+        const interval = effectiveCycle(row) * 1000; // between finished batches
         const item = pretty(row.item);
         const where = `${item} on ${row.count}× ${row.facility}`;
         const repeats = row.kind === 'crop' ? !!assumptions.plotsResow : row.kind === 'processor' ? !!assumptions.processorsRepeat : true;
@@ -160,7 +236,8 @@ export function buildEvents(rows, {
             }));
         }
         const leadBound = row.kind === 'processor' && row.leadSeconds > row.cycleSeconds;
-        const first = start + (row.kind === 'processor' ? row.leadSeconds : row.cycleSeconds) * 1000;
+        const wait = leadBound ? (row.leadSeconds - row.cycleSeconds) * 1000 : 0;
+        const first = start + wait + interval;
         const doneTitle = row.kind === 'crop' ? `Harvest ${item}` : `${item} batch done`;
         const firstBody = leadBound
             ? `${where}: first batch, counting the time its ingredients take to arrive (approximate).`
@@ -169,10 +246,13 @@ export function buildEvents(rows, {
         const batches = batchesUntilFull(cap, row.yieldPerBatch);
         if (batches) {
             // The store is full `batches` batches after setup; collecting then restarts the count.
-            const span = batches * cycle;
-            const fullAt = first + (batches - 1) * cycle;
+            const span = batches * interval;
+            const fullAt = first + (batches - 1) * interval;
             const store = row.kind === 'processor' ? `${cap} batches` : `${cap} ${item} (${batches} ${batches === 1 ? 'batch' : 'batches'} of ${row.yieldPerBatch})`;
             const level = row.level ? ` at level ${row.level}` : '';
+            const pace = interval > cycle * 1.05
+                ? ` A batch takes ${spanText(row.cycleSeconds)}, but its ingredients arrive for about one every ${spanText(interval / 1000)}${row.count > 1 ? ' on each' : ''}.`
+                : '';
             if (firstBatch && batches > 1) {
                 events.push({ at: first, kind: 'done', key: row.key, approximate: leadBound, title: doneTitle, body: firstBody });
             }
@@ -183,6 +263,7 @@ export function buildEvents(rows, {
                     title: `Collect ${item}`,
                     body: `${where}: the ${row.facility}${level} holds ${store}, then stops until collected.`
                         + (n > 0 ? ` Fill-up ${n + 1} since setup, if each earlier one was collected on time.` : '')
+                        + pace
                         + ' Cap from a fan wiki, not checked in game.',
                 });
             }
@@ -191,11 +272,11 @@ export function buildEvents(rows, {
         if (firstBatch) events.push({ at: first, kind: 'done', key: row.key, approximate: leadBound, title: doneTitle, body: firstBody });
         if (!repeats || first >= horizonEnd) continue;
         // No cap known for this facility at this level: check in every K cycles instead.
-        const occurrences = Math.floor((horizonEnd - first) / cycle) + 1;
+        const occurrences = Math.floor((horizonEnd - first) / interval) + 1;
         const every = Math.max(1, Math.ceil(occurrences / perRow));
         for (let n = every; n < occurrences; n += every) {
             events.push({
-                at: first + n * cycle, kind: 'checkin', key: row.key, approximate: false,
+                at: first + n * interval, kind: 'checkin', key: row.key, approximate: false,
                 title: `Check ${row.facility}: ${item}`,
                 body: `${where}: batch ${n + 1} should be done, if every one before it was collected on time. No output cap is known for this ${row.facility}${row.level ? ` at level ${row.level}` : ''}, so this is a check-in, not a "full" moment.`,
             });

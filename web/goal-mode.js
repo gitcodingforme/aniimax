@@ -9,7 +9,7 @@
 // RV step; an item goal is one solve with that item as the only cost. `priorities: []` is what the
 // page sends for its Level up strategy (activePriorities() in app.js), so nothing else is chased.
 // `config` is ctx.config (see web/panels.js).
-import { stripVariant, summarizePlan } from './plan-summary.js?v=fork-m9-2';
+import { coveringHomeLevel, playerHomeLevel, stripVariant, summarizePlan } from './plan-summary.js?v=fork-m9-2';
 
 export const GOAL_KEY = 'aniimax-goal-mode-v1';
 
@@ -71,55 +71,18 @@ export function goalBase(base, { tiers = [], skipped = [] } = {}) {
     return input;
 }
 
-// Everything a player at `rv` could have: the page's simpleSetup, or the same worked out from
-// FACILITIES (`unlocks`, `counts`) and MODULE_MAX_LEVELS.
-function setupAt(config, rv) {
-    if (typeof config.simpleSetup === 'function') return config.simpleSetup(rv);
-    const at = list => (Array.isArray(list) && list.length ? list[Math.max(1, Math.min(rv, list.length)) - 1] : 0);
-    const facilities = {};
-    for (const f of facilityList(config)) {
-        const unlocked = Object.entries(f.unlocks || {}).filter(([, need]) => need <= rv).map(([level]) => Number(level));
-        facilities[f.name] = unlocked.length ? [{ count: at(f.counts), level: Math.max(...unlocked) }] : [{ count: 0, level: 1 }];
-    }
-    const modules = Object.fromEntries(Object.entries(config.MODULE_MAX_LEVELS || {}).map(([m, caps]) => [m, at(caps)]));
-    return { facilities, modules };
-}
-
 const tierLevel = tiers => Math.max(0, ...(tiers || []).filter(t => t.count > 0).map(t => t.level));
 
-// The lowest RV level whose facilities and modules cover everything in `input` (homeLevelCovering
-// in web/roadmap.js, copied from app.js), for Advanced mode, which has no RV level input of its own.
+// The lowest RV level whose facilities and modules cover everything in `input` (app.js's rule):
+// coveringHomeLevel in plan-summary.js.
 export function homeLevelCovering(input, config = {}) {
-    const top = Number.isInteger(config.MAX_HOME_LEVEL) ? config.MAX_HOME_LEVEL : 20;
-    for (let level = 1; level <= top; level++) {
-        const allowed = setupAt(config, level);
-        const facilitiesFit = facilityList(config).every((f) => {
-            const have = input?.facilities?.[f.name];
-            if (tierCount(have) === 0) return true;
-            const cap = allowed.facilities[f.name];
-            return tierCount(have) <= tierCount(cap) && (f.hasLevels === false || tierLevel(have) <= tierLevel(cap));
-        });
-        const modulesFit = Object.entries(input?.modules || {}).every(([name, at]) => at <= (allowed.modules?.[name] ?? 0));
-        if (facilitiesFit && modulesFit) return level;
-    }
-    return top;
+    return coveringHomeLevel(input, config);
 }
 
-// The RV level a goal starts from. Simple mode: the plan's level-up target less one, else the RV
-// level input (`homeLevel`). Advanced mode, where that input is hidden and may be stale: the
-// level-up target less one when the plan was a level-up plan, else the lowest RV covering what was
-// entered; never below that covering level, since what was entered must already be allowed.
+// The RV level a goal starts from: the one the player is at, by the rule every card shares
+// (playerHomeLevel in plan-summary.js). `homeLevel` is the saved RV level input.
 export function startLevel(input, { config = {}, simple = false, homeLevel = null, context = null } = {}) {
-    const top = Number.isInteger(config.MAX_HOME_LEVEL) ? config.MAX_HOME_LEVEL : 20;
-    const clamp = rv => Math.max(1, Math.min(top, Math.floor(rv)));
-    const target = Number(context?.target);
-    const hasTarget = Number.isInteger(target) && target > 1;
-    if (simple) {
-        const given = Number(homeLevel);
-        return clamp(hasTarget ? target - 1 : (Number.isInteger(given) && given >= 1 ? given : 1));
-    }
-    const covering = homeLevelCovering(input, config);
-    return clamp(context?.levelUp && hasTarget ? Math.max(covering, target - 1) : covering);
+    return playerHomeLevel({ input, config, simple, savedHomeLevel: homeLevel, context });
 }
 
 // One plan input per RV step from `from` + 1 to `to`: `[{ rv, input, note, ready }]`. Simple mode
@@ -239,6 +202,55 @@ export function stepOutcome(plan, focus = []) {
     return { status: 'ok', ...summarizeStep(plan, focus) };
 }
 
+// What a setup cannot make, for a goal the planner called unreachable. `names` are the goal's
+// costs ('coins' is left out), `recipes` get_all_items' list and `input` the plan input solved.
+// A name is made when a recipe for it (or one with it as byproduct) runs on an owned facility at its
+// level, with its module, and everything it uses is made too (quick recipes count as what they
+// make; skipped and season recipes as the input says). Returns `[{ item, needs }]` for each name
+// not made, `needs` being `[{ item, makers }]`: the item at the bottom of the chain that nothing
+// owned makes (the name itself, or something it uses) and every `{ facility, level, module }`
+// (lowest level per facility, `module` a `[module, level]` or null) that would make it.
+export function unmakeable(names, recipes, input = {}) {
+    const owned = {};
+    for (const [facility, tiers] of Object.entries(input?.facilities || {})) owned[facility] = tierLevel(tiers);
+    const excluded = new Set(input?.exclude || []);
+    const list = (Array.isArray(recipes) ? recipes : [])
+        .filter(r => typeof r?.name === 'string' && !excluded.has(r.name) && (!r.season || input?.season));
+    const known = new Set(list.map(r => r.name));
+    const madeBy = r => (r.name.startsWith('quick_') && known.has(r.name.slice(6)) ? r.name.slice(6) : r.name);
+    const makes = (r, name) => madeBy(r) === name || r.byproduct_item === name;
+    const runs = (r) => {
+        const [module, level] = Array.isArray(r.module_requirement) ? r.module_requirement : [];
+        return (owned[r.facility] || 0) >= (r.facility_level || 1) && (!module || (input?.modules?.[module] || 0) >= level);
+    };
+    const memo = new Map();
+    const can = (name, path = new Set()) => {
+        if (memo.has(name)) return memo.get(name);
+        if (path.has(name)) return false;
+        path.add(name);
+        const ok = list.some(r => makes(r, name) && runs(r) && (r.raw_materials || []).every(m => can(m, path)));
+        path.delete(name);
+        memo.set(name, ok);
+        return ok;
+    };
+    const needs = (name, seen) => {
+        if (can(name) || seen.has(name)) return [];
+        seen.add(name);
+        const running = list.filter(r => makes(r, name) && runs(r));
+        if (running.length) return running.flatMap(r => (r.raw_materials || []).flatMap(m => needs(m, seen)));
+        const byFacility = new Map();
+        for (const r of list.filter(r => makes(r, name))) {
+            const level = r.facility_level || 1;
+            const kept = byFacility.get(r.facility);
+            if (!kept || level < kept.level) {
+                byFacility.set(r.facility, { facility: r.facility, level, module: Array.isArray(r.module_requirement) ? r.module_requirement : null });
+            }
+        }
+        return [{ item: name, makers: [...byFacility.values()] }];
+    };
+    return (names || []).filter(n => n !== 'coins' && !can(n)).map(item => ({ item, needs: needs(item, new Set()) }));
+}
+
 // "about 2.5 days", "about 5 hours", "under an hour", "ready now", or "never" for null.
 export function formatDays(seconds) {
     if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return 'never';
@@ -268,7 +280,8 @@ export function goalItems(recipes, label = name => name) {
     return [...names].map(name => ({ name, label: String(label(name)) })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-// The saved goal, read back safely: `{ kind, rv, item, amount, have, countUpgrades }`.
+// The saved goal, read back safely: `{ kind, rv, from, item, amount, have, countUpgrades }`, `from`
+// the starting RV level the target `rv` was picked at.
 export function readGoal(raw) {
     let g = null;
     try {
@@ -279,9 +292,21 @@ export function readGoal(raw) {
     return {
         kind: g.kind === 'item' ? 'item' : 'rv',
         rv: Number.isInteger(g.rv) ? g.rv : null,
+        from: Number.isInteger(g.from) ? g.from : null,
         item: typeof g.item === 'string' ? g.item : null,
         amount: num(g.amount, 1),
         have: num(g.have, 0),
         countUpgrades: g.countUpgrades === true,
     };
+}
+
+// Whether a new 'plan' value should stop a goal that is running (`running`) from the plan
+// `previous`: no plan is on screen any more (null: another Aniimo setup is solving, or the solve
+// failed), or the inputs were solved again (a different setupHash). The same setupHash
+// stops nothing, so a repeat of the plan on screen leaves the run alone.
+export function shouldStop(running, previous, next) {
+    if (!running) return false;
+    if (!next) return true;
+    if (!previous) return false;
+    return next.setupHash !== previous.setupHash;
 }

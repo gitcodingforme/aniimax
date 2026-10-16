@@ -7,6 +7,9 @@ import { diffSetups, isSnapshot } from './history.js?v=fork-m9-2';
 import { summarizePlan } from './plan-summary.js?v=fork-m9-2';
 import { effectiveSetup } from './setup-input.js?v=fork-m9-2';
 
+// Shown when the chooser has nothing in it yet.
+export const NOTHING_LOADED = 'Load a profile, paste a setup or pick a snapshot first.';
+
 const isObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
 const hasTiers = value => isObject(value) && isObject(value.facilityTiers);
 
@@ -19,7 +22,7 @@ export function otherFromSetup(setup, source = 'setup') {
 // Text from a file or a paste: a profile file (format 'aniimax-profile') or a raw saved setup
 // (JSON with `facilityTiers`). Throws a short plain-language reason otherwise.
 export function otherFromText(text) {
-    if (typeof text !== 'string' || text.trim() === '') throw new Error('there is nothing to read yet');
+    if (typeof text !== 'string' || text.trim() === '') throw new Error(NOTHING_LOADED);
     let data;
     try {
         data = JSON.parse(text);
@@ -115,4 +118,19 @@ export function compareResults(planA, planB) {
         deltaLevelUpSeconds: subtract(a.levelUpSeconds, b.levelUpSeconds),
         rows: [...byKey.values()],
     };
+}
+
+// Whether the page's plan is not the one `previous` ({ setupHash, setup }) was taken from: its
+// fingerprint or its Aniimo setup string (Best, Minimum or My Aniimo) differs. A `previous`
+// without a `setup` string is compared by fingerprint only.
+export function planMoved(previous, next) {
+    if (!previous || !next) return false;
+    return previous.setupHash !== next.setupHash || (previous.setup !== undefined && previous.setup !== next.setup);
+}
+
+// Whether a running "Solve both" should be stopped when the page's plan topic changes to `next`:
+// the plan went away (null) or moved on from the one the solve started with.
+export function shouldStop(running, previous, next) {
+    if (!running) return false;
+    return !next || planMoved(previous, next);
 }

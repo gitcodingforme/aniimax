@@ -90,7 +90,11 @@ export function createSolver({
     // One plan, in a worker of its own that is stopped when the plan is in, on a timeout or on
     // an abort. Resolves with the plan, or `{ success: false, error }` when the planner fails
     // (as app.js's ensurePlanFor does); rejects with Error('timed out') or Error('cancelled').
-    async function findPlan(input, { onProgress, timeoutMs = 180000, signal } = {}) {
+    // The default timeout is 300 s because a level-up plan runs several HiGHS solves in a row in
+    // worker.js (most of each byproduct and priority, the level-up pace, the coins, the stock-up,
+    // perhaps a strict retry), each allowed 30 s (EXACT_TIME_LIMIT): six or seven at that limit
+    // already pass 180 s, and the page's own solve has no timeout to cut it short.
+    async function findPlan(input, { onProgress, timeoutMs = 300000, signal } = {}) {
         const release = await limiter.acquire(signal);
         return new Promise((resolve, reject) => {
             let worker = null;
@@ -284,17 +288,20 @@ export function createSolver({
 
     // --- time_to_reach, on one helper worker of its own ---------------------------------------
     // Outside the limiter: one extra worker at most, kept between calls and stopped after
-    // `helperIdleMs` with nothing to do. The next call starts a new one, as it does after an error.
+    // `helperIdleMs` with nothing to do. The next call starts a new one, as it does after an error,
+    // a timeout or an abort.
     let helper = null;
     let nextId = 0;
 
+    // Stops `h`; anything still waiting on it is rejected with `error`.
     function dropHelper(h, error) {
         if (helper !== h) return;
         helper = null;
         clearTimeout(h.idleTimer);
         stop(h.worker);
-        h.pending.forEach(p => p.reject(error));
+        const waiting = [...h.pending.values()];
         h.pending.clear();
+        waiting.forEach(request => request.settle(request.reject, error));
     }
 
     // Starts the idle clock once nothing is waiting on the helper. The timer never keeps Node (the
@@ -313,17 +320,21 @@ export function createSolver({
         worker.onmessage = (event) => {
             const { id, type, ok, result, error } = event.data || {};
             if (type === 'progress') return;
-            const p = h.pending.get(id);
-            if (!p) return;
+            const request = h.pending.get(id);
+            if (!request) return;
             h.pending.delete(id);
             if (!ok) {
-                p.reject(new Error(error || 'The planner failed'));
+                request.settle(request.reject, new Error(error || 'The planner failed'));
             } else {
+                let value;
                 try {
-                    p.resolve(JSON.parse(result));
+                    value = JSON.parse(result);
                 } catch (e) {
-                    p.reject(e);
+                    request.settle(request.reject, e);
+                    whenIdle(h);
+                    return;
                 }
+                request.settle(request.resolve, value);
             }
             whenIdle(h);
         };
@@ -333,32 +344,80 @@ export function createSolver({
         return h;
     }
 
-    function callHelper(goal) {
+    // Posts `request` to the helper, starting one if there is none.
+    function send(request) {
+        let h;
+        try {
+            h = helperWorker();
+        } catch (error) {
+            request.settle(request.reject, error);
+            return;
+        }
+        clearTimeout(h.idleTimer);
+        h.idleTimer = null;
+        request.helper = h;
+        h.pending.set(request.id, request);
+        h.worker.postMessage({ id: request.id, type: 'time_to_reach', payload: request.payload });
+    }
+
+    // Stops `h`, which may be stuck on a request that was given up on; the requests still waiting
+    // on it are sent again to a new helper.
+    function restartHelper(h) {
+        if (helper !== h) return;
+        const waiting = [...h.pending.values()];
+        h.pending.clear();
+        dropHelper(h);
+        waiting.forEach(send);
+    }
+
+    // One time_to_reach request. Rejects with Error('timed out') after `timeoutMs`, or
+    // Error('cancelled') when `signal` aborts; either way the helper is stopped and replaced.
+    function callHelper(goal, { timeoutMs = 60000, signal } = {}) {
         return new Promise((resolve, reject) => {
-            let h;
-            try {
-                h = helperWorker();
-            } catch (error) {
-                reject(error);
+            if (signal?.aborted) {
+                reject(cancelledError());
                 return;
             }
-            clearTimeout(h.idleTimer);
-            h.idleTimer = null;
-            const id = ++nextId;
-            h.pending.set(id, { resolve, reject });
-            h.worker.postMessage({ id, type: 'time_to_reach', payload: JSON.stringify(goal) });
+            let timer = null;
+            const request = {
+                id: ++nextId,
+                payload: JSON.stringify(goal),
+                resolve,
+                reject,
+                helper: null,
+                done: false,
+                settle: (fn, value) => {
+                    if (request.done) return;
+                    request.done = true;
+                    clearTimeout(timer);
+                    signal?.removeEventListener('abort', onAbort);
+                    fn(value);
+                },
+            };
+            const giveUp = (error) => {
+                if (request.done) return;
+                const h = request.helper;
+                h?.pending.delete(request.id);
+                request.settle(reject, error);
+                if (h) restartHelper(h);
+            };
+            const onAbort = () => giveUp(cancelledError());
+            signal?.addEventListener('abort', onAbort, { once: true });
+            timer = startTimer(timeoutMs, () => giveUp(timedOutError()));
+            send(request);
         });
     }
 
     // What `plan` makes in `seconds`: time_to_reach's goal result (see JsGoalResult in wasm.rs).
-    function timeOver(plan, seconds) {
-        return callHelper({ plan, seconds });
+    // `options`: `{ timeoutMs = 60000, signal }`.
+    function timeOver(plan, seconds, options) {
+        return callHelper({ plan, seconds }, options);
     }
 
     // How long `plan` takes from `current` to `target` Home Coins: time_to_reach's goal result,
-    // with `total_time_seconds` (see JsGoalResult in wasm.rs).
-    function timeTo(plan, target, current = 0) {
-        return callHelper({ plan, target, current });
+    // with `total_time_seconds` (see JsGoalResult in wasm.rs). `options`: `{ timeoutMs = 60000, signal }`.
+    function timeTo(plan, target, current = 0, options) {
+        return callHelper({ plan, target, current }, options);
     }
 
     return { findPlan, rank, timeOver, timeTo };

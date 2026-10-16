@@ -4,7 +4,7 @@
 // them. The card contract is in web/panels.js.
 
 import {
-    SESSION_KEY, adaptPlan, aimInput, firstCollectBy, levelUpLosses, readSettings, rowRates, unknownCapRows, windowCoins,
+    SESSION_KEY, adaptPlan, aimInput, firstCollectBy, levelUpLosses, readSettings, rowRates, shouldStop, unknownCapRows, windowCoins,
     windowSecondsFor, writeSettings,
 } from '../session.js?v=fork-m9-2';
 import { planRows } from '../reminders.js?v=fork-m9-2';
@@ -66,7 +66,8 @@ export function mount(el, ctx) {
     let settings = load();
     let current = null; // the latest 'plan' value
     // The run on screen: { snap, mode, windowSeconds, aim, recipes, facilities, caps, running,
-    // controller, round, result (adaptPlan's answer), coins: { now, adapted }, error }.
+    // controller, round, result (adaptPlan's answer), coins: { now, adapted }, error, stopped (a new
+    // plan stopped the run) }.
     let state = null;
 
     function showSettings() {
@@ -94,6 +95,17 @@ export function mount(el, ctx) {
         return ` <span class="${good ? 'delta-up' : 'delta-down'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}%</span>`;
     }
 
+    // Why the window figure is under steady income times the window, when it is: in a session the
+    // engine counts the wait for first batches; overnight, stores that fill stop until collected.
+    function gapNote(facts) {
+        const steady = facts.coinsPerHour / 3600 * state.windowSeconds;
+        if (!Number.isFinite(facts.windowCoins) || !(steady > 0) || facts.windowCoins >= steady * 0.99) return '';
+        const why = state.mode === 'session'
+            ? 'lower than steady income because the first batches take a while to arrive'
+            : 'lower than steady income because some stores fill and stop until collected';
+        return `<span class="session-note">${why}</span>`;
+    }
+
     function chips(names) {
         const once = [...new Set(names.map(stripVariant))];
         return `<ul class="feature-chips">${once.map(n => `<li>${name(n)}</li>`).join('')}</ul>`;
@@ -109,7 +121,7 @@ export function mount(el, ctx) {
         const lines = [
             ['Steady income', Number.isFinite(facts.coinsPerHour) ? `${coinsText(facts.coinsPerHour)} coins/h${other ? delta(facts.coinsPerHour, other.coinsPerHour) : ''}` : '–'],
             [state.mode === 'session' ? `Coins in ${escape(duration(state.windowSeconds))}` : `Coins by morning`,
-                facts.windowCoins === undefined ? 'working out…' : `${Number.isFinite(facts.windowCoins) ? '~' : ''}${coinsText(facts.windowCoins)}${other ? delta(facts.windowCoins, other.windowCoins) : ''}`],
+                facts.windowCoins === undefined ? 'working out…' : `${Number.isFinite(facts.windowCoins) ? '~' : ''}${coinsText(facts.windowCoins)}${other ? delta(facts.windowCoins, other.windowCoins) : ''}${gapNote(facts)}`],
             ['First store full', collectText(facts.first)],
         ];
         if (facts.showLevelUp) {
@@ -211,7 +223,7 @@ export function mount(el, ctx) {
         if (!current?.plan?.success) return 'Solve a plan first.';
         if (!state) return `Pick a length and press Plan it. The plan is solved again up to ${MAX_ROUNDS} times, so this can take a minute.`;
         const parts = [];
-        if (isStale()) parts.push('Setup changed; plan it again.');
+        if (isStale()) parts.push(state.stopped ? 'Setup changed; plan it again. (stopped)' : 'Setup changed; plan it again.');
         if (state.running) {
             parts.push(state.result ? 'Working out the coins in the window…' : state.round
                 ? `Solving again without ${state.round.excluded.length} recipe${state.round.excluded.length === 1 ? '' : 's'} (try ${state.round.n} of ${MAX_ROUNDS})…`
@@ -284,12 +296,13 @@ export function mount(el, ctx) {
             result: null,
             coins: { now: undefined, adapted: undefined },
             error: null,
+            stopped: false,
         };
         state = s;
         render();
         try {
             s.result = await adaptPlan({
-                base: aimInput(snap.input, s.aim, { aniipodTiers: ctx.config.ANIIPOD_TIERS, skipped: ctx.getSetup()?.skippedRecipes }),
+                base: aimInput(snap.input, s.aim, { aniipodTiers: ctx.config.ANIIPOD_TIERS, skipped: snap.context?.skipped }),
                 plan: s.aim === 'strategy' ? snap.plan : null,
                 mode: s.mode,
                 windowSeconds: s.windowSeconds,
@@ -343,9 +356,16 @@ export function mount(el, ctx) {
     stopBtn.addEventListener('click', () => state?.controller?.abort());
 
     showSettings();
-    // A new plan never starts a run; the result only says when it no longer matches.
+    // A new plan never starts a run; the result only says when it no longer matches. A run still
+    // solving stops when no plan is on screen, the inputs were solved again or another Aniimo setup is
+    // shown: its Stop button is dimmed then, and it would hold a solver slot. Once the solving is
+    // done (a result is in) only the coin count is left, which holds no slot, so that run carries on.
     ctx.on('plan', (value) => {
         current = value || null;
+        if (state?.controller && shouldStop(!!state.running && !state.result, state.snap, current)) {
+            state.stopped = true;
+            state.controller.abort();
+        }
         render();
     });
 }

@@ -12,7 +12,10 @@
 //          modules: { id: level }, aniimoLevels: { Ability: n },
 //          rosterLevels: { memberIndex: { Ability: n } } }
 
-import { diffPlans, summarizePlan } from './plan-summary.js?v=fork-m9-2';
+import { diffPlans, playerHomeLevel, summarizePlan } from './plan-summary.js?v=fork-m9-2';
+
+// The lowest RV level that allows every facility and module an input owns (app.js's rule).
+export { coveringHomeLevel } from './plan-summary.js?v=fork-m9-2';
 
 // A whole number at least `min`, else null.
 const whole = (value, min = 0) => {
@@ -68,30 +71,13 @@ const atRv = (list, rv) => (Array.isArray(list) && list.length ? list[Math.min(r
 const sum = (list, pick) => list.reduce((total, x) => total + (pick(x) > 0 ? pick(x) : 0), 0);
 
 const ownedTiers = (input, name) => (input?.facilities?.[name] || []).filter(t => t.count > 0);
-const maxHomeLevel = config => (Number.isInteger(config?.MAX_HOME_LEVEL) ? config.MAX_HOME_LEVEL : 20);
 
-// The lowest RV level with room for every facility `input` owns (the count, and the level's unlock).
-export function coveringHomeLevel(input, config) {
-    const top = maxHomeLevel(config);
-    for (let rv = 1; rv <= top; rv++) {
-        const fits = (config?.FACILITIES || []).every((f) => {
-            const tiers = ownedTiers(input, f.name);
-            if (tiers.length === 0) return true;
-            const cap = atRv(f.counts, rv);
-            if (cap !== null && sum(tiers, t => t.count) > cap) return false;
-            return f.hasLevels === false || !(f.unlocks?.[Math.max(...tiers.map(t => t.level))] > rv);
-        });
-        if (fits) return rv;
-    }
-    return top;
-}
-
-// The RV level the plan is for. Simple mode: the level-up target less one when there is one
-// (as the roadmap card does), else `homeLevel`. Advanced mode: the lowest RV covering what is owned.
-export function homeLevelFor(input, config, { simple = false, homeLevel = null, target = null } = {}) {
-    if (!simple) return coveringHomeLevel(input, config);
-    const rv = Number.isInteger(target) && target > 1 ? target - 1 : Math.floor(Number(homeLevel));
-    return Math.min(rv >= 1 ? rv : maxHomeLevel(config), maxHomeLevel(config));
+// The RV level the plan is for: the one the player is at, by the rule every card shares
+// (playerHomeLevel in plan-summary.js). `homeLevel` is the saved RV level input and `context` the
+// plan's planContext. Without a `context`, a `target` is taken as a level-up plan's target.
+export function homeLevelFor(input, config, { simple = false, homeLevel = null, target = null, context = null } = {}) {
+    const plan = context ?? (Number.isInteger(target) && target > 1 ? { levelUp: true, target } : null);
+    return playerHomeLevel({ input, config, simple, savedHomeLevel: homeLevel, context: plan });
 }
 
 // Facility types `input` owns none of that RV level `rv` has unlocked and has room for: the ones

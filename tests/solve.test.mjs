@@ -243,3 +243,29 @@ test('test_the_time_helper_runs_beside_busy_workers_and_stops_when_idle', async 
     controller.abort();
     await assert.rejects(busy, { message: 'cancelled' });
 });
+
+test('test_a_time_request_can_time_out_or_be_cancelled_and_the_helper_is_replaced', async () => {
+    // The helper answers only plans that are not marked `stuck`.
+    const fake = fakeWorkers((worker, message) => {
+        const goal = JSON.parse(message.payload);
+        if (!goal.plan.stuck) worker.send({ id: message.id, ok: true, result: JSON.stringify({ success: true, seconds: goal.seconds }) });
+    });
+    const solver = createSolver({ workerUrl: 'w', makeWorker: fake.makeWorker });
+    await assert.rejects(solver.timeOver({ stuck: true }, 1, { timeoutMs: 15 }), { message: 'timed out' });
+    assert.equal(fake.made[0].terminated, true, 'the stuck helper is stopped');
+    assert.deepEqual(await solver.timeOver({ success: true }, 5), { success: true, seconds: 5 });
+    assert.equal(fake.made.length, 2, 'and a new one answers the next call');
+
+    // Cancelling one request moves the others waiting on that helper to a new one.
+    const controller = new AbortController();
+    const stuck = solver.timeTo({ stuck: true }, 10, 0, { signal: controller.signal });
+    const behind = solver.timeOver({ success: true }, 7);
+    controller.abort();
+    await assert.rejects(stuck, { message: 'cancelled' });
+    assert.deepEqual(await behind, { success: true, seconds: 7 });
+    assert.equal(fake.made[1].terminated, true);
+    assert.equal(fake.made.length, 3);
+    // Already aborted: nothing is sent.
+    await assert.rejects(solver.timeOver({ success: true }, 1, { signal: AbortSignal.abort() }), { message: 'cancelled' });
+    assert.equal(fake.made[2].messages.length, 1);
+});

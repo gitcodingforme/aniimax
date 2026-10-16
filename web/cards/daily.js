@@ -3,7 +3,7 @@
 // ../daily.js and tested in tests/daily.test.mjs; this file only draws it. See web/panels.js for the
 // card contract.
 import {
-    DAILY_KEY, allDone, clock, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, tickAll, toggle, untickDay, writeState,
+    DAILY_KEY, allDone, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, tickAll, timeLabel, toggle, untickDay, writeState,
 } from '../daily.js?v=fork-m9-2';
 
 // The list is rebuilt this often so lines turn overdue by themselves while the page stays open.
@@ -78,7 +78,7 @@ export async function mount(el, ctx) {
             const box = `daily-${n++}`;
             const on = ticked.includes(item.id);
             const late = item.overdue ? ` <span class="daily-late">overdue ${esc(ctx.format.duration((now - item.at) / 1000))}</span>` : '';
-            const when = item.at === null ? '' : `<span class="daily-when">${item.approximate ? '~' : ''}${clock(item.at)}</span> `;
+            const when = item.at === null ? '' : `<span class="daily-when">${item.approximate ? '~' : ''}${esc(timeLabel(item.at, now))}</span> `;
             return `<div class="daily-item${on ? ' done' : ''}${item.overdue ? ' overdue' : ''}">`
                 + `<input type="checkbox" id="${box}" data-id="${esc(item.id)}"${on ? ' checked' : ''}> `
                 + `<label for="${box}">${when}<span class="daily-title">${esc(item.title)}</span>${late}</label></div>`;
@@ -93,11 +93,11 @@ export async function mount(el, ctx) {
         const started = timers ? Date.parse(timers.startedAt) : NaN;
         if (items.length === 0) note.textContent = timers ? 'Nothing is due for the rest of today.' : 'Solve a plan to get a list for today.';
         else if (!timers) note.textContent = 'No reminders are running, so these lines have no times. Press "I just set everything up per the plan" in Reminders to get them.';
-        else note.textContent = `Times come from the reminders set up ${dayKey(started) === day ? '' : `${dayKey(started)} `}${clock(started)}. A ~ means the moment is approximate.`;
+        else note.textContent = `Times come from your reminders (set up: ${timeLabel(started, now)}). A ~ means the moment is approximate.`;
 
         const overdue = items.filter(i => i.overdue).length;
         count.textContent = items.length === 0 ? '' : `${doneCount(state, day, ids)} of ${items.length} done`
-            + (overdue ? `, ${overdue} overdue` : '') + (entry?.doneAt ? `. You marked it all done at ${clock(entry.doneAt)}.` : '');
+            + (overdue ? `, ${overdue} overdue` : '') + (entry?.doneAt ? `. You marked it all done at ${timeLabel(entry.doneAt, now)}.` : '');
         allBtn.disabled = items.length === 0 || (allDone(state, day, ids) && !!entry?.doneAt);
         noneBtn.disabled = !entry || (entry.ticked.length === 0 && !entry.doneAt);
     }

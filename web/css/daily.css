@@ -21,7 +21,7 @@
 
 #daily-card .daily-when {
     display: inline-block;
-    min-width: 3.4rem;
+    min-width: 5.2rem;
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }

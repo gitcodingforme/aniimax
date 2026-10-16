@@ -2,7 +2,7 @@
 // engine's level-up cost (ctx.solver.findPlan), one RV step after another, and the card says how
 // long it takes and what to run. Logic in web/goal-mode.js; the card contract is in web/panels.js.
 import {
-    GOAL_KEY, atCurrentPlan, formatDays, goalItems, itemGoalInput, readGoal, rvSteps, startLevel, stepOutcome,
+    GOAL_KEY, atCurrentPlan, formatDays, goalItems, itemGoalInput, readGoal, rvSteps, shouldStop, startLevel, stepOutcome, unmakeable,
 } from '../goal-mode.js?v=fork-m9-2';
 import { summarizePlan } from '../plan-summary.js?v=fork-m9-2';
 
@@ -76,6 +76,7 @@ export function mount(el, ctx) {
     let current = null; // the latest 'plan' value
     let state = null; // the goal on screen (see startRv and startItem)
     let items = null; // the item list once loaded
+    let recipes = null; // get_all_items' recipes once loaded
     let loading = null;
     let shownFrom = null; // the starting RV level the target input was last checked against
 
@@ -88,16 +89,8 @@ export function mount(el, ctx) {
     });
     // No plan on screen counts as stale too: nothing to continue from.
     const isStale = () => !!state && (!current || current.setupHash !== state.snap.setupHash || current.setup !== state.snap.setup);
-    // The skips the player made themselves (see goalBase in ../goal-mode.js).
-    const skipped = () => {
-        try {
-            const list = ctx.getSetup()?.skippedRecipes;
-            return Array.isArray(list) ? list : [];
-        } catch (err) {
-            console.warn('Could not read the skipped recipes:', err);
-            return [];
-        }
-    };
+    // The skips the player made themselves when the plan was solved (see goalBase in ../goal-mode.js).
+    const skippedOf = snap => (Array.isArray(snap?.context?.skipped) ? snap.context.skipped : []);
     const whole = (input, min) => {
         const n = Math.floor(Number(input.value));
         return Number.isFinite(n) && n >= min ? n : null;
@@ -106,7 +99,7 @@ export function mount(el, ctx) {
     function save() {
         try {
             localStorage.setItem(GOAL_KEY, JSON.stringify({
-                kind: kind(), rv: whole(rvInput, 1), item: itemSelect.value || saved.item || null,
+                kind: kind(), rv: whole(rvInput, 1), from: fromLevel(), item: itemSelect.value || saved.item || null,
                 amount: whole(amountInput, 1), have: whole(haveInput, 0), countUpgrades: upgradesInput.checked,
             }));
         } catch (err) {
@@ -116,8 +109,9 @@ export function mount(el, ctx) {
 
     function loadItems() {
         if (items || loading) return;
-        loading = ctx.items().then((recipes) => {
-            items = goalItems(recipes, label);
+        loading = ctx.items().then((list) => {
+            recipes = list;
+            items = goalItems(list, label);
             itemSelect.innerHTML = items.map(o => `<option value="${escape(o.name)}">${escape(o.label)}</option>`).join('');
             if (saved.item && items.some(o => o.name === saved.item)) itemSelect.value = saved.item;
         }, (err) => {
@@ -129,13 +123,40 @@ export function mount(el, ctx) {
         });
     }
 
+    // The recipes, for saying why a goal can't be made; null when they can't be loaded.
+    async function recipeList() {
+        if (!recipes) {
+            try {
+                recipes = await ctx.items();
+            } catch (err) {
+                console.warn('Could not load the recipes:', err);
+            }
+        }
+        return recipes;
+    }
+
+    const moduleName = id => ctx.config.moduleNames?.[id] || label(id);
+    const makerText = m => `${m.facility} Lv ${m.level}+${m.module ? ` with ${moduleName(m.module[0])} ${m.module[1]}` : ''}`;
+    // "Rough Lumber (Wood Block from Woodland Lv 1+)": what the setup can't make, and what would.
+    const missingText = missing => missing.slice(0, 3).map(({ item, needs }) => {
+        const parts = needs.slice(0, 2).map((n) => {
+            const makers = n.makers.length ? n.makers.slice(0, 2).map(makerText).join(' or ') : 'no recipe on the list';
+            return n.item === item ? `made at ${makers}` : `${label(n.item)} from ${makers}`;
+        });
+        return `${label(item)}${parts.length ? ` (${parts.join('; ')})` : ''}`;
+    }).join(', ');
+
     const chips = rows => (rows.length
         ? `<ul class="feature-chips">${rows.slice(0, TOP_ROWS).map(r => `<li>${escape(r.facility)} x${escape(String(r.count))}: ${escape(label(r.item))}</li>`).join('')}</ul>`
         : '');
     const slowestText = o => (o.slowest ? `${escape(label(o.slowest.name))} (${escape(formatDays(o.slowest.seconds))})` : '–');
 
-    function problemText(o, what) {
-        if (o.status === 'unreachable') return `This setup can't make ${what}.`;
+    function problemText(o, what, simpleMode) {
+        if (o.status === 'unreachable') {
+            const fix = simpleMode ? 'Check the recipes you skipped.' : 'Add the facility that makes it, or use Simple mode.';
+            const named = o.missing?.length ? escape(missingText(o.missing)) : what;
+            return `This setup can't make ${named}. ${fix}`;
+        }
         if (o.status === 'rejected') return `The planner did not take this goal${o.reason ? ` (${escape(o.reason)})` : ''}.`;
         if (o.status === 'failed') return `The planner failed: ${escape(o.error)}.`;
         if (o.status === 'skipped') return 'Skipped.';
@@ -153,7 +174,7 @@ export function mount(el, ctx) {
                 <td>RV ${escape(String(step.rv))}${note ? `<span class="goal-mode-note">${escape(note)}</span>` : ''}</td>
                 <td class="goal-mode-num">${ok ? escape(formatDays(o.seconds)) : '–'}</td>
                 <td>${ok ? slowestText(o) : '–'}</td>
-                <td>${ok ? chips(o.rows) : problemText(o, what)}</td>
+                <td>${ok ? chips(o.rows) : problemText(o, what, simpleOf(s.snap))}</td>
             </tr>`;
         }).join('');
         const oks = done.map((_, i) => s.results[i]).filter(o => o.status === 'ok');
@@ -192,7 +213,7 @@ export function mount(el, ctx) {
             lines.push(`<p class="goal-mode-total">Planned for it: ${escape(formatDays(o.seconds))}.</p>`, earns, chips(o.rows));
         } else if (o && o.status !== 'ok') {
             const keep = est.seconds ? ' The estimate above still stands.' : '';
-            lines.push(`<p class="goal-mode-bad">${problemText(o, name)}${keep}</p>`);
+            lines.push(`<p class="goal-mode-bad">${problemText(o, name, simpleOf(s.snap))}${keep}</p>`);
         }
         resultsEl.innerHTML = lines.join('');
     }
@@ -200,7 +221,7 @@ export function mount(el, ctx) {
     function statusText() {
         if (!current) return 'Solve a plan first.';
         const parts = [];
-        if (isStale()) parts.push('Setup changed; work it out again.');
+        if (isStale()) parts.push(state.stopped ? 'Setup changed; work it out again. (stopped)' : 'Setup changed; work it out again.');
         if (state?.running) {
             parts.push(state.kind === 'rv' ? `Working out RV ${state.working} (step ${state.next + 1} of ${state.steps.length})…` : `Planning for ${label(state.item)}…`);
         } else if (state?.ended) {
@@ -221,9 +242,13 @@ export function mount(el, ctx) {
         $('#goal-mode-upgrades-row').hidden = !simple();
         const from = fromLevel();
         rvInput.min = String(Math.min(maxRv, from + 1));
-        // A new starting level (or none shown yet) moves a target that is no longer above it.
-        if ((from !== shownFrom || rvInput.value === '') && !(Number(rvInput.value) > from)) {
-            rvInput.value = String(Math.min(maxRv, Math.max(saved.rv || 0, from + 1)));
+        // The target starts one above the starting level, or at the one picked last time from the
+        // same level; a new starting level moves a target that is no longer above it.
+        if (shownFrom === null || rvInput.value === '') {
+            const remembered = saved.from === from && saved.rv > from ? saved.rv : null;
+            rvInput.value = String(Math.min(maxRv, remembered || from + 1));
+        } else if (from !== shownFrom && !(Number(rvInput.value) > from)) {
+            rvInput.value = String(Math.min(maxRv, from + 1));
         }
         shownFrom = from;
         runBtn.disabled = running || !current || (k === 'item' && !items);
@@ -243,6 +268,7 @@ export function mount(el, ctx) {
 
     async function runRv(s) {
         s.running = true;
+        s.stopped = false;
         s.ended = null;
         s.controller = new AbortController();
         let solved = 0;
@@ -263,12 +289,18 @@ export function mount(el, ctx) {
                 break;
             }
             solved++;
-            const outcome = stepOutcome(plan, step.input.level_up.cost.map(([n]) => n));
+            const costNames = step.input.level_up.cost.map(([n]) => n);
+            const outcome = stepOutcome(plan, costNames);
+            if (outcome.status === 'unreachable') {
+                const list = await recipeList();
+                if (list) outcome.missing = unmakeable(costNames, list, step.input);
+            }
             s.results[s.next] = outcome;
             s.next++;
             if (outcome.status !== 'ok') {
                 s.blocked = true;
-                s.ended = `Stopped at RV ${step.rv}: the steps after it were not worked out.`;
+                // Only when there were steps after it: the table row already says what went wrong.
+                if (s.next < s.steps.length) s.ended = `Stopped at RV ${step.rv}: the steps after it were not worked out.`;
                 break;
             }
         }
@@ -285,7 +317,7 @@ export function mount(el, ctx) {
             return;
         }
         const steps = rvSteps(snap.input, {
-            from, to, config: ctx.config, simple: simpleOf(snap), countUpgrades: upgradesInput.checked, skipped: skipped(),
+            from, to, config: ctx.config, simple: simpleOf(snap), countUpgrades: upgradesInput.checked, skipped: skippedOf(snap),
         });
         state = { kind: 'rv', snap, from, steps, results: [], next: 0, running: false, blocked: false, ended: null };
         runRv(state);
@@ -311,8 +343,13 @@ export function mount(el, ctx) {
         s.controller = new AbortController();
         render();
         try {
-            const plan = await ctx.solver.findPlan(itemGoalInput(snap.input, item, amount, have, { tiers: ctx.config.ANIIPOD_TIERS, skipped: skipped() }), { signal: s.controller.signal });
+            const input = itemGoalInput(snap.input, item, amount, have, { tiers: ctx.config.ANIIPOD_TIERS, skipped: skippedOf(snap) });
+            const plan = await ctx.solver.findPlan(input, { signal: s.controller.signal });
             s.outcome = stepOutcome(plan, [item]);
+            if (s.outcome.status === 'unreachable') {
+                const list = await recipeList();
+                if (list) s.outcome.missing = unmakeable([item], list, input);
+            }
             s.coinsPerHour = summarizePlan(plan).coinsPerHour;
         } catch (err) {
             s.ended = endedText(err, label(item));
@@ -345,9 +382,15 @@ export function mount(el, ctx) {
     [rvInput, upgradesInput, itemSelect, amountInput, haveInput].forEach(input => input.addEventListener('change', save));
 
     if (kind() === 'item') loadItems();
-    // A new plan never starts a solve; the results only say when they no longer match.
+    // A new plan never starts a solve; the results only say when they no longer match. A solve still
+    // running stops when no plan is on screen or the inputs were solved again: its Stop button is
+    // dimmed then, and it would hold a solver slot. The steps worked out so far stay on screen.
     ctx.on('plan', (value) => {
         current = value || null;
+        if (state?.controller && shouldStop(!!state.running, state.snap, current)) {
+            state.stopped = true;
+            state.controller.abort();
+        }
         if (kind() === 'item') loadItems();
         render();
     });

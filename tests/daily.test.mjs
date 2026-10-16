@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    DAILY_KEY, allDone, clock, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, tickAll, toggle, untickDay, writeState,
+    DAILY_KEY, allDone, clock, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, tickAll, timeLabel, toggle, untickDay, writeState,
 } from '../web/daily.js';
 import { planRows } from '../web/reminders.js';
 
@@ -54,14 +54,17 @@ test('test_items_group_into_collect_water_replant_level', () => {
     assert.deepEqual(lines(items, 'Water'), ['08:40 Water Rice on Farmland', '09:20 Water Rice on Farmland']);
     const collect = lines(items, 'Collect');
     assert.equal(collect.length, 15);
-    assert.deepEqual(collect.slice(0, 3), ['08:10 Collect Rock from Mine', '08:43 Collect Milled Rice from Carousel Mill', '10:00 Harvest Rice from Farmland']);
-    assert.deepEqual(lines(items, 'Collect').filter(l => l.includes('Rock')), ['08:10 Collect Rock from Mine', '13:30 Collect Rock from Mine', '19:00 Collect Rock from Mine']);
+    // A first batch is "ready" (once per row); "Collect" is only for when the store is full.
+    assert.deepEqual(collect.slice(0, 3), ['08:10 Ready: first Rock batch at Mine', '08:43 Ready: first Milled Rice batch at Carousel Mill', '10:00 Harvest Rice from Farmland']);
+    assert.deepEqual(collect.filter(l => l.includes('Rock')), ['08:10 Ready: first Rock batch at Mine', '13:30 Collect Rock from Mine', '19:00 Collect Rock from Mine']);
+    assert.equal(collect.filter(l => l.includes('Ready')).length, 2, 'one per row, and the rice store holds one harvest so it has none');
     assert.equal(items.find(i => i.title.startsWith('Collect Milled Rice')).approximate, true, 'a processor waiting on ingredients is approximate');
     // Level shortfalls only: rock is fully stocked, and the level-up time (15:00) is still ahead.
     assert.deepEqual(lines(items, 'Level'), ['-- Get 30 more Rice for RV 6 (10 of 40 in stock)', '-- Get 3,800 more Home Coins for RV 6 (1,200 of 5,000 in stock)']);
     assert.ok(items.every(i => i.at === null || (i.at >= at(0) && i.at < at(24))), 'only today');
     assert.deepEqual(items.map(i => i.id), dailyItems({ timers: timersFor(plan), plan, context, now: at(9), caps }).map(i => i.id), 'ids are stable');
-    assert.ok(items.find(i => i.group === 'Collect').id.startsWith('collect:Mine|rock:'));
+    assert.ok(items.find(i => i.group === 'Collect').id.startsWith('ready:Mine|rock:'));
+    assert.ok(items.some(i => i.id.startsWith('collect:Mine|rock:')));
     // The item formatter comes from the page.
     assert.ok(dailyItems({ timers: timersFor(plan), plan, now: at(9), caps, name: s => s.toUpperCase() }).some(i => i.title === 'Collect ROCK from Mine'));
 });
@@ -97,7 +100,7 @@ test('test_replant_only_when_plots_do_not_resow', () => {
     assert.equal(on.filter(i => i.group === 'Replant').length, 0);
     const off = dailyItems({ timers: timersFor(plan), settings: { assumptions: { plotsResow: false } }, plan, context, now: at(9), caps });
     assert.deepEqual(lines(off, 'Replant'), ['10:00 Replant Rice on Farmland']);
-    assert.deepEqual(lines(off, 'Collect').filter(l => l.includes('Rice from Farmland')), ['10:00 Harvest Rice from Farmland'], 'a crop that is not re-sown is harvested once');
+    assert.deepEqual(lines(off, 'Collect').filter(l => l.includes('Farmland')), ['10:00 Ready to harvest: Rice on Farmland'], 'a crop that is not re-sown is harvested once');
 });
 
 test('test_timers_older_than_today_still_fill_today', () => {
@@ -124,6 +127,37 @@ test('test_a_fast_row_on_week_old_timers_still_has_lines_today', () => {
     assert.equal(items.length, 12, 'today has 72 fill-ups, thinned to 12');
     assert.equal(clock(items[0].at), '00:00');
     assert.ok(items.every((it, i) => i === 0 || it.at - items[i - 1].at === 2 * 3600 * 1000), 'every two hours');
+});
+
+test('test_unknown_store_size_gives_ready_and_check_lines_not_collect', () => {
+    const items = dailyItems({ timers: timersFor(plan), plan, now: at(9), caps: null });
+    const collect = lines(items, 'Collect');
+    assert.ok(collect.every(l => !/ Collect /.test(l)), 'no store is known to be full');
+    assert.equal(collect.filter(l => l.includes('Ready')).length, 3, 'one ready line per row');
+    assert.ok(collect.some(l => l === '12:00 Check Rice at Farmland') && collect.some(l => l.includes('Check Rock at Mine')));
+    assert.equal(new Set(items.map(i => i.id)).size, items.length);
+});
+
+test('test_the_list_runs_past_midnight_when_it_is_late', () => {
+    const late = timersFor(plan, at(23, 35));
+    const night = dailyItems({ timers: late, plan, context, now: at(23, 40), caps });
+    const end = at(23, 40) + 12 * 3600 * 1000;
+    assert.ok(night.some(i => i.at >= at(24)), 'items after midnight');
+    assert.ok(night.every(i => i.at === null || i.at < end), 'but only 12 hours ahead');
+    assert.ok(night.some(i => i.at !== null && i.at > at(23, 40) + 10 * 3600 * 1000), 'the late morning is in');
+    // Early in the day the list still stops at midnight.
+    const morning = dailyItems({ timers: timersFor(plan), plan, context, now: at(8, 30), caps });
+    assert.ok(morning.every(i => i.at === null || i.at < at(24)));
+});
+
+test('test_time_labels_match_the_reminders_card_format', () => {
+    const plain = s => s.replace(/[  ]/g, ' ');
+    assert.equal(plain(timeLabel(at(23, 35), at(23, 40), 'en-US')), '11:35 PM');
+    assert.equal(plain(timeLabel(at(24, 10), at(23, 40), 'en-US')), 'Tomorrow 12:10 AM');
+    assert.equal(plain(timeLabel(at(1, 0, 14), at(9), 'en-US')), 'Yesterday 1:00 AM');
+    assert.equal(plain(timeLabel(at(8, 0, 20), at(9), 'en-US')), 'Oct 20 8:00 AM');
+    assert.equal(timeLabel(at(9), at(9)), new Date(at(9)).toLocaleTimeString(undefined, { timeStyle: 'short' }), 'the browser locale by default');
+    assert.equal(timeLabel(NaN, at(9)), '');
 });
 
 test('test_without_timers_each_producing_row_is_one_collect_line', () => {

@@ -159,14 +159,24 @@ test('test_facilities_you_could_build_are_unowned_unlocked_ones_with_room', () =
     assert.deepEqual(buildableFacilities(own, config, null), []);
 });
 
-test('test_home_level_is_the_simple_one_or_the_lowest_covering_what_is_owned', () => {
+test('test_home_level_follows_the_shared_rv_rule_and_modules_count', () => {
     assert.equal(coveringHomeLevel(base, config), 5, 'Farmland level 3 needs RV 5');
     assert.equal(coveringHomeLevel({ facilities: {} }, config), 1);
     assert.equal(coveringHomeLevel({ facilities: { Farmland: [{ count: 99, level: 1 }] } }, config), 20);
+    // Modules count: Kitchen Module 3 needs RV 6, even with one RV 1 Farmland.
+    const kitchen = { facilities: { Farmland: [{ count: 1, level: 1 }] }, modules: { kitchen_module: 3 } };
+    assert.equal(coveringHomeLevel(kitchen, config), 6);
+    assert.equal(homeLevelFor(kitchen, config, { simple: false }), 6);
+    assert.deepEqual(buildableFacilities(kitchen, config, homeLevelFor(kitchen, config, { simple: false })), ['Mine', 'Heat Furnace', 'Well'],
+        'the "Not built yet" list is for the RV the modules need');
     assert.equal(homeLevelFor(base, config, { simple: true, homeLevel: '8', target: 7 }), 6, 'a level-up target less one');
+    assert.equal(homeLevelFor(base, config, { simple: true, homeLevel: '8', context: { levelUp: true, target: 7 } }), 6);
+    assert.equal(homeLevelFor(base, config, { simple: true, homeLevel: '8', context: { levelUp: false, target: 9 } }), 8);
     assert.equal(homeLevelFor(base, config, { simple: true, homeLevel: '8' }), 8);
-    assert.equal(homeLevelFor(base, config, { simple: true }), 20);
-    assert.equal(homeLevelFor(base, config, { simple: false, homeLevel: 12 }), 5);
+    assert.equal(homeLevelFor(base, config, { simple: true }), 5, 'no saved RV: the lowest covering what is owned');
+    // Advanced mode: the saved RV when it covers what is owned, else the lowest RV that does.
+    assert.equal(homeLevelFor(base, config, { simple: false, homeLevel: 12 }), 12);
+    assert.equal(homeLevelFor(base, config, { simple: false, homeLevel: 3 }), 5);
 });
 
 test('test_a_count_zero_facility_is_edited_like_any_other', () => {

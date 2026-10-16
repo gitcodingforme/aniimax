@@ -70,8 +70,8 @@ export function mount(el, ctx) {
     }
 
     const isSimpleFor = snap => (typeof snap.context?.simple === 'boolean' ? snap.context.simple : ctx.isSimple());
-    // The RV level the plan is for (Simple mode: its own; Advanced: the lowest covering what is owned).
-    const rvOf = snap => homeLevelFor(snap.input, cfg, { simple: isSimpleFor(snap), homeLevel: ctx.homeLevel(), target: Number(snap.context?.target) || null });
+    // The RV level the plan is for (playerHomeLevel in ../plan-summary.js, the rule every card shares).
+    const rvOf = snap => homeLevelFor(snap.input, cfg, { simple: isSimpleFor(snap), homeLevel: ctx.homeLevel(), context: snap.context || null });
 
     // The form for `input` at RV level `rv`, as { html, values }: values maps each box's data-key to its start value.
     function buildForm(input, rv) {
@@ -82,7 +82,7 @@ export function mount(el, ctx) {
         };
         const select = (id, label, key, text, from, to, chosen) => `
             <label for="${id}">${label}</label>
-            <select id="${id}" ${attrs(key, chosen, text)}>${options(from, to, chosen)}</select>`;
+            <select id="${id}" aria-label="${escape(text)}" ${attrs(key, chosen, text)}>${options(from, to, chosen)}</select>`;
 
         // One row for tier `i` of facility `f` (a facility you could build is a tier with a count of 0).
         const facilityRow = (f, tier, i, name, top) => {
@@ -91,8 +91,9 @@ export function mount(el, ctx) {
                 ? `<input type="hidden" ${attrs(`facility|${f.name}|${i}|level`, 1, `${name} level`)} value="1">`
                 : select(`${id}-level`, 'Level', `facility|${f.name}|${i}|level`, `${name} level`, 1, top, tier.level);
             return `<div class="what-if-row">
-                <label for="${id}-count" class="what-if-name">${escape(name)}</label>
-                <input type="number" min="0" step="1" id="${id}-count" value="${tier.count}" ${attrs(`facility|${f.name}|${i}|count`, tier.count, `${name} count`)}>
+                <span class="what-if-name">${escape(name)}</span>
+                <label for="${id}-count">Count</label>
+                <input type="number" min="0" step="1" id="${id}-count" aria-label="${escape(name)} count" value="${tier.count}" ${attrs(`facility|${f.name}|${i}|count`, tier.count, `${name} count`)}>
                 ${level}</div>`;
         };
         const facilityRows = [];
@@ -176,7 +177,7 @@ export function mount(el, ctx) {
         const rows = cmp.rows.map(r => `<tr><td>${escape(r.facility)}</td><td>${escape(item(stripVariant(r.item)))}</td>
             <td class="what-if-num">${r.before}</td><td class="what-if-num">${r.after}</td></tr>`).join('');
         const table = rows
-            ? `<div class="feature-scroll"><table class="what-if-table"><thead><tr><th>Facility</th><th>Item</th><th class="what-if-num">Before</th><th class="what-if-num">After</th></tr></thead><tbody>${rows}</tbody></table></div>`
+            ? `<div class="feature-scroll"><table class="what-if-table"><thead><tr><th>Facility</th><th>Item</th><th class="what-if-num">Facilities before</th><th class="what-if-num">Facilities after</th></tr></thead><tbody>${rows}</tbody></table></div>`
             : '<p class="hint small">No facility changes what it makes.</p>';
         const unproven = cmp.a.proven && cmp.b.proven ? '' : '<p class="hint small">The solver ran out of time before proving one of these is its best answer, so small differences may be noise.</p>';
         resultEl.innerHTML = `${changes}<div class="feature-compare">
@@ -226,7 +227,7 @@ export function mount(el, ctx) {
     }
 
     tryBtn.addEventListener('click', tryIt);
-    stopBtn.addEventListener('click', () => run?.controller.abort());
+    stopBtn.addEventListener('click', () => { if (run) run.controller.abort(); });
     resetBtn.addEventListener('click', () => {
         run?.controller.abort();
         if (current) seedForm(current, true);

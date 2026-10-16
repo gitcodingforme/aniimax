@@ -97,18 +97,26 @@ export function longRecipes(plan, windowSeconds) {
         .reduce((names, step) => addName(names, step.item_name), []);
 }
 
+// Seconds between finished batches: the row's effectiveCycleSeconds (from the plan's output rate,
+// set by planRows) when it has one, else the batch time.
+export function batchInterval(row) {
+    const interval = Number(row?.effectiveCycleSeconds ?? row?.cycleSeconds);
+    return interval > 0 ? interval : row?.cycleSeconds;
+}
+
 // Seconds from setup until this row's output store is full (a planRows row), or null when the cap
 // or the batch size is unknown. The same moment as the reminders' "collect" event: the store's
-// batches times the batch time, plus, for a processor, the wait for its first ingredients (its
-// leadSeconds already holds that wait and its first batch). A row that does not repeat (see
-// `repeats`) stops after one batch, as the reminders assume, cap or no cap.
+// batches times the interval between finished batches (batchInterval), plus, for a processor, the
+// wait for its first ingredients (its leadSeconds already holds that wait and its first batch). A
+// row that does not repeat (see `repeats`) stops after one batch, as the reminders assume, cap or
+// no cap.
 export function fillSeconds(row, caps, assumptions = DEFAULT_ASSUMPTIONS) {
     if (!row || !(row.cycleSeconds > 0)) return null;
     if (!repeats(row, assumptions)) return row.kind === 'processor' && row.leadSeconds > 0 ? row.leadSeconds : row.cycleSeconds;
     const batches = batchesUntilFull(outputCap(caps, row.facility, row.level), row.yieldPerBatch);
     if (!batches) return null;
     const wait = row.kind === 'processor' && row.leadSeconds > row.cycleSeconds ? row.leadSeconds - row.cycleSeconds : 0;
-    return batches * row.cycleSeconds + wait;
+    return batches * batchInterval(row) + wait;
 }
 
 // Rows whose store fills before the window ends, soonest first: `[{ key, item, facility, fillSeconds }]`.
@@ -293,4 +301,16 @@ export async function adaptPlan({
         unknown: unknownCapRows(rowsOf(current), caps, assumptions),
         error: null,
     };
+}
+
+// Whether a new 'plan' value should stop a run that is running (`running`) from the plan
+// `previous`: no plan is on screen any more (null: another Aniimo setup is solving, or the solve
+// failed), or the inputs were solved again (a different setupHash or a different setup string). The same setupHash
+// stops nothing, so a repeat of the plan on screen leaves the run alone.
+export function shouldStop(running, previous, next) {
+    if (!running) return false;
+    if (!next) return true;
+    if (!previous) return false;
+    return next.setupHash !== previous.setupHash
+        || next.setup !== previous.setup;
 }

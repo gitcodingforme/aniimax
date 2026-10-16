@@ -1,10 +1,10 @@
 // Upgrade roadmap card: "what should I upgrade next?" On a click, each possible change to the
 // current setup is solved for the most Home Coins (ctx.solver.rank with measure 'coins') and
 // shown with its cost, the extra coins an hour, how fast it pays back, and how long the plan's
-// income takes to afford it. Logic in web/roadmap.js; the card contract is in web/panels.js.
+// income takes to save its coins. Logic in web/roadmap.js; the card contract is in web/panels.js.
 
 import {
-    emptyRoadmapStatus, nextBatch, remainingCount, roadmapCandidates, roadmapHomeLevel, scoreRoadmap,
+    emptyRoadmapStatus, nextBatch, remainingCount, roadmapCandidates, roadmapHomeLevel, scoreRoadmap, shouldStop, slowerItemThanCoins,
 } from '../roadmap.js?v=fork-m9-2';
 import { summarizePlan } from '../plan-summary.js?v=fork-m9-2';
 
@@ -33,7 +33,8 @@ export function mount(el, ctx) {
     // The check on screen: { snap, homeLevel, simple, shown (solvable changes in the table),
     // unsolved (needs a higher RV), deferred (not in the table yet), results (by candidate id:
     // rank's answer, null for no plan, missing while unanswered), baseTop, baseProven, baseFailed,
-    // coinsPerHour, running, controller, outcome (rank's last outcome) }.
+    // coinsPerHour, running, controller, outcome (rank's last outcome), stopped (a new plan stopped
+    // the run) }.
     let state = null;
 
     const isStale = () => !!state && !(current && current.setupHash === state.snap.setupHash && current.setup === state.snap.setup);
@@ -49,18 +50,35 @@ export function mount(el, ctx) {
         return state.running ? 'checking…' : 'not checked';
     }
 
+    // A row's note, for the footnotes under the table. The next RV also waits on its items: the
+    // plan's level-up (when it is for that RV) says how long the slowest takes.
+    function noteFor(row) {
+        if (!row.note) return null;
+        const levelUp = state.snap.plan?.level_up;
+        if (row.kind !== 'next-rv' || !levelUp || Number(state.snap.context?.target) !== row.level) return row.note;
+        const coinsSeconds = Number.isFinite(row.affordInHours) ? row.affordInHours * 3600 : null;
+        const slow = slowerItemThanCoins(levelUp.requirements, coinsSeconds);
+        if (!slow) return row.note;
+        return `${row.note} The slowest item is ${ctx.format.item(slow.name)}: ${slow.seconds === null
+            ? 'this plan never makes enough'
+            : `${duration(slow.seconds)} at this plan's pace`}, longer than saving the coins.`;
+    }
+
     function renderTable(rows) {
         if (rows.length === 0) {
             tableEl.innerHTML = '';
             return;
         }
+        const notes = [];
         const body = rows.map((row, i) => {
+            const note = noteFor(row);
+            if (note) notes.push(`<p class="hint small roadmap-footnote">* ${escape(row.label)}: ${escape(note)}</p>`);
             const muted = row.status !== 'gain' && row.status !== 'pending';
             const classes = [i === 0 && row.status === 'gain' ? 'roadmap-best' : '', muted ? 'roadmap-muted' : ''].filter(Boolean).join(' ');
             const cost = row.cost !== null ? escape(number(row.cost)) : (row.kind === 'build' ? 'not listed' : 'unknown');
             const afford = row.status === 'needs-rv' ? '–' : escape(hours(row.affordInHours));
             return `<tr${classes ? ` class="${classes}"` : ''}>
-                <td>${escape(row.label)}${row.note ? `<span class="roadmap-note">${escape(row.note)}</span>` : ''}</td>
+                <td>${escape(row.label)}${note ? ' *' : ''}</td>
                 <td class="roadmap-num">${cost}</td>
                 <td class="roadmap-num">${gainCell(row)}</td>
                 <td class="roadmap-num">${row.status === 'gain' ? escape(hours(row.paybackHours)) : '–'}</td>
@@ -74,10 +92,10 @@ export function mount(el, ctx) {
                 <th class="roadmap-num">Cost</th>
                 <th class="roadmap-num" title="Extra Home Coins an hour the planner expects with this change alone">+coins/h</th>
                 <th class="roadmap-num" title="How long the extra coins take to repay the cost">Payback</th>
-                <th class="roadmap-num" title="How long the plan's income now takes to earn the cost, starting from zero">Affordable in</th>
+                <th class="roadmap-num" title="How long the plan's income now takes to save the cost in Home Coins, starting from zero; items a change also needs are not counted">Coins saved in</th>
             </tr></thead>
             <tbody>${body}</tbody>
-        </table>${unproven ? '<p class="hint small">~ the solver ran out of time before proving this is its best answer.</p>' : ''}`;
+        </table>${notes.join('')}${unproven ? '<p class="hint small roadmap-footnote">~ the solver ran out of time before proving this is its best answer.</p>' : ''}`;
     }
 
     function statusText(rows) {
@@ -87,7 +105,7 @@ export function mount(el, ctx) {
                 : 'Solve a plan first.';
         }
         const parts = [];
-        if (isStale()) parts.push('Setup changed; check again.');
+        if (isStale()) parts.push(state.stopped ? 'Setup changed; check again. (stopped)' : 'Setup changed; check again.');
         const asked = state.shown.length;
         const answered = state.shown.filter(c => state.results[c.id] !== undefined).length;
         const helped = rows.filter(r => r.status === 'gain').length;
@@ -136,6 +154,7 @@ export function mount(el, ctx) {
             return;
         }
         s.running = true;
+        s.stopped = false;
         s.outcome = null;
         s.baseFailed = false;
         s.controller = new AbortController();
@@ -209,9 +228,15 @@ export function mount(el, ctx) {
         run(batch);
     });
 
-    // A new plan never starts a check; the table only says when it no longer matches.
+    // A new plan never starts a check; the table only says when it no longer matches. A check still
+    // running stops when no plan is on screen or the inputs were solved again: its Stop button is
+    // dimmed then, and it would hold both solver slots. The answers so far stay on screen.
     ctx.on('plan', (value) => {
         current = value || null;
+        if (state?.controller && shouldStop(!!state.running, state.snap, current)) {
+            state.stopped = true;
+            state.controller.abort();
+        }
         render();
     });
 }

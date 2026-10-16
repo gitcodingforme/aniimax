@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false  # untrusted pages are parsed below; no token in .git/config
 
       - name: Apply my verified overrides
         run: python3 scripts/apply_overrides.py
@@ -64,8 +66,10 @@ jobs:
             echo "No differences, and Issues are off: nothing to do."
             exit 0
           fi
-          gh label create web-check --force --repo "$GITHUB_REPOSITORY" \
-            --description "Weekly check of wiki numbers against the data"
+          if [ "$CODE" = "1" ]; then
+            gh label create web-check --force --repo "$GITHUB_REPOSITORY" \
+              --description "Weekly check of wiki numbers against the data"
+          fi
           number=$(gh issue list --repo "$GITHUB_REPOSITORY" --label web-check --state open --limit 1 \
             --json number -q '.[0].number // empty')
           today=$(date -u +%Y-%m-%d)

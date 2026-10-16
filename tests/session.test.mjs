@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
     DEFAULTS, adaptPlan, aimInput, cappedRows, fillSeconds, firstCollectBy, levelUpLosses, longRecipes, readSettings, rowRates,
-    unknownCapRows, windowCoins, windowSecondsFor, writeSettings,
+    shouldStop, unknownCapRows, windowCoins, windowSecondsFor, writeSettings,
 } from '../web/session.js';
 import { planRows } from '../web/reminders.js';
 import { stripVariant } from '../web/plan-summary.js';
@@ -35,7 +35,8 @@ const recipes = [
 ];
 const facilities = { Farmland: [{ count: 12, level: 7 }], Mine: [{ count: 2, level: 3 }], 'Carousel Mill': [{ count: 1, level: 4 }] };
 const caps = { Farmland: [null, 10, 15, 20, 25, 30, 35], Mine: [200, 200, 200, 200, 200, 200], 'Carousel Mill': [20, 20, 20, 20, 20, 20] };
-const rows = planRows(plan, { recipes, facilities });
+// effectiveCycleSeconds is the interval between finished batches; here it equals the batch time.
+const rows = planRows(plan, { recipes, facilities }).map(r => ({ ...r, effectiveCycleSeconds: r.cycleSeconds }));
 const HOUR = 3600;
 
 // A planner stand-in: the plan's rows minus every excluded recipe, plus `extra[name]` rows that
@@ -74,6 +75,22 @@ test('test_fill_seconds_with_and_without_a_cap', () => {
     assert.equal(fillSeconds({ ...rice, level: 1 }, caps), null, 'no cap known at level 1');
     assert.equal(fillSeconds(rock, null), null, 'no caps table');
     assert.equal(fillSeconds({ ...rock, cycleSeconds: 0 }, caps), null);
+});
+
+test('test_fill_time_follows_the_effective_batch_interval', () => {
+    const [rice, rock, mill] = rows;
+    // Batches finish only every third batch time (fewer hands than plots): the store takes three times as long.
+    const slow = { ...rock, effectiveCycleSeconds: 3 * rock.cycleSeconds };
+    assert.equal(fillSeconds(slow, caps), 3 * fillSeconds(rock, caps));
+    assert.equal(fillSeconds(slow, caps), 33 * 1800);
+    assert.equal(fillSeconds({ ...mill, effectiveCycleSeconds: 600 }, caps), 2000 + 20 * 600, 'the ingredient wait is not stretched');
+    assert.equal(fillSeconds({ ...rock, effectiveCycleSeconds: undefined }, caps), 19800, 'no interval known: the batch time');
+    assert.equal(fillSeconds({ ...rock, effectiveCycleSeconds: 0 }, caps), 19800);
+    assert.deepEqual(cappedRows([rice, slow], caps, 8 * HOUR).map(r => r.item), ['rice'], 'the slow mine no longer fills overnight');
+    assert.equal(firstCollectBy([slow, mill], caps).item, 'milled_rice');
+    // The slow mine runs all night instead of stopping at 19800 s.
+    const night = windowCoins(plan, [rice, slow, mill, rows[3], rows[4]], caps, 8 * HOUR);
+    assert.ok(Math.abs(night - (0.5 * 6000 + 0.25 * 8 * HOUR + 0.25 * 8 * HOUR)) < 1e-6, String(night));
 });
 
 test('test_capped_rows_are_those_full_before_the_window_ends', () => {
@@ -250,4 +267,18 @@ test('test_rows_that_do_not_repeat_stop_after_one_batch', async () => {
     assert.equal(result.plan, null);
     assert.deepEqual(result.excluded, ['rice', 'milled_rice', 'rose', 'rock']);
     assert.equal(calls.length, 0);
+});
+
+test('shouldStop: a run stops when no plan is left or the inputs were solved again', () => {
+    const previous = { tab: 'best', setup: 'best:x', setupHash: 'h1' };
+    assert.equal(shouldStop(true, previous, null), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:x', setupHash: 'h2' }), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:x', setupHash: 'h1' }), false);
+    // Another Aniimo setup or a roster edit (same inputs, a different setup string) stops the session run too.
+    assert.equal(shouldStop(true, previous, { tab: 'minimum', setup: 'minimum', setupHash: 'h1' }), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:y', setupHash: 'h1' }), true);
+    // Nothing running, nothing to stop; no plan to compare with, nothing to decide on.
+    assert.equal(shouldStop(false, previous, null), false);
+    assert.equal(shouldStop(false, previous, { setupHash: 'h2' }), false);
+    assert.equal(shouldStop(true, null, { setupHash: 'h2' }), false);
 });

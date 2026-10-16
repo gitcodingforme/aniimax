@@ -25,18 +25,26 @@ const stamp = (commit) => fakeResponse(JSON.stringify({ appVersion: '0.17.1', co
 
 function fakeCaches() {
     const stores = new Map();
+    const log = [];
     return {
         stores,
+        log,
         async open(name) {
             if (!stores.has(name)) stores.set(name, new Map());
             const entries = stores.get(name);
             return {
                 async match(key) { return entries.get(String(key)); },
-                async put(key, response) { entries.set(String(key), response); },
+                async put(key, response) {
+                    log.push(`put ${name} ${String(key).replace(SCOPE, '')} ${response.body}`);
+                    entries.set(String(key), response);
+                },
             };
         },
         async keys() { return [...stores.keys()]; },
-        async delete(name) { return stores.delete(name); },
+        async delete(name) {
+            log.push(`delete ${name}`);
+            return stores.delete(name);
+        },
     };
 }
 
@@ -126,8 +134,8 @@ test('test_route_for_sends_each_kind_of_request_to_its_route', () => {
     ]) assert.equal(route(path), 'network-first', path);
 
     for (const path of [
-        'app.js?v=fork-caps-1', 'i18n.js', 'style.css', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
-        'icons/icon-192.png', 'manifest.webmanifest', 'sw-register.js?v=fork-caps-1',
+        'app.js?v=fork-m9-2', 'i18n.js', 'style.css', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
+        'icons/icon-192.png', 'manifest.webmanifest', 'sw-register.js?v=fork-m9-2',
     ]) assert.equal(route(path), 'swr', path);
 
     assert.equal(route('version.json', { method: 'POST' }), 'bypass');
@@ -150,7 +158,7 @@ test('test_cache_key_strips_load_and_keeps_v', () => {
     const { SW } = loadWorker();
     assert.equal(SW.cacheKey(`${SCOPE}worker.js?load=1760000000000`), `${SCOPE}worker.js`);
     assert.equal(SW.cacheKey(`${SCOPE}pkg/aniimax.js?load=1&v=2`), `${SCOPE}pkg/aniimax.js?v=2`);
-    assert.equal(SW.cacheKey(`${SCOPE}app.js?v=fork-caps-1`), `${SCOPE}app.js?v=fork-caps-1`);
+    assert.equal(SW.cacheKey(`${SCOPE}app.js?v=fork-m9-2`), `${SCOPE}app.js?v=fork-m9-2`);
     assert.equal(SW.cacheKey(`${SCOPE}a.js?v=1&load=2&x=a%20b#frag`), `${SCOPE}a.js?v=1&x=a%20b`);
     assert.equal(SW.pageKey(`${SCOPE}index.html?sw=on#config=abc`), SCOPE);
     assert.equal(SW.keyFor(navigation('./?nosw'), SCOPE), SCOPE);
@@ -166,12 +174,13 @@ test('test_worker_urls_with_different_load_tags_share_one_saved_copy', async () 
     await lifecycle(env, 'install');
     const first = await fetchEvent(env, get('pkg/aniimax.js?load=1'));
     assert.equal(first.response.body, 'solver js');
-    assert.deepEqual([...env.caches.stores.get('aniimax-aaa1111').keys()], [`${SCOPE}pkg/aniimax.js`]);
+    const solverKeys = () => [...env.caches.stores.get('aniimax-aaa1111').keys()].filter((key) => !key.endsWith('version.json'));
+    assert.deepEqual(solverKeys(), [`${SCOPE}pkg/aniimax.js`]);
 
     env.offline = true;
     const second = await fetchEvent(env, get('pkg/aniimax.js?load=2'));
     assert.equal(second.response.body, 'solver js');
-    assert.equal(env.caches.stores.get('aniimax-aaa1111').size, 1);
+    assert.deepEqual(solverKeys(), [`${SCOPE}pkg/aniimax.js`]);
 });
 
 test('test_stale_while_revalidate_answers_from_cache_and_refreshes_it', async () => {
@@ -268,6 +277,60 @@ test('test_a_worker_start_checks_the_version_before_saving_the_solver', async ()
     await fetchEvent(env, get('pkg/aniimax.js?load=2'));
     await fetchEvent(env, get('style.css'));
     assert.equal(versionFetches(), now);
+});
+
+test('test_nothing_is_saved_before_a_version_check_succeeds', async () => {
+    // A cache left by an earlier run of the worker, then a fresh worker whose checks fail.
+    const caches = fakeCaches();
+    const old = await caches.open('aniimax-aaa1111');
+    await old.put(`${SCOPE}style.css`, fakeResponse('old css'));
+    caches.log.length = 0;
+    const slowVersion = () => new Promise((resolve) => setTimeout(() => resolve(stamp('bbb2222')), 90));
+    const env = loadWorker({
+        caches,
+        routes: {
+            [SCOPE]: fakeResponse('<html>B</html>'),
+            [`${SCOPE}style.css`]: fakeResponse('new css'),
+            [`${SCOPE}version.json`]: fakeResponse('down', { ok: false, status: 503 }),
+        },
+    });
+    await lifecycle(env, 'install');
+    assert.equal((await fetchEvent(env, navigation())).response.body, '<html>B</html>');
+    // Unconfirmed cache: the network answers, not the saved (maybe other build's) copy.
+    assert.equal((await fetchEvent(env, get('style.css'))).response.body, 'new css');
+    env.routes[`${SCOPE}version.json`] = slowVersion; // slower than the timeout: still no success
+    await fetchEvent(env, navigation());
+    await fetchEvent(env, get('worker.js?load=1'));
+    assert.deepEqual(caches.log, [], 'no put and no delete before a successful check');
+    assert.equal(env.SW.state.verified, false);
+
+    // The network failing still falls back to the existing saved copy.
+    env.offline = true;
+    assert.equal((await fetchEvent(env, get('style.css'))).response.body, 'old css');
+
+    // A check that works: rotate to the live build, then saving starts.
+    env.offline = false;
+    env.routes[`${SCOPE}version.json`] = stamp('bbb2222');
+    await fetchEvent(env, navigation());
+    assert.equal(env.SW.state.verified, true);
+    assert.deepEqual(cacheNames(env), ['aniimax-bbb2222']);
+    assert.equal(cached(env, 'aniimax-bbb2222', './').body, '<html>B</html>');
+});
+
+test('test_a_new_version_json_rotates_before_it_is_stored', async () => {
+    const env = loadWorker({ routes: { [`${SCOPE}version.json`]: stamp('aaa1111'), [`${SCOPE}app.js?v=1`]: fakeResponse('app A') } });
+    await lifecycle(env, 'install');
+    await fetchEvent(env, get('app.js?v=1'));
+    assert.deepEqual(env.caches.log.filter((line) => line.startsWith('put')).map((line) => line.split(' ').slice(0, 3).join(' ')),
+        ['put aniimax-aaa1111 version.json', 'put aniimax-aaa1111 app.js?v=1']);
+
+    // The page's own version.json fetch is the first to see build B.
+    env.caches.log.length = 0;
+    env.routes[`${SCOPE}version.json`] = stamp('bbb2222');
+    await fetchEvent(env, get('version.json'));
+    const log = env.caches.log.map((line) => line.replace(/ \{.*$/, ''));
+    assert.deepEqual(log, ['delete aniimax-aaa1111', 'put aniimax-bbb2222 version.json']);
+    assert.equal(JSON.parse(cached(env, 'aniimax-bbb2222', 'version.json').body).commit, 'bbb2222');
 });
 
 test('test_only_ok_basic_responses_are_saved', async () => {

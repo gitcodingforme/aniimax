@@ -38,3 +38,7 @@ __pycache__/
 web/coins.json
 # Data-check summary written by scripts/verify_data.py for the local site (personal data)
 web/verification.json
+
+# Local runs of scripts/web_check.py write fan-site reports here; the Action keeps its own.
+web-check.md
+web-check.json

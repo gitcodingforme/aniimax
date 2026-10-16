@@ -22,7 +22,7 @@ import {
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
 } from './history.js?v=fork-m9-2';
 import {
-    DEFAULT_ASSUMPTIONS, NTFY_SERVER, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown,
+    DEFAULT_ASSUMPTIONS, NTFY_SERVER, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, effectiveCycle, formatCountdown,
     googleCalendarUrl, icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
 } from './reminders.js?v=fork-m9-2';
 import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m9-2';
@@ -1392,13 +1392,13 @@ function renderReminders() {
         const cap = outputCap(OUTPUT_CAPS, r.facility, r.level);
         const batches = batchesUntilFull(cap, r.yieldPerBatch);
         if (!batches) return '<span class="hint small">no cap known</span>';
-        const full = formatSeconds(batches * r.cycleSeconds);
+        const full = formatSeconds(batches * effectiveCycle(r));
         return r.kind === 'processor' ? `${cap} batches, full in ${full}` : `${cap} (${batches} × ${r.yieldPerBatch}), full in ${full}`;
     };
     document.getElementById('reminders-rows').innerHTML = `<table><thead><tr><th>On</th><th>Facility</th><th>Making</th><th>Batch</th><th>Store</th><th>Started at</th></tr></thead><tbody>${
         timers.rows.map((r, i) => `<tr><td><input type="checkbox" data-row="${i}" class="reminder-row-on" ${r.on === false ? '' : 'checked'} aria-label="Remind about ${escapeText(r.facility)}"></td>`
             + `<td>${r.count}× ${escapeText(r.facility)}${r.level ? ` <span class="hint small">Lv.${r.level}</span>` : ''}</td><td>${escapeText(prettyItem(r.item))}${r.kind === 'processor' && r.leadSeconds > r.cycleSeconds ? ' <span class="hint small">(first batch after ingredients)</span>' : ''}</td>`
-            + `<td>${formatSeconds(r.cycleSeconds)}</td>`
+            + `<td>${r.cycleSeconds < 60 ? `${Math.round(r.cycleSeconds)}s` : formatSeconds(r.cycleSeconds)}${effectiveCycle(r) > r.cycleSeconds * 1.05 ? ` <span class="hint small">(one every ${effectiveCycle(r) < 60 ? `${Math.round(effectiveCycle(r))}s` : formatSeconds(effectiveCycle(r))}: waits for ingredients)</span>` : ''}</td>`
             + `<td>${storeCell(r)}</td>`
             + `<td><input type="datetime-local" data-row="${i}" class="reminder-row-start" value="${toLocalInputValue(r.startedAt || timers.startedAt)}"></td></tr>`).join('')
     }</tbody></table>`;
@@ -5328,7 +5328,9 @@ function featureContext() {
             return allItems.then(copy);
         },
         saveSnapshot: note => snapshotNow(typeof note === 'string' ? note : undefined),
-        solver: createSolver({ workerUrl: WORKER_URL }),
+        // Two solve slots at most, fewer on small machines: the page's own ranking already uses
+        // hardwareConcurrency - 3 workers, and HiGHS gives up after 30 s of wall-clock time.
+        solver: createSolver({ workerUrl: WORKER_URL, maxWorkers: Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 4) - 3)) }),
         format: { number: formatNumber, duration: formatDuration, item: prettyItem, escape: escapeText, perHour },
         addStylesheet,
     };

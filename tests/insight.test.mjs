@@ -169,5 +169,16 @@ test('test_the_card_shows_the_table_and_guesses', () => {
     // Too little to compare: the empty state.
     ctx.getHistory = () => [];
     mount(el, ctx);
-    assert.match(nodes['#insight-status'].textContent, /Save two snapshots/);
+    assert.match(nodes['#insight-status'].textContent, /Save two snapshots, or let the game watcher on your PC log your coins, then come back to compare./);
+});
+
+test('test_a_starved_processor_fills_slower_so_the_capped_guess_shrinks', () => {
+    // Flour finishes a batch every 600 s (not 300) because its suppliers are slow: 50 x 600 = 30000 s to fill.
+    const starved = rows.map(r => (r.item === 'flour' ? { ...r, cycleSeconds: 300, effectiveCycleSeconds: 600 } : { ...r }));
+    const plain = rows.map(r => (r.item === 'flour' ? { ...r, cycleSeconds: 300, effectiveCycleSeconds: 300 } : { ...r }));
+    const flour = list => byCause(list, 'output-capped').find(g => /Flour/.test(g.text));
+    assert.equal(flour(guesses({ ...base, rows: plain })).coinsPerHour, 1050);
+    const slow = flour(guesses({ ...base, rows: starved }));
+    assert.equal(slow.coinsPerHour, 300); // 0.6 x 3600 x (36000 - 30000) s / 3600 / 12 h
+    assert.equal(slow.confidence, 'medium'); // the gap is no longer twice the fill time
 });

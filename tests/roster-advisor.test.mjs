@@ -160,8 +160,15 @@ test('test_best_share_measure_and_cap', () => {
     assert.equal(homeCapFor({ config, simple: true, homeLevel: 3 }), 11);
     assert.equal(homeCapFor({ config, simple: true, homeLevel: 1 }), null);
     assert.equal(homeCapFor({ config, simple: true, homeLevel: 9 }), 11);
-    assert.equal(homeCapFor({ config, simple: false, homeLevel: 3 }), null);
+    // Advanced mode: the saved RV input when it covers what is owned (playerHomeLevel in
+    // web/plan-summary.js), else the lowest RV that does; a level-up target less one comes first.
+    assert.equal(homeCapFor({ config, simple: false, homeLevel: 3 }), 11);
     assert.equal(homeCapFor({ config, simple: false, context: { levelUp: true, target: 3 } }), 8);
+    const rvConfig = { ...config, FACILITIES: [{ name: 'Mine', unlocks: { 1: 1, 2: 2 }, counts: [1, 2] }] };
+    const atTwo = { facilities: { Mine: [{ count: 2, level: 2 }] }, modules: {} };
+    assert.equal(homeCapFor({ config: rvConfig, simple: false, input: atTwo }), 8, 'no saved RV: the lowest covering, RV 2');
+    assert.equal(homeCapFor({ config: rvConfig, simple: false, homeLevel: 1, input: atTwo }), 8, 'a saved RV too low to cover gives way');
+    assert.equal(homeCapFor({ config: rvConfig, simple: false, homeLevel: 3, input: atTwo }), 11);
 });
 
 test('test_a_running_check_stops_on_another_setup_or_a_new_solve', () => {
@@ -169,9 +176,11 @@ test('test_a_running_check_stops_on_another_setup_or_a_new_solve', () => {
     assert.equal(stopsCheck(checked, { tab: 'best', setup: 'best:x', setupHash: 'h1' }), true);
     assert.equal(stopsCheck(checked, { tab: 'minimum', setup: 'minimum', setupHash: 'h1' }), true);
     assert.equal(stopsCheck(checked, { tab: 'custom', setup: 'roster:1', setupHash: 'h2' }), true);
-    // The same inputs, a roster edit on them, or a setup still solving keep it going.
+    // A cleared or failed plan stops it too.
+    assert.equal(stopsCheck(checked, null), true);
+    assert.equal(stopsCheck(checked, undefined), true);
+    // The same inputs, or a roster edit on them, keep it going.
     assert.equal(stopsCheck(checked, { tab: 'custom', setup: 'roster:1', setupHash: 'h1' }), false);
     assert.equal(stopsCheck(checked, { tab: 'custom', setup: 'roster:2', setupHash: 'h1' }), false);
-    assert.equal(stopsCheck(checked, null), false);
     assert.equal(stopsCheck(null, { tab: 'best' }), false);
 });

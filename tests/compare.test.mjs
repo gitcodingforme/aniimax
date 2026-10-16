@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText, rosterSummary } from '../web/compare.js';
+import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText, planMoved, rosterSummary, shouldStop } from '../web/compare.js';
 import { FACILITIES, MAX_HOME_LEVEL, MODULE_MAX_LEVELS, simpleSetup } from '../web/facility-config.js';
 import { makeSnapshot } from '../web/history.js';
 import { buildProfile } from '../web/profile.js';
@@ -36,7 +36,7 @@ test('test_other_from_text_reads_a_profile_a_setup_and_refuses_the_rest', () => 
     assert.equal(fromSetup.source, 'setup');
     assert.deepEqual(fromSetup.actual, {});
     assert.throws(() => otherFromText('{not json'), /not valid JSON/);
-    assert.throws(() => otherFromText('   '), /nothing to read/);
+    assert.throws(() => otherFromText('   '), /Load a profile, paste a setup or pick a snapshot first/);
     assert.throws(() => otherFromText('[]'), /neither an Aniimax profile nor a homeland setup/);
     assert.throws(() => otherFromText(JSON.stringify({ format: 'aniimax-profile', version: 99, setup: friend })), /version 99/);
     assert.throws(() => otherFromText(JSON.stringify({ facilityTiers: 'x' })), /neither/);
@@ -108,4 +108,23 @@ test('test_compare_results_deltas_and_rows', () => {
     assert.equal(failed.b.ok, false);
     assert.equal(failed.deltaCoinsPerHour, null);
     assert.deepEqual(failed.rows.map(r => r.b), [0, 0]);
+});
+
+test('test_should_stop_when_the_page_plan_goes_or_moves_on', () => {
+    const started = { setupHash: 'aaaa', setup: 'best:Fire4' };
+    assert.equal(shouldStop(false, started, null), false, 'nothing runs, nothing to stop');
+    assert.equal(shouldStop(true, started, null), true, 'the plan went away');
+    assert.equal(shouldStop(true, started, { setupHash: 'aaaa', setup: 'best:Fire4' }), false, 'the same plan again');
+    assert.equal(shouldStop(true, started, { setupHash: 'bbbb', setup: 'best:Fire4' }), true, 'inputs changed');
+    assert.equal(shouldStop(true, started, { setupHash: 'aaaa', setup: 'minimum' }), true, 'another Aniimo tab');
+    assert.equal(shouldStop(true, { setupHash: 'aaaa' }, { setupHash: 'aaaa', setup: 'minimum' }), false, 'no setup string to compare');
+    assert.equal(shouldStop(true, null, { setupHash: 'aaaa', setup: 'minimum' }), false);
+});
+
+test('test_plan_moved_sees_a_tab_switch_as_well_as_a_new_hash', () => {
+    const shown = { setupHash: 'aaaa', setup: 'best:Fire4' };
+    assert.equal(planMoved(shown, { setupHash: 'aaaa', setup: 'best:Fire4' }), false);
+    assert.equal(planMoved(shown, { setupHash: 'aaaa', setup: 'roster:[]' }), true);
+    assert.equal(planMoved(shown, { setupHash: 'cccc', setup: 'best:Fire4' }), true);
+    assert.equal(planMoved(shown, null), false);
 });

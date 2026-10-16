@@ -28,7 +28,8 @@ Live fetches send a named User-Agent, obey robots.txt, wait 3 s between requests
 
 Exit codes: 0 every page read and no differences; 1 differences; 2 nothing could be fetched or parsed, or
 no differences but some page could not be fetched or parsed (so a rate-limited week never reads as clean);
-3 crash. --write-sources rows use the names of data/sources/web_sources.csv (needs_rv, output_cap, RV, wikily.gg).
+3 crash or a bad command line. The report ends with a fingerprint of the differences and of the could-not-fetch
+and could-not-parse lists, which the workflow compares to decide whether to edit the issue. --write-sources rows use the names of data/sources/web_sources.csv (needs_rv, output_cap, RV, wikily.gg).
 Only our own names and numbers reach the report; a name seen only on a fan site is reduced to
 letters, digits and " :'-", cut to 60 characters, with @ written as (at). Standard library only.
 """
@@ -546,6 +547,11 @@ class Check:
         self.facts: list[list[str]] = []
         self.pages = self.pages_ok = 0
 
+    def mark_lines(self) -> list[str]:
+        """What the fingerprint covers: the differences plus what could not be read, so the workflow edits
+        the issue whenever either list changes and its body always says which pages were missing."""
+        return self.diffs + [f"could not fetch: {x}" for x in self.fetch_fail] + [f"could not parse: {x}" for x in self.parse_fail]
+
     def same(self, kind: str, ours, theirs, line: str) -> None:
         if ours == theirs:
             self.agree[kind] += 1
@@ -676,7 +682,7 @@ def render(check: Check) -> str:
     out += section("Differences", check.diffs) + section("Could not fetch", check.fetch_fail)
     out += section("Could not parse", check.parse_fail) + section("Only on the wiki", check.only)
     out += section("Agree counts", [f"{k}: {v} agree" for k, v in check.agree.items()] + [f"{k}: {v}" for k, v in check.info.items()])
-    return "\n".join(out) + f"<!-- web-check:{fingerprint(check.diffs)} -->\n"
+    return "\n".join(out) + f"<!-- web-check:{fingerprint(check.mark_lines())} -->\n"
 
 
 def run(args) -> int:
@@ -720,7 +726,7 @@ def run(args) -> int:
         args.report.write_text(report, encoding="utf-8")
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps({"format": "aniimax-web-check", "checked_on": check.today, "fingerprint": fingerprint(check.diffs),
+        args.json.write_text(json.dumps({"format": "aniimax-web-check", "checked_on": check.today, "fingerprint": fingerprint(check.mark_lines()),
                                          "differences": sorted(set(check.diffs)), "could_not_fetch": check.fetch_fail, "could_not_parse": check.parse_fail,
                                          "only_on_wiki": sorted(set(check.only)), "agree": dict(check.agree), "info": dict(check.info),
                                          "facts": [dict(zip(SOURCES_HEADER, f)) for f in check.facts]}, indent=1), encoding="utf-8")
@@ -749,7 +755,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-cache", action="store_true", help="neither read nor write the page cache")
     parser.add_argument("--today", help=argparse.SUPPRESS)
     try:
-        return run(parser.parse_args(argv))
+        args = parser.parse_args(argv)
+    except SystemExit as e:  # argparse's own code 2 would read as "sites unreachable" in the workflow
+        return 0 if e.code in (0, None) else 3
+    try:
+        return run(args)
     except Exception:
         traceback.print_exc(file=sys.stderr)
         return 3

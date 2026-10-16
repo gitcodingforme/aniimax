@@ -10,7 +10,7 @@
 // Pure logic lives in web/<name>.js, styles in web/css/<name>.css loaded with
 // ctx.addStylesheet('css/<name>.css'), tests in tests/<name>.test.mjs (node:test, assert/strict).
 // Logic modules import only pure modules (reminders.js, history.js, profile.js, plan-summary.js,
-// share-config.js) and take data and solver functions as arguments. facility-config.js is NOT
+// share-config.js, setup-input.js) and take data and solver functions as arguments. facility-config.js is NOT
 // imported: use ctx.config, which holds the copies with data/overrides/structure.json applied
 // (a second import would be a second, unpatched copy). Never import app.js, i18n.js or bus.js
 // either: use ctx.on / ctx.last.
@@ -37,9 +37,11 @@
 //   solver: createSolver({ workerUrl }) from solve.js, shared by every card (two plan and ranking
 //     workers at most, queued beyond that, plus one time_to_reach helper of its own that never
 //     waits for them and is stopped after 60 s idle):
-//     findPlan(input, { onProgress, timeoutMs, signal }), rank(measure, base, inputs,
-//     { onResult, onBase, baseTop, workers, timeoutMs, signal }), timeOver(plan, seconds),
-//     timeTo(plan, target, current),
+//     findPlan(input, { onProgress, timeoutMs = 300000, signal }), rank(measure, base, inputs,
+//     { onResult, onBase, baseTop, workers, timeoutMs = 300000, signal }),
+//     timeOver(plan, seconds, { timeoutMs = 60000, signal }),
+//     timeTo(plan, target, current, { timeoutMs = 60000, signal }); a timed-out or cancelled time
+//     request rejects with Error('timed out') or Error('cancelled') and replaces the helper,
 //   format: { number, duration (seconds -> '1h 5m'), item (snake_case -> 'Quick Wheat'),
 //     escape (text -> safe for innerHTML), perHour (per second -> per hour text) },
 //   addStylesheet(href),

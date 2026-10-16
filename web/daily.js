@@ -2,13 +2,14 @@
 // different thing from the Setup checklist (checklist.js): that one resets when the plan changes,
 // this one starts fresh every local day. Pure functions only (no DOM, no storage); tested in
 // tests/daily.test.mjs. web/cards/daily.js draws it and keeps the ticks in localStorage under DAILY_KEY.
-import { DEFAULT_ASSUMPTIONS, buildEvents, planRows, pretty } from './reminders.js?v=fork-m9-2';
+import { DEFAULT_ASSUMPTIONS, buildEvents, effectiveCycle, planRows, pretty } from './reminders.js?v=fork-m9-2';
 
 export const DAILY_KEY = 'aniimax-daily-v1';
 export const GROUPS = Object.freeze(['Collect', 'Water', 'Replant', 'Level']);
 const MARGIN_S = 3600;     // slack past midnight, so an event right at the end of the day is not cut off
 const ROW_EVENTS_CEILING = 3000;   // most events buildEvents may make for one row (it stops at its per-row limit, counted from setup)
-const MAX_ROW_ITEMS = 12;  // most collect lines one row gets in a day; a faster row is thinned evenly, not listed 48 times
+const MAX_ROW_ITEMS = 12;  // most collect lines one row gets in the list; a faster row is thinned evenly, not listed 48 times
+const LOOKAHEAD_MS = 12 * 3600 * 1000;   // the list reaches the later of the end of today and this far past now
 
 const ms = value => (value instanceof Date ? value.getTime() : typeof value === 'number' ? value : Date.parse(value));
 const pad = n => String(n).padStart(2, '0');
@@ -21,10 +22,23 @@ export function dayKey(date = Date.now()) {
     return Number.isNaN(d.getTime()) ? null : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Local 'HH:MM'.
+// Local 24-hour 'HH:MM' (for tests and sorting; the card shows timeLabel).
 export function clock(at) {
     const d = new Date(ms(at));
     return Number.isNaN(d.getTime()) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// A time as the Reminders card shows it: the browser's own short time ('11:35 PM'), with 'Tomorrow',
+// 'Yesterday' or the date in front when it is not the same calendar day as `now`.
+export function timeLabel(at, now = Date.now(), locale = undefined) {
+    const d = new Date(ms(at)), n = new Date(ms(now));
+    if (Number.isNaN(d.getTime()) || Number.isNaN(n.getTime())) return '';
+    const time = d.toLocaleTimeString(locale, { timeStyle: 'short' });
+    const days = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
+    if (days === 0) return time;
+    if (days === 1) return `Tomorrow ${time}`;
+    if (days === -1) return `Yesterday ${time}`;
+    return `${d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} ${time}`;
 }
 
 // [start, end) of the local day that `nowMs` falls in; built from the calendar date so a 23 or 25 hour day is right.
@@ -35,8 +49,10 @@ function dayBounds(nowMs) {
 
 // --- today's items ------------------------------------------------------------------------
 
-// Today's actions as [{ id, group, title, at (ms or null), overdue, approximate? }], sorted by group then
-// time. `timers` is the running reminders (or null), `settings` the reminder settings, `plan` the
+// The actions from the start of today to the later of midnight and 12 hours from now, as
+// [{ id, group, title, at (ms or null), overdue, approximate? }], sorted by group then time. Collect
+// lines are only "the store is full" moments (and check-ins for rows with no known store size); a
+// row's first batch gets one "Ready" line. `timers` is the running reminders (or null), `settings` the reminder settings, `plan` the
 // find_plan result and `context` the plan topic's context. `ticked` is the ids already ticked today:
 // an item is overdue when its time has passed and it is not in there. `name` turns an item name into
 // text (the page's own item formatter; defaults to the reminders' one). Without timers it falls back
@@ -57,33 +73,48 @@ export function dailyItems({ timers = null, settings = null, plan = null, contex
         const assumptions = { ...DEFAULT_ASSUMPTIONS, ...settings?.assumptions };
         const rows = new Map(timers.rows.map(r => [r.key, r]));
         const levelUpSeconds = timers.levelUpSeconds > 0 ? timers.levelUpSeconds : null;
-        // The horizon counts from startedAt, not from now, so it reaches the end of today however old the timers are.
-        // The per-row limit also counts from setup: it must allow one event per fastest cycle over that whole span,
-        // or a quick row on old timers would run out of events before today.
+        // The list runs from the start of today to the later of the end of today and 12 hours from now, so a
+        // session at 23:35 still shows the morning. The horizon counts from startedAt, not from now, so it
+        // reaches that end however old the timers are. The per-row limit also counts from setup: it must
+        // allow one event per fastest cycle over that whole span, or a quick row on old timers would run
+        // out of events before today.
+        const windowEnd = Math.max(dayEnd, nowMs + LOOKAHEAD_MS);
         const active = timers.rows.filter(r => r.on !== false && r.cycleSeconds > 0);
-        const first = Math.min(startedMs, ...active.map(r => (r.startedAt && ms(r.startedAt)) || startedMs));
-        const horizonSeconds = Math.max(0, (dayEnd - startedMs) / 1000) + MARGIN_S;
-        const fastest = Math.min(Infinity, ...active.map(r => r.cycleSeconds));
-        const maxPerRow = Math.min(ROW_EVENTS_CEILING, Math.max(6, Math.ceil(((dayEnd - first) / 1000 + MARGIN_S) / fastest) + 2));
-        const events = buildEvents(timers.rows, { startedAt: timers.startedAt, horizonSeconds, assumptions, levelUpSeconds, levelUpTarget: target, caps, maxPerRow });
-        const harvests = new Map();   // row key -> today's collect, done and check-in events
+        const earliest = Math.min(startedMs, ...active.map(r => (r.startedAt && ms(r.startedAt)) || startedMs));
+        const fastest = Math.min(Infinity, ...active.map(effectiveCycle));
+        const maxPerRow = Math.min(ROW_EVENTS_CEILING, Math.max(6, Math.ceil(((windowEnd - earliest) / 1000 + MARGIN_S) / fastest) + 2));
+        const events = buildEvents(timers.rows, {
+            startedAt: timers.startedAt, horizonSeconds: Math.max(0, (windowEnd - startedMs) / 1000) + MARGIN_S,
+            assumptions, levelUpSeconds, levelUpTarget: target, caps, maxPerRow,
+        });
+        const ready = new Map();      // row key -> its first batch (the "done" event, made once per row)
+        const harvests = new Map();   // row key -> store-full ("collect") and check-in events in the window
         for (const e of events) {
-            const at = Math.round(e.at), row = rows.get(e.key);
+            const at = Math.round(e.at), row = rows.get(e.key), approximate = !!e.approximate;
             if (e.kind === 'levelup') {
                 if (at <= nowMs) add(`levelup:${target ?? ''}`, 'Level', target ? `Level up to RV ${target} now` : 'Level up now', at);
-            } else if (!row || at < dayStart || at >= dayEnd) {
+            } else if (!row || at < dayStart || at >= windowEnd) {
                 continue;
             } else if (e.kind === 'water') {
-                add(`water:${e.key}:${at}`, 'Water', `Water ${nice(row.item)} on ${row.facility}`, at, { approximate: !!e.approximate });
+                add(`water:${e.key}:${at}`, 'Water', `Water ${nice(row.item)} on ${row.facility}`, at, { approximate });
+            } else if (e.kind === 'done') {
+                if (!ready.has(e.key)) ready.set(e.key, { at, approximate });
             } else {
-                harvests.set(e.key, [...(harvests.get(e.key) || []), { at, kind: e.kind, approximate: !!e.approximate }]);
+                harvests.set(e.key, [...(harvests.get(e.key) || []), { at, kind: e.kind, approximate }]);
             }
         }
+        // First batches: ready, which is not the same as the store being full.
+        for (const [key, e] of ready) {
+            const row = rows.get(key), crop = row.kind === 'crop';
+            add(`ready:${key}:${e.at}`, 'Collect', crop ? `Ready to harvest: ${nice(row.item)} on ${row.facility}` : `Ready: first ${nice(row.item)} batch at ${row.facility}`, e.at, { approximate: e.approximate });
+            if (crop && !assumptions.plotsResow) add(`replant:${key}:${e.at}`, 'Replant', `Replant ${nice(row.item)} on ${row.facility}`, e.at);
+        }
+        // Store full: collect. Check-ins exist only for rows whose store size is not known.
         for (const [key, list] of harvests) {
             const row = rows.get(key), crop = row.kind === 'crop', step = Math.ceil(list.length / MAX_ROW_ITEMS);
             for (const e of list.filter((_, i) => i % step === 0)) {
-                add(`collect:${key}:${e.at}`, 'Collect', `${crop ? 'Harvest' : 'Collect'} ${nice(row.item)} from ${row.facility}${e.kind === 'checkin' ? ' (check-in)' : ''}`, e.at, { approximate: e.approximate });
-                if (crop && !assumptions.plotsResow) add(`replant:${key}:${e.at}`, 'Replant', `Replant ${nice(row.item)} on ${row.facility}`, e.at);
+                const title = e.kind === 'checkin' ? `Check ${nice(row.item)} at ${row.facility}` : `${crop ? 'Harvest' : 'Collect'} ${nice(row.item)} from ${row.facility}`;
+                add(`${e.kind}:${key}:${e.at}`, 'Collect', title, e.at, { approximate: e.approximate });
             }
         }
     } else {

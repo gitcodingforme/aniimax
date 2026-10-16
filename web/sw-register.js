@@ -1,11 +1,12 @@
 // Turns on offline support (the service worker in sw.js) and shows its two small messages.
 //
 // - On the published site it registers ./sw.js, which saves the site's files as they load so the
-//   next visit works without internet. See docs/runbooks/offline.md.
+//   next visit works without internet. The owner's runbook is docs/runbooks/offline.md in the
+//   workspace (not in this repository).
 // - On a local dev server (localhost, 127.0.0.1, [::1]) it does nothing unless the URL has
 //   ?sw=on, so the files you are editing and the watcher's live files are never served from a
 //   saved copy. A worker left over from an earlier ?sw=on test is switched off again.
-// - Opening any page of the site with ?nosw switches offline support off in this browser: it
+// - Opening any page of the site with ?nosw switches offline support off for that visit: it
 //   unregisters the worker, deletes the saved copies, and removes ?nosw from the address bar.
 // - An unregistered worker keeps controlling the tab it was removed from (and would save files
 //   again), so after switching off the page reloads once; a sessionStorage flag stops a loop.
@@ -24,9 +25,12 @@ function params(search) {
     return new URLSearchParams(String(search || '').replace(/^\?/, ''));
 }
 
-// True for a local development server.
+// True for a local development server: localhost names, loopback, the .localhost and .test
+// suffixes, and private LAN addresses (a phone on the same Wi-Fi opening the dev server).
 export function isLocalHost(hostname) {
-    return LOCAL_HOSTS.includes(String(hostname || '').toLowerCase());
+    const host = String(hostname || '').toLowerCase();
+    if (LOCAL_HOSTS.includes(host) || host.endsWith('.localhost') || host.endsWith('.test')) return true;
+    return /^(10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+$/.test(host);
 }
 
 // True when the URL asks to switch offline support off (?nosw).

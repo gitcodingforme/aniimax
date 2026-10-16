@@ -264,6 +264,27 @@ class CompareTest(unittest.TestCase):
         code = Root(self, kiln=KILN.replace("41, 3,", "45, 3,"), pages=PAGES + missing).run()[0]
         self.assertEqual(code, 1)  # differences still win, so the issue gets updated
 
+    def test_fingerprint_covers_pages_that_could_not_be_read(self):
+        kiln = KILN.replace("41, 3,", "45, 3,")
+        _, report, full, _ = Root(self, kiln=kiln).run()
+        missing = "https://wikily.gg/aniimo/homeland-crafting/facilities/mine, Farmland, facility,\n"
+        code, report2, partial, _ = Root(self, kiln=kiln, pages=PAGES + missing).run()
+        self.assertEqual((code, partial["differences"]), (1, full["differences"]))
+        self.assertNotEqual(partial["fingerprint"], full["fingerprint"])
+        lines = full["differences"] + [f"could not fetch: {x}" for x in partial["could_not_fetch"]]
+        self.assertEqual(partial["fingerprint"], wc.fingerprint(lines))
+        self.assertIn(f"<!-- web-check:{partial['fingerprint']} -->", report2)
+        again = Root(self, kiln=kiln, pages=PAGES + missing).run()[2]
+        self.assertEqual(again["fingerprint"], partial["fingerprint"])  # same missing page, same mark: no edit
+
+    def test_bad_command_line_exits_3(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(wc.main(["--no-such-flag"]), 3)
+            self.assertEqual(wc.main(["--report"]), 3)
+            self.assertEqual(wc.main(["--help"]), 0)
+        self.assertIn("unrecognized arguments", err.getvalue())
+
     def test_exit_3_on_a_crash_with_traceback(self):
         with mock.patch.object(wc, "run", side_effect=RuntimeError("boom")):
             code, _, _, err = Root(self).run()

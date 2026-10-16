@@ -23,7 +23,7 @@ export function mount(el, ctx) {
     const { escape, number, duration } = ctx.format;
     el.innerHTML = `
         <h2>Roster advisor</h2>
-        <p class="hint" id="roster-advisor-hint" hidden>Pick My Aniimo in the Aniimo setup to get advice on your team</p>
+        <p class="hint" id="roster-advisor-hint" hidden>Pick My Aniimo in the Aniimo Team card to get advice on your team</p>
         <div id="roster-advisor-body">
             <p class="hint">Solves your plan again with each change to your team: each Aniimo left out (the one you miss least is your weakest link), each one a level higher, and a new Aniimo for each ability your facilities use that nobody on your team has. New Aniimo are counted without a personality bonus.</p>
             <div class="feature-actions">
@@ -198,7 +198,7 @@ export function mount(el, ctx) {
         }
         const needed = neededAbilities(snap.input, ctx.config, requirements);
         const simple = typeof snap.context?.simple === 'boolean' ? snap.context.simple : ctx.isSimple();
-        s.homeCap = homeCapFor({ config: ctx.config, simple, homeLevel: ctx.homeLevel(), context: snap.context });
+        s.homeCap = homeCapFor({ config: ctx.config, simple, homeLevel: ctx.homeLevel(), context: snap.context, input: snap.input });
         const members = snap.input.roster.members || [];
         // The page's roster holds the names; it lines up with the plan's members unless it was
         // edited since.
@@ -238,8 +238,9 @@ export function mount(el, ctx) {
     stopBtn.addEventListener('click', () => state?.controller?.abort());
 
     // A new plan never starts a check; the table only says when it no longer matches. A check
-    // still running stops when another setup is shown or the inputs were solved again: its Stop
-    // button is hidden or dimmed then, and it would hold both solver slots.
+    // still running stops when the plan is cleared or fails, another setup is shown, or the inputs
+    // were solved again: its Stop button is hidden or dimmed then, and it would hold both solver
+    // slots.
     ctx.on('plan', (value) => {
         current = value || null;
         if (current) lastTab = current.tab;

@@ -1,7 +1,7 @@
 // Roster advisor: for a player planning with "My Aniimo" (their own roster), which Aniimo is the
 // weakest link and which change to the team would help most. Pure functions only (no DOM, no
-// storage, no imports); the card is web/cards/roster-advisor.js and the tests are
-// tests/roster-advisor.test.mjs.
+// storage, no imports but plan-summary.js); the card is web/cards/roster-advisor.js and the tests
+// are tests/roster-advisor.test.mjs.
 //
 // Inputs are plan inputs as the 'plan' topic carries them (planSnapshot in app.js). In My Aniimo
 // mode they hold `aniimo: 'roster'` and `roster: { members: [{ count, abilities: { Fire: 3 },
@@ -13,6 +13,8 @@
 // second for another priority, or level-ups per day for 'level_up' (PACE_UNIT = 86400 in
 // src/exact.rs, so the level-up takes 86400 / top seconds). `coins` ({ base, value }, per second)
 // comes only when the measure doesn't move: the most Home Coins while keeping it.
+
+import { playerHomeLevel } from './plan-summary.js?v=fork-m9-2';
 
 // The smallest change worth showing, as a share of the base (RANK_MIN_GAIN in worker.js).
 export const ADVISOR_MIN_GAIN = 1e-3;
@@ -85,15 +87,14 @@ export function neededAbilities(input, config = {}, requirements = []) {
     return new Set([...found].sort((a, b) => at(a) - at(b)));
 }
 
-// How many Aniimo the homeland holds (ANIIMO_MAX, index = RV level - 1), or null when unknown.
-// Simple mode: the RV level input. Advanced mode only knows it from a level-up target (INFERRED:
-// someone working toward RV n is at RV n - 1).
-export function homeCapFor({ config, simple = false, homeLevel = null, context = null } = {}) {
+// How many Aniimo the homeland holds (ANIIMO_MAX, index = RV level - 1), or null when unknown, at
+// the RV level the player is at by the rule every card shares (playerHomeLevel in
+// plan-summary.js): `input` is the plan input, `homeLevel` the saved RV level input and
+// `context` the plan's planContext.
+export function homeCapFor({ config, simple = false, homeLevel = null, context = null, input = null } = {}) {
     const list = config?.ANIIMO_MAX;
     if (!Array.isArray(list) || list.length === 0) return null;
-    const target = Number(context?.target);
-    const rv = simple ? Number(homeLevel) : (context?.levelUp && Number.isInteger(target) && target > 1 ? target - 1 : null);
-    if (!Number.isInteger(rv) || rv < 1) return null;
+    const rv = playerHomeLevel({ input, config, simple, savedHomeLevel: homeLevel, context });
     const cap = list[Math.min(rv, list.length) - 1];
     return Number.isFinite(cap) && cap > 0 ? cap : null;
 }
@@ -238,9 +239,10 @@ export function bestShare(baseTop, bestTop) {
 }
 
 // Whether a new 'plan' value should stop a check running for `checked` (the plan it started
-// from): another Aniimo setup is on screen, or the inputs were solved again (a new setupHash).
-// A null value (a setup still solving) stops nothing; the next value decides.
+// from): the plan was cleared or failed (null), another Aniimo setup is on screen, or the inputs
+// were solved again (a new setupHash).
 export function stopsCheck(checked, value) {
-    if (!checked || !value) return false;
+    if (!checked) return false;
+    if (!value) return true;
     return value.tab !== 'custom' || value.setupHash !== checked.setupHash;
 }

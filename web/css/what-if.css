@@ -25,6 +25,7 @@
 
 #what-if-card .what-if-row .what-if-name {
     flex: 1 1 7rem;
+    font-size: 0.85rem;
     color: var(--text);
 }
 
@@ -115,4 +116,14 @@
     #what-if-card .what-if-grid {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+/* style.css gives .skip-add-btn no disabled look, so Stop (idle) and Try it (running) are dimmed here. */
+#what-if-card .skip-add-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+#what-if-card .skip-add-btn:disabled:hover {
+    border-color: var(--border);
 }

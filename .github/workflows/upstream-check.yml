@@ -54,12 +54,18 @@ jobs:
             echo
             echo "Upstream commits touching those paths:"
             echo
+            # Fenced as plain text: upstream's commit subjects and data cells are untrusted and
+            # must not render as mentions, links or hidden markup in the PR body.
+            echo '```text'
             git log --format='- %h %ad %s' --date=short "$SYNCED"..FETCH_HEAD -- $WATCH
+            echo '```'
             echo
             # Plain-words summary of the data/*.csv changes; never fails the job.
             echo "## What changed, in words"
             echo
-            python3 scripts/describe_data_diff.py --git "$SYNCED" FETCH_HEAD --max-lines 150 || echo "(describe_data_diff.py failed; see the file list above)"
+            echo '```text'
+            python3 scripts/describe_data_diff.py --git "$SYNCED" FETCH_HEAD --max-lines 150 --format text || echo "(describe_data_diff.py failed; see the file list above)"
+            echo '```'
             echo
             echo "Merging this PR does not deploy: tag a \`v*\` release or run the Deploy workflow afterwards (see docs/runbooks/game-patched.md in the workspace)."
             echo

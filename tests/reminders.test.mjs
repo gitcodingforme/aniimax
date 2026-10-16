@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    DEFAULT_ASSUMPTIONS, NTFY_DAILY_LIMIT, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown, icsCalendar,
+    DEFAULT_ASSUMPTIONS, NTFY_DAILY_LIMIT, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, effectiveCycle, formatCountdown, icsCalendar,
     isValidTopic, ntfyRequests, outputCap, planRows, rowLevel, sendNtfy, suggestTopic, upcoming, wateringFractions,
 } from '../web/reminders.js';
 
@@ -259,4 +259,112 @@ test('test_second_watering_point_is_a_setting', () => {
     assert.deepEqual(water.map(e => (e.at - T0) / 1000), [600, 1350]);
     assert.match(water[1].body, /at 75% of the grow time/);
     assert.match(buildEvents(rows, { startedAt: T0 }).filter(e => e.kind === 'water')[1].body, /at 67% of the grow time/);
+});
+
+
+// --- effectiveCycleSeconds: a processor works only as fast as its ingredients arrive ----------
+
+// The Carousel Mill sells one milled rice every 600 s although a batch takes 200 s: it gets
+// ingredients for a third of its batches. Most of the rice is milled, little of it sold.
+const starved = (mill = {}, millStream = {}) => ({
+    coin_items: [
+        { item_name: 'rice', facility: 'Farmland', facility_count: 9, status: 'producing', is_grower: true, cycle_time: 1800, busy_units: 9 },
+        { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 1, status: 'producing', is_grower: false, cycle_time: 200, ...mill },
+    ],
+    income_streams: [
+        { item_name: 'rice', facility: 'Farmland', units_per_second: 0.01, lead_time_seconds: 1800 },
+        { item_name: 'milled_rice', facility: 'Carousel Mill', units_per_second: 1 / 600, lead_time_seconds: 0, ...millStream },
+    ],
+});
+const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 1e-6, `${message || ''} ${actual} ≠ ${expected}`);
+const millEvents = rows => buildEvents(rows, { startedAt: T0, caps }).filter(e => e.key === 'Carousel Mill|milled_rice');
+
+test('test_a_starved_processor_fills_three_times_slower_at_a_third_of_its_batch_rate', () => {
+    const mill = planRows(starved(), { recipes, facilities })[1];
+    assert.equal(mill.cycleSeconds, 200, 'the batch time stays the raw one');
+    assert.equal(mill.effectiveCycleSeconds, 600);
+    const fed = planRows(starved({}, { units_per_second: 1 / 200 }), { recipes, facilities })[1];
+    assert.equal(fed.effectiveCycleSeconds, 200);
+    const collectAt = row => (millEvents([row]).find(e => e.kind === 'collect').at - T0) / 1000;
+    assert.equal(collectAt(fed), 20 * 200);
+    assert.equal(collectAt(mill), 20 * 600);
+    assert.equal(collectAt(mill), 3 * collectAt(fed));
+    // Batches done every 600 s: first one, then a fill-up every 20 of them.
+    const events = millEvents([mill]);
+    assert.deepEqual(events.slice(0, 3).map(e => [e.kind, (e.at - T0) / 1000]), [['done', 600], ['collect', 12000], ['collect', 24000]]);
+    assert.match(events[1].body, /holds 20 batches, then stops/);
+    assert.match(events[1].body, /A batch takes 3m, but its ingredients arrive for about one every 10m\./);
+    assert.doesNotMatch(millEvents([fed])[1].body, /ingredients arrive/);
+    // busy_units (how many units are busy on average) says the same, per row.
+    assert.equal(planRows(starved({ busy_units: 0.25 }, { units_per_second: 0 }), { recipes, facilities })[1].effectiveCycleSeconds, 800);
+    // It also counts what the mill makes for other recipes, so it wins over the sold stream.
+    assert.equal(planRows(starved({ busy_units: 1 }), { recipes, facilities })[1].effectiveCycleSeconds, 200);
+    // Without a stored cap, the batch check-ins follow the same 600 s interval.
+    const checkins = buildEvents([mill], { startedAt: T0 }).filter(e => e.kind === 'checkin');
+    assert.ok(checkins.length > 0);
+    assert.ok(checkins.every(e => ((e.at - T0) / 1000) % 600 === 0), 'on the 600 s beat');
+    assert.match(checkins[0].body, new RegExp(`batch ${(checkins[0].at - T0) / 1000 / 600} should be done`));
+});
+
+test('test_rows_without_a_known_rate_keep_their_batch_time', () => {
+    // No units_per_second and no busy_units: the batch time.
+    assert.equal(planRows(starved({}, { units_per_second: undefined }), { recipes, facilities })[1].effectiveCycleSeconds, 200);
+    assert.equal(planRows({ coin_items: starved().coin_items }, { recipes, facilities })[1].effectiveCycleSeconds, 200, 'no income_streams at all');
+    // A stream faster than the batch rate cannot speed it up.
+    assert.equal(planRows(starved({}, { units_per_second: 1 }), { recipes, facilities })[1].effectiveCycleSeconds, 200);
+    // The original fixture: every row keeps its batch time, the part-time mine (busy 1.5 of 2) too.
+    assert.deepEqual(planRows(plan).map(r => [r.cycleSeconds, r.effectiveCycleSeconds]), [[1800, 1800], [600, 600], [200, 200]]);
+    // effectiveCycle: a row saved before the field existed, or with a smaller one, uses the batch time.
+    assert.equal(effectiveCycle({ cycleSeconds: 200 }), 200);
+    assert.equal(effectiveCycle({ cycleSeconds: 200, effectiveCycleSeconds: 50 }), 200);
+    assert.equal(effectiveCycle({ cycleSeconds: 200, effectiveCycleSeconds: 600 }), 600);
+    const saved = { ...planRows(starved(), { recipes, facilities })[1] };
+    delete saved.effectiveCycleSeconds;
+    assert.equal((millEvents([saved]).find(e => e.kind === 'collect').at - T0) / 1000, 20 * 200, 'an old saved row: the old timing');
+    // A byproduct rate of the row's item counts like a stream.
+    const sand = planRows({
+        coin_items: [{ item_name: 'mineral_sand', facility: 'Chimney Kiln', facility_count: 1, status: 'producing', is_grower: false, cycle_time: 100 }],
+        byproduct_rates: [['mineral_sand', 0.005, 0]],
+    });
+    assert.equal(sand[0].effectiveCycleSeconds, 200);
+});
+
+test('test_crops_keep_their_timing_when_most_of_the_harvest_is_not_sold', () => {
+    const rows = planRows(starved(), { recipes, facilities });
+    // 9 plots of 18 rice every 1800 s is 0.09 a second; the plan sells only 0.01 of it.
+    assert.equal(rows[0].effectiveCycleSeconds, 1800);
+    const rice = buildEvents(rows, { startedAt: T0, caps }).filter(e => e.key === 'Farmland|rice');
+    assert.deepEqual(rice.slice(0, 3).map(e => [e.kind, (e.at - T0) / 1000]), [['water', 600], ['water', 1200], ['collect', 1800]]);
+    assert.doesNotMatch(rice[2].body, /ingredients arrive/);
+});
+
+test('test_the_first_batch_still_waits_for_its_ingredients', () => {
+    const mill = planRows(starved({}, { lead_time_seconds: 2000 }), { recipes, facilities })[1];
+    assert.equal(mill.leadSeconds, 2200);
+    // The 2000 s wait for the first rice, then a batch every 600 s: batch k is done at 2000 + 600 k,
+    // the moment session.js's fillSeconds gives for the store (wait + batches × interval).
+    assert.deepEqual(millEvents([mill]).slice(0, 2).map(e => [e.kind, (e.at - T0) / 1000, e.approximate]),
+        [['done', 2000 + 600, true], ['collect', 2000 + 20 * 600, true]]);
+    assert.match(millEvents([mill])[0].body, /ingredients take to arrive/);
+    // Fed at its full batch rate, the first batch is done at the lead time, as before.
+    const fed = planRows(starved({}, { lead_time_seconds: 2000, units_per_second: 1 / 200 }), { recipes, facilities })[1];
+    assert.deepEqual(millEvents([fed]).slice(0, 2).map(e => [e.kind, (e.at - T0) / 1000]), [['done', 2200], ['collect', 2200 + 19 * 200]]);
+});
+
+test('test_a_stream_several_rows_make_is_split_by_facility_same_facility_first', () => {
+    const twoPlaces = (facility, perSecond) => planRows({
+        coin_items: [
+            { item_name: 'milled_rice', facility: 'Carousel Mill', facility_count: 2, status: 'producing', is_grower: false, cycle_time: 200 },
+            { item_name: 'milled_rice', facility: 'Joy Wheel Loom', facility_count: 1, status: 'producing', is_grower: false, cycle_time: 200 },
+        ],
+        income_streams: [{ item_name: 'milled_rice', facility, units_per_second: perSecond }],
+    });
+    // The stream names the Carousel Mill: both of its units share it, the other row gets none.
+    const [mills, loom] = twoPlaces('Carousel Mill', 0.002);
+    near(mills.effectiveCycleSeconds, 1000, 'two mills, one batch every 1000 s each');
+    assert.equal(loom.effectiveCycleSeconds, 200);
+    // A stream from neither facility is split by facility count.
+    const split = twoPlaces('Elsewhere', 0.003);
+    near(split[0].effectiveCycleSeconds, 1000);
+    near(split[1].effectiveCycleSeconds, 1000);
 });

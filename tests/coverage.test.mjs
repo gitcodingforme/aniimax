@@ -167,8 +167,9 @@ test('test_names_and_details_are_escaped', () => {
     coverageHtml(model, { escape: s => { escaped += 1; return String(s).replace(/</g, '&lt;'); }, item: n => `pretty ${n}` });
     assert.ok(escaped >= 3, 'ctx.format.escape is used when given');
     assert.match(html, /Sell values, yields and seed costs: no source checks these yet\./);
-    assert.match(html, /Your own in-game checks appear on your local site \(scripts\/verify_data\.py\)/);
-    assert.doesNotMatch(coverageHtml({ ...model, localChecks: true }), /appear on your local site/);
+    assert.match(html, /Your own checks from the game watcher show here only on the copy of the site running on your PC, never on the public site\./);
+    assert.doesNotMatch(coverageHtml({ ...model, localChecks: true }), /game watcher show here only/);
+    assert.match(html, /Marked unverified by the original project: 0/);
 });
 
 test('test_facility_summary_counts_by_status', () => {

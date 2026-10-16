@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    atCurrentPlan, covers, formatDays, goalBase, goalItems, homeLevelCovering, itemGoalInput, readGoal, rvSteps, startLevel, stepOutcome,
-    summarizeStep, upgradeCoinsAt,
+    atCurrentPlan, covers, formatDays, goalBase, goalItems, homeLevelCovering, itemGoalInput, readGoal, rvSteps, shouldStop, startLevel, stepOutcome,
+    summarizeStep, unmakeable, upgradeCoinsAt,
 } from '../web/goal-mode.js';
 
 // A small made-up config in ctx.config's shape. simpleSetup(rv) gives rv Farmland at level
@@ -185,13 +185,13 @@ test('test_goal_items_and_saved_goal', () => {
     ];
     assert.deepEqual(goalItems(recipes).map(o => o.name), ['mineral_sand', 'quick_rose', 'rock', 'rough_lumber', 'wheat']);
     assert.deepEqual(goalItems(null), []);
-    assert.deepEqual(readGoal('{"kind":"item","rv":7,"item":"jam","amount":40,"have":-1,"countUpgrades":true}'),
-        { kind: 'item', rv: 7, item: 'jam', amount: 40, have: null, countUpgrades: true });
-    assert.deepEqual(readGoal('{bad'), { kind: 'rv', rv: null, item: null, amount: null, have: null, countUpgrades: false });
+    assert.deepEqual(readGoal('{"kind":"item","rv":7,"from":5,"item":"jam","amount":40,"have":-1,"countUpgrades":true}'),
+        { kind: 'item', rv: 7, from: 5, item: 'jam', amount: 40, have: null, countUpgrades: true });
+    assert.deepEqual(readGoal('{bad'), { kind: 'rv', rv: null, from: null, item: null, amount: null, have: null, countUpgrades: false });
     assert.deepEqual(readGoal(null).kind, 'rv');
 });
 
-test('test_start_level_in_advanced_mode_ignores_the_hidden_rv_input', () => {
+test('test_start_level_follows_the_shared_rv_rule', () => {
     // 3 Farmland at level 3 need RV 3 (simpleSetup(3) allows 3 at level 3); 1 Mine at level 2 needs RV 4.
     const owned = { facilities: { Farmland: [{ count: 3, level: 3 }], Mine: [{ count: 0, level: 1 }] }, modules: { kitchen_module: 2 } };
     assert.equal(homeLevelCovering(owned, config), 3);
@@ -200,8 +200,12 @@ test('test_start_level_in_advanced_mode_ignores_the_hidden_rv_input', () => {
     const bare = { MAX_HOME_LEVEL: 8, FACILITIES: [{ name: 'Farmland', unlocks: { 1: 1, 2: 4 }, counts: [2, 2, 3, 4] }] };
     assert.equal(homeLevelCovering({ facilities: { Farmland: [{ count: 3, level: 2 }] } }, bare), 4);
     assert.equal(homeLevelCovering({ facilities: { Farmland: [{ count: 9, level: 1 }] } }, bare), 8);
-    // Advanced mode: a stale RV input (20) is never used.
-    assert.equal(startLevel(owned, { config, simple: false, homeLevel: 20, context: { levelUp: false, target: 6 } }), 3);
+    // Advanced mode: the saved RV input when it covers what is owned (20 is past this config's top, 8),
+    // else the lowest RV that does (playerHomeLevel in web/plan-summary.js).
+    assert.equal(startLevel(owned, { config, simple: false, homeLevel: 5, context: { levelUp: false, target: 6 } }), 5);
+    assert.equal(startLevel(owned, { config, simple: false, homeLevel: 20, context: { levelUp: false, target: 6 } }), 8);
+    assert.equal(startLevel(owned, { config, simple: false, homeLevel: 2, context: { levelUp: false, target: 6 } }), 3);
+    assert.equal(startLevel(owned, { config, simple: false, context: { levelUp: false, target: 6 } }), 3);
     // A level-up plan starts one below its target, but never below what the facilities need.
     assert.equal(startLevel(owned, { config, simple: false, homeLevel: 20, context: { levelUp: true, target: 7 } }), 6);
     assert.equal(startLevel(owned, { config, simple: false, homeLevel: 1, context: { levelUp: true, target: 2 } }), 3);
@@ -221,4 +225,61 @@ test('test_goal_inputs_drop_lesser_aniipod_tiers_the_player_did_not_skip', () =>
     const [step] = rvSteps(priority, { from: 3, to: 4, config: { ...config, ANIIPOD_TIERS: tiers }, skipped: ['aniipod_pro'] });
     assert.deepEqual(step.input.exclude, ['rose_shortbread', 'aniipod_pro']);
     assert.deepEqual(itemGoalInput(priority, 'jam', 4, 0, { tiers, skipped: [] }).exclude, ['rose_shortbread']);
+});
+
+test('shouldStop: a run stops when no plan is left or the inputs were solved again', () => {
+    const previous = { tab: 'best', setup: 'best:x', setupHash: 'h1' };
+    assert.equal(shouldStop(true, previous, null), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:x', setupHash: 'h2' }), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:x', setupHash: 'h1' }), false);
+    // Another Aniimo setup on the same inputs is not a new solve of the inputs, so this card leaves it be.
+    assert.equal(shouldStop(true, previous, { tab: 'minimum', setup: 'minimum', setupHash: 'h1' }), false);
+    // Nothing running, nothing to stop; no plan to compare with, nothing to decide on.
+    assert.equal(shouldStop(false, previous, null), false);
+    assert.equal(shouldStop(false, previous, { setupHash: 'h2' }), false);
+    assert.equal(shouldStop(true, null, { setupHash: 'h2' }), false);
+});
+
+test('test_unmakeable_names_what_the_setup_cannot_make_and_who_would', () => {
+    const recipes = [
+        { name: 'oak', facility: 'Woodland', facility_level: 1, byproduct_item: 'wood_block' },
+        { name: 'rough_lumber', facility: 'Woodworking Bench', facility_level: 1, raw_materials: ['wood_block'] },
+        { name: 'standard_planks', facility: 'Woodworking Bench', facility_level: 2, raw_materials: ['rough_lumber'] },
+        { name: 'rock', facility: 'Mine', facility_level: 2, byproduct_item: 'mineral_sand' },
+        { name: 'rock', facility: 'Quarry', facility_level: 3, byproduct_item: 'mineral_sand' },
+        { name: 'coarse_sifted_ore', facility: 'Chimney Kiln', facility_level: 1, raw_materials: ['mineral_sand'],
+          module_requirement: ['crafting_module', 2] },
+        { name: 'wheat', facility: 'Farmland', facility_level: 1 },
+        { name: 'quick_wheat', facility: 'Farmland', facility_level: 2 },
+        { name: 'moon_wheat', facility: 'Farmland', facility_level: 1, season: true },
+    ];
+    const input = {
+        facilities: {
+            'Woodworking Bench': [{ count: 1, level: 1 }], Woodland: [{ count: 0, level: 1 }], Mine: [{ count: 1, level: 1 }],
+            'Chimney Kiln': [{ count: 1, level: 1 }], Farmland: [{ count: 2, level: 1 }],
+        },
+        modules: { crafting_module: 1 },
+    };
+    // Coins are left out; wheat is made; the bench runs but nothing owned makes its Wood Blocks.
+    assert.deepEqual(unmakeable(['coins', 'wheat', 'rough_lumber'], recipes, input), [
+        { item: 'rough_lumber', needs: [{ item: 'wood_block', makers: [{ facility: 'Woodland', level: 1, module: null }] }] },
+    ]);
+    // A level too low, then the lowest level for each facility that would make it.
+    assert.deepEqual(unmakeable(['standard_planks', 'mineral_sand'], recipes, input), [
+        { item: 'standard_planks', needs: [{ item: 'standard_planks', makers: [{ facility: 'Woodworking Bench', level: 2, module: null }] }] },
+        { item: 'mineral_sand', needs: [{ item: 'mineral_sand', makers: [
+            { facility: 'Mine', level: 2, module: null }, { facility: 'Quarry', level: 3, module: null },
+        ] }] },
+    ]);
+    // A module too low counts too, once the sand is there.
+    const mined = { ...input, facilities: { ...input.facilities, Mine: [{ count: 1, level: 2 }] } };
+    assert.deepEqual(unmakeable(['coarse_sifted_ore'], recipes, mined)[0].needs[0].makers,
+        [{ facility: 'Chimney Kiln', level: 1, module: ['crafting_module', 2] }]);
+    assert.deepEqual(unmakeable(['coarse_sifted_ore'], recipes, { ...mined, modules: { crafting_module: 2 } }), []);
+    // Skipped recipes, season recipes outside the season, and an item nothing makes.
+    assert.equal(unmakeable(['wheat'], recipes, { ...input, exclude: ['wheat'] }).length, 1);
+    assert.equal(unmakeable(['moon_wheat'], recipes, input).length, 1);
+    assert.deepEqual(unmakeable(['moon_wheat'], recipes, { ...input, season: true }), []);
+    assert.deepEqual(unmakeable(['gold'], recipes, input), [{ item: 'gold', needs: [{ item: 'gold', makers: [] }] }]);
+    assert.deepEqual(unmakeable(['wheat'], null, input), [{ item: 'wheat', needs: [{ item: 'wheat', makers: [] }] }]);
 });

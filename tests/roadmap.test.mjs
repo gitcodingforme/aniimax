@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    emptyRoadmapStatus, homeLevelCovering, nextBatch, remainingCount, roadmapCandidates, roadmapHomeLevel, scoreRoadmap, setupAt, upgradeCostOf,
+    emptyRoadmapStatus, homeLevelCovering, nextBatch, remainingCount, roadmapCandidates, roadmapHomeLevel, scoreRoadmap, setupAt, shouldStop, slowerItemThanCoins, upgradeCostOf,
 } from '../web/roadmap.js';
 
 // A small made-up config in ctx.config's shape, without the page's upgradeCost and simpleSetup.
@@ -96,11 +96,15 @@ test('test_home_level_follows_the_mode', () => {
     // Farmland Lv 3 needs RV 5.
     assert.equal(homeLevelCovering(base, config), 5);
     assert.equal(homeLevelCovering({ facilities: {}, modules: {} }, config), 1);
-    assert.equal(roadmapHomeLevel(base, { config, simple: true, homeLevel: 12, context: { target: 8 } }), 7);
+    // The rule every card shares (playerHomeLevel in web/plan-summary.js): a level-up plan's target
+    // less one, else the saved RV input (in Advanced mode only when it covers what is owned), else
+    // the lowest RV covering what is owned.
+    assert.equal(roadmapHomeLevel(base, { config, simple: true, homeLevel: 12, context: { levelUp: true, target: 8 } }), 7);
+    assert.equal(roadmapHomeLevel(base, { config, simple: true, homeLevel: 12, context: { levelUp: false, target: 8 } }), 12);
     assert.equal(roadmapHomeLevel(base, { config, simple: true, homeLevel: 12 }), 12);
     assert.equal(roadmapHomeLevel(base, { config, context: { levelUp: false, target: 9 } }), 5);
-    // A level-up target says nothing about the RV level the player has.
-    assert.equal(roadmapHomeLevel(base, { config, context: { levelUp: true, target: 9 } }), 5);
+    assert.equal(roadmapHomeLevel(base, { config, context: { levelUp: true, target: 9 } }), 8);
+    assert.equal(roadmapHomeLevel(base, { config, homeLevel: 12 }), 12);
     assert.equal(roadmapHomeLevel(base, { config, homeLevel: 3 }), 5);
     assert.equal(upgradeCostOf(config, 'Farmland', 1, 3), 760);
     assert.equal(upgradeCostOf(config, 'Mine', 3, 4), null);
@@ -178,13 +182,44 @@ test('test_nothing_to_solve_says_why', () => {
     assert.equal(emptyRoadmapStatus([], [cand('A', 1)], 3), null);
 });
 
-test('test_advanced_mode_uses_the_rv_the_player_has_not_the_target', () => {
-    // At RV 6 aiming for RV 10: Farmland Lv 4 needs RV 7, so it waits; it is not solved.
+test('test_advanced_mode_uses_the_saved_rv_or_the_level_below_a_level_up_target', () => {
+    // At RV 6 (saved), or levelling up to RV 7: Farmland Lv 4 needs RV 7, so it waits; it is not solved.
     const atSix = { ...base, facilities: { Farmland: [{ count: 4, level: 3 }], Mine: [{ count: 1, level: 2 }] } };
-    const homeLevel = roadmapHomeLevel(atSix, { config, homeLevel: 6, context: { levelUp: true, target: 10 } });
+    assert.equal(roadmapHomeLevel(atSix, { config, homeLevel: 6, context: { levelUp: true, target: 7 } }), 6);
+    assert.equal(roadmapHomeLevel(atSix, { config, homeLevel: 6, context: { levelUp: true, target: 10 } }), 9);
+    const homeLevel = roadmapHomeLevel(atSix, { config, homeLevel: 6, context: { levelUp: false, target: 10 } });
     assert.equal(homeLevel, 6);
     const { candidates } = roadmapCandidates(atSix, { config, homeLevel });
     assert.deepEqual(candidates.map(c => `${c.label}|${c.needsRv}|${c.input ? 'solve' : 'wait'}`), [
         '+1 Farmland (Lv 1)|null|solve', '+1 Mine (Lv 1)|null|solve', '1 Farmland to Lv 4|7|wait', 'Mine to Lv 3|9|wait',
     ]);
+});
+
+test('shouldStop: a run stops when no plan is left or the inputs were solved again', () => {
+    const previous = { tab: 'best', setup: 'best:x', setupHash: 'h1' };
+    assert.equal(shouldStop(true, previous, null), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:x', setupHash: 'h2' }), true);
+    assert.equal(shouldStop(true, previous, { tab: 'best', setup: 'best:x', setupHash: 'h1' }), false);
+    // Another Aniimo setup on the same inputs is not a new solve of the inputs, so this card leaves it be.
+    assert.equal(shouldStop(true, previous, { tab: 'minimum', setup: 'minimum', setupHash: 'h1' }), false);
+    // Nothing running, nothing to stop; no plan to compare with, nothing to decide on.
+    assert.equal(shouldStop(false, previous, null), false);
+    assert.equal(shouldStop(false, previous, { setupHash: 'h2' }), false);
+    assert.equal(shouldStop(true, null, { setupHash: 'h2' }), false);
+});
+
+test('test_next_rv_names_an_item_slower_than_the_coins', () => {
+    const requirements = [
+        { name: 'coins', need: 32000, have: 0, per_second: 2, seconds: 16000 },
+        { name: 'wood_block', need: 1300, have: 100, per_second: 0.0246, seconds: 48780 },
+        { name: 'mineral_sand', need: 700, have: 700, per_second: 0.01, seconds: 0 },
+    ];
+    // Coins saved in 4h 27m; Wood Blocks take 13h 33m.
+    assert.deepEqual(slowerItemThanCoins(requirements, 16000), { name: 'wood_block', seconds: 48780 });
+    assert.equal(slowerItemThanCoins(requirements, 50000), null);
+    assert.deepEqual(slowerItemThanCoins([{ name: 'mineral_sand', seconds: null }], 10), { name: 'mineral_sand', seconds: null });
+    assert.equal(slowerItemThanCoins([{ name: 'coins', seconds: 99 }], 10), null);
+    assert.equal(slowerItemThanCoins(undefined, 10), null);
+    // Rows carry the candidate's level, so the card can match the plan's level-up target.
+    assert.equal(scoreRoadmap([cand('next-rv:6', 32000, { kind: 'next-rv', level: 6 })], 1, [])[0].level, 6);
 });

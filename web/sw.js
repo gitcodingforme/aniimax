@@ -31,6 +31,9 @@
 // fetched version.json names a different commit, a new empty cache is started, every older
 // `aniimax-*` cache is deleted, and open tabs get a "Site updated. Reload" message. So copies from
 // two different builds are never mixed (pkg/aniimax.js and pkg/aniimax_bg.wasm must match).
+// Nothing is saved, and no saved copy is preferred over the network, until a version check has
+// succeeded since this worker started: until then a file might belong to another build than the
+// cache. (Saved copies are still used when the network fails.)
 //
 // Everything is in plain functions on the `SW` object so tests/sw.test.mjs can load this file in
 // Node and call them directly; the event listeners at the bottom only exist inside a browser.
@@ -40,8 +43,8 @@
 // Emergency off switch. If a deploy ever leaves visitors stuck on a broken saved version, change
 // this to true and deploy: the next time any visitor loads the site, this worker deletes its
 // caches, unregisters itself and reloads the open tabs, so they get the plain live site. (Never
-// delete this file instead: a missing sw.js leaves the old worker running.) See
-// docs/runbooks/offline.md.
+// delete this file instead: a missing sw.js leaves the old worker running.) The owner's runbook
+// is docs/runbooks/offline.md in the workspace, not in this repository.
 const KILL_SWITCH = false;
 
 // A marker `withTimeout` returns when the time ran out first.
@@ -55,6 +58,8 @@ const SW = {
     CACHE_PREFIX: 'aniimax-',
     // How long network-first waits before using a saved copy. Tests shorten it.
     NETWORK_TIMEOUT_MS: 6000,
+    // After a failed version check, saving does not start another one for this long.
+    CHECK_RETRY_MS: 10000,
     // The local watcher's personal files: never saved, always live.
     NEVER_CACHE: /(reading|coins|verification)\.json$/,
     // Files (relative to the site folder) that are network-first besides HTML, *.json and pkg/*.
@@ -72,8 +77,8 @@ const SW = {
     // What this worker remembers while it runs. The browser stops idle workers, so nothing here is
     // relied on for long: the active cache name is re-read from the cache list after a restart.
     // `checking` is the version check in flight; `pending` the latest one (reads and saves wait
-    // for it).
-    state: { cacheName: null, naming: null, pending: null, checking: null },
+    // for it); `verified` turns true once a check succeeded; `lastCheckEnd` is when one last ended.
+    state: { cacheName: null, naming: null, pending: null, checking: null, verified: false, lastCheckEnd: 0 },
 };
 self.SW = SW;
 
@@ -262,14 +267,26 @@ SW.match = async function (key) {
     }
 };
 
-// Saves a copy in the active cache. `waitForCheck` first waits for a running version check, so a
-// file from a new build is saved in the new build's cache (the check itself saves without waiting).
-SW.put = async function (key, response, { waitForCheck = false } = {}) {
+// Writes a copy into the active cache, no questions asked (only the version check uses this).
+SW.store = async function (key, response) {
     try {
-        if (waitForCheck && SW.state.pending) await SW.state.pending;
         const cache = await SW.openActive();
         await cache.put(key, response);
         return true;
+    } catch (_) {
+        return false;
+    }
+};
+
+// Saves a copy, but only into a cache confirmed to be this build's: waits for a running version
+// check, starts one if none has succeeded yet (at most every CHECK_RETRY_MS after a failure), and
+// skips the save when there is still no successful check. Returns true when saved.
+SW.put = async function (key, response) {
+    try {
+        if (SW.state.pending) await SW.state.pending;
+        if (!SW.state.verified && Date.now() - SW.state.lastCheckEnd >= SW.CHECK_RETRY_MS) await SW.startCheck();
+        if (!SW.state.verified) return false;
+        return await SW.store(key, response);
     } catch (_) {
         return false;
     }
@@ -303,25 +320,31 @@ SW.tellClients = async function (message) {
     }
 };
 
-// Reads a fetched version.json. When it names another commit than the active cache: switch to a
-// new cache for that build, delete the old ones, and tell open tabs to offer a reload.
+// Reads a fetched version.json: 'unusable' (no commit in it), 'same' (the active cache is this
+// build's), or 'rotated': it named another commit, so the worker switched to a new cache for that
+// build, deleted the old ones and told open tabs to offer a reload. Rotation always happens
+// before anything of the new build is saved. A usable answer counts as a successful check.
 SW.noteVersion = async function (response) {
     let commit;
     try {
         const stamp = await response.json();
         commit = stamp && stamp.commit;
     } catch (_) {
-        return false;
+        return 'unusable';
     }
-    if (typeof commit !== 'string' || commit === '') return false;
+    if (typeof commit !== 'string' || commit === '') return 'unusable';
     const next = SW.cacheNameFor(commit);
     await SW.activeCacheName();
-    if (SW.state.cacheName === next) return false;
+    if (SW.state.cacheName === next) {
+        SW.state.verified = true;
+        return 'same';
+    }
     // Set before any other await, so every later save goes into the new build's cache.
     SW.state.cacheName = next;
     await SW.deleteOurCaches(next);
+    SW.state.verified = true;
     await SW.tellClients({ type: 'aniimax-updated', commit: SW.safeCommit(commit) });
-    return true;
+    return 'rotated';
 };
 
 // Starts a version check unless one is already running, and returns it.
@@ -335,17 +358,28 @@ SW.startCheck = function () {
 
 // Fetches the live version.json (bypassing the browser's own short-term cache) and acts on it.
 // Started by every page navigation and every worker start (see `startCheck`); never rejects.
+// A timeout or a failed fetch is not a success, so nothing is saved until a later check works.
+// A 404 counts only while the active cache is 'aniimax-dev' (a local build has no version.json).
 SW.checkVersion = async function () {
     try {
         const url = SW.scopeFile('version.json');
         const response = await SW.withTimeout(self.fetch(url, { cache: 'no-store' }), SW.NETWORK_TIMEOUT_MS);
-        if (response === TIMED_OUT || !SW.isCacheable(response)) return false;
+        if (response === TIMED_OUT) return false;
+        if (response.status === 404 && (await SW.activeCacheName()) === SW.cacheNameFor(null)) {
+            SW.state.verified = true;
+            return false;
+        }
+        if (!SW.isCacheable(response)) return false;
         const forCache = response.clone();
-        const changed = await SW.noteVersion(response);
-        await SW.put(SW.cacheKey(url), forCache);
-        return changed;
+        const result = await SW.noteVersion(response);
+        if (result === 'unusable') return false;
+        // Rotate first (above), then store this build's version.json in this build's cache.
+        await SW.store(SW.cacheKey(url), forCache);
+        return result === 'rotated';
     } catch (_) {
         return false;
+    } finally {
+        SW.state.lastCheckEnd = Date.now();
     }
 };
 
@@ -359,9 +393,10 @@ SW.fetchAndStore = async function (request, key, waitUntil) {
         if (key === SW.scopeFile('version.json')) {
             const forCheck = response.clone();
             const forCache = response.clone();
-            waitUntil(SW.noteVersion(forCheck).then(() => SW.put(key, forCache, { waitForCheck: true })));
+            // Rotate first if it names a new build, then store it (in the new build's cache).
+            waitUntil(SW.noteVersion(forCheck).then(() => SW.put(key, forCache)));
         } else {
-            waitUntil(SW.put(key, response.clone(), { waitForCheck: true }));
+            waitUntil(SW.put(key, response.clone()));
         }
     }
     return response;
@@ -376,9 +411,11 @@ SW.networkFirst = function (request, key, waitUntil, { timeout = true } = {}) {
         try {
             const first = timeout ? await SW.withTimeout(network, SW.NETWORK_TIMEOUT_MS) : await network;
             if (first !== TIMED_OUT) return first;
-            // Slow network: use the saved copy if there is one (the fetch carries on in the
-            // background and refreshes it), else keep waiting for the network.
-            const saved = await SW.match(key);
+            // Slow network: use the saved copy if there is one and this build's cache is
+            // confirmed (the fetch carries on in the background and refreshes it), else keep
+            // waiting for the network.
+            if (SW.state.pending) await SW.state.pending;
+            const saved = SW.state.verified ? await SW.match(key) : null;
             return saved || await network;
         } catch (_) {
             // No network: the saved copy, or the browser's normal offline error.
@@ -391,12 +428,14 @@ SW.staleWhileRevalidate = function (request, key, waitUntil) {
     const fresh = SW.fetchAndStore(request, key, waitUntil);
     waitUntil(fresh);
     return (async () => {
-        const saved = await SW.match(key);
+        // Until a version check succeeded the saved copy may be another build's: use the network.
+        if (SW.state.pending) await SW.state.pending;
+        const saved = SW.state.verified ? await SW.match(key) : null;
         if (saved) return saved;
         try {
             return await fresh;
         } catch (_) {
-            return Response.error();
+            return (await SW.match(key)) || Response.error();
         }
     })();
 };
@@ -426,7 +465,7 @@ SW.warm = async function (urls) {
         if (await SW.match(key)) continue;
         try {
             const response = await self.fetch(url, { cache: 'no-cache', credentials: 'same-origin' });
-            if (SW.isCacheable(response) && await SW.put(key, response, { waitForCheck: true })) saved += 1;
+            if (SW.isCacheable(response) && await SW.put(key, response)) saved += 1;
         } catch (_) { /* offline or missing: try again next visit */ }
     }
     return saved;

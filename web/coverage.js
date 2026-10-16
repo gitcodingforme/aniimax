@@ -32,7 +32,7 @@ export const STATUS_LABELS = {
     'game-differs': 'Game differs',
     wiki: 'Matches the wiki',
     'wiki-differs': 'Wiki differs',
-    unverified: 'Not confirmed upstream',
+    unverified: 'Marked unverified by the original project',
     unchecked: 'Not checked',
 };
 
@@ -357,6 +357,6 @@ export function coverageHtml(model, format = {}) {
     }
     for (const note of model?.notes || []) out.push(`<p class="feature-status">${esc(note)}</p>`);
     out.push('<p class="hint small coverage-footnote">Sell values, yields and seed costs: no source checks these yet.</p>');
-    if (!local) out.push('<p class="hint small coverage-footnote">Your own in-game checks appear on your local site (scripts/verify_data.py).</p>');
+    if (!local) out.push('<p class="hint small coverage-footnote">Your own checks from the game watcher show here only on the copy of the site running on your PC, never on the public site.</p>');
     return out.join('');
 }

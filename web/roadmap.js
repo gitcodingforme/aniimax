@@ -1,17 +1,19 @@
 // Upgrade roadmap: what to upgrade next, one change at a time, priced in Home Coins and ranked by
-// how fast it pays for itself. Pure functions only (no DOM, no storage, no imports); the card is
-// web/cards/roadmap.js and the tests are tests/roadmap.test.mjs.
+// how fast it pays for itself. Pure functions only (no DOM, no storage, no imports but
+// plan-summary.js); the card is web/cards/roadmap.js and the tests are tests/roadmap.test.mjs.
 //
 // `config` is ctx.config (see web/panels.js): FACILITIES (with `unlocks` and `counts`),
 // FACILITY_UPGRADE_COSTS, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, MAX_HOME_LEVEL, and the page's
-// `upgradeCost` and `simpleSetup` when it has them (copies of both are below, for a config
-// without them).
+// `upgradeCost` and `simpleSetup` when it has them (a copy of upgradeCost is below, and
+// plan-summary.js's setupAtHomeLevel stands in for simpleSetup, for a config without them).
 //
 // What the numbers mean: the card ranks with measure 'coins', so each result's `top` is the most
 // Home Coins per second the planner can make with that input (the objective of
 // exact_priority_problem(input, no floors, 'coins'), src/exact.rs: "currency per second"),
 // ignoring the plan's priorities and level-up pace. The base's `top` is the same solve for the
 // setup as it stands, so `(top - baseTop) * 3600` is extra Home Coins an hour.
+
+import { coveringHomeLevel, playerHomeLevel, setupAtHomeLevel } from './plan-summary.js?v=fork-m9-2';
 
 // The smallest gain worth showing, as a share of the base (RANK_MIN_GAIN in worker.js and app.js):
 // below it, a difference is as likely to be the solver's tolerances as a real improvement.
@@ -27,18 +29,10 @@ function atHomeLevel(list, homeLevel) {
     return list[Math.max(1, Math.min(homeLevel, list.length)) - 1];
 }
 
-// Everything a player at `rv` could have (facility-config.js's simpleSetup, on `config`'s data).
+// Everything a player at `rv` could have (facility-config.js's simpleSetup, on `config`'s data):
+// setupAtHomeLevel in plan-summary.js.
 export function setupAt(config, rv) {
-    if (typeof config.simpleSetup === 'function') return config.simpleSetup(rv);
-    const facilities = {};
-    for (const f of config.FACILITIES || []) {
-        const unlocked = Object.entries(f.unlocks || {}).filter(([, need]) => need <= rv).map(([level]) => Number(level));
-        facilities[f.name] = unlocked.length === 0
-            ? [{ count: 0, level: 1 }]
-            : [{ count: atHomeLevel(f.counts, rv), level: Math.max(...unlocked) }];
-    }
-    const modules = Object.fromEntries(Object.entries(config.MODULE_MAX_LEVELS || {}).map(([m, caps]) => [m, atHomeLevel(caps, rv)]));
-    return { facilities, modules };
+    return setupAtHomeLevel(config, rv);
 }
 
 // Home Coins to raise one `facility` from `from` to `to` (facility-config.js's upgradeCost), or
@@ -57,38 +51,16 @@ export function upgradeCostOf(config, facility, from, to) {
 
 const maxHomeLevel = config => (Number.isInteger(config.MAX_HOME_LEVEL) ? config.MAX_HOME_LEVEL : 20);
 
-// The lowest RV level whose facilities and modules cover everything in `input` (copied from
-// app.js), for Advanced mode, where the player enters what they have rather than their RV level.
+// The lowest RV level whose facilities and modules cover everything in `input` (app.js's rule):
+// coveringHomeLevel in plan-summary.js.
 export function homeLevelCovering(input, config) {
-    const top = maxHomeLevel(config);
-    for (let level = 1; level <= top; level++) {
-        const allowed = setupAt(config, level);
-        const facilitiesFit = (config.FACILITIES || []).every((f) => {
-            const have = input?.facilities?.[f.name];
-            if (tierCount(have) === 0) return true;
-            const cap = allowed.facilities[f.name];
-            return tierCount(have) <= tierCount(cap) && (f.hasLevels === false || tierLevel(have) <= tierLevel(cap));
-        });
-        const modulesFit = Object.entries(input?.modules || {}).every(([name, at]) => at <= (allowed.modules[name] ?? 0));
-        if (facilitiesFit && modulesFit) return level;
-    }
-    return top;
+    return coveringHomeLevel(input, config);
 }
 
-// The RV level the roadmap works within: the one the player has. Simple mode: the plan's RV level
-// (its level-up target less one, else `homeLevel`). Advanced mode: `homeLevel` when the setup
-// gives one, else the lowest RV covering what was entered (as the Opportunities card does); never
-// below that covering level, since what was entered must already be allowed. A level-up target
-// is not used there: it can be several RV levels ahead.
+// The RV level the roadmap works within: the one the player has, by the rule every card shares
+// (playerHomeLevel in plan-summary.js). `homeLevel` is the saved RV level input.
 export function roadmapHomeLevel(input, { config, simple = false, homeLevel = null, context = null } = {}) {
-    const top = maxHomeLevel(config);
-    const clamp = rv => Math.max(1, Math.min(top, Math.floor(rv)));
-    const target = Number(context?.target);
-    const given = Number(homeLevel);
-    const known = Number.isInteger(given) && given >= 1;
-    if (simple) return clamp(Number.isInteger(target) && target > 1 ? target - 1 : (known ? given : top));
-    const covering = homeLevelCovering(input, config);
-    return clamp(known ? Math.max(covering, given) : covering);
+    return playerHomeLevel({ input, config, simple, savedHomeLevel: homeLevel, context });
 }
 
 // Tiers with equal levels merged, lowest level first.
@@ -171,6 +143,22 @@ export function roadmapCandidates(base, { config, homeLevel, simple = false, max
     return { candidates: [...ordered.slice(0, cap), ...unsolved], deferred: ordered.slice(cap) };
 }
 
+// The level-up's slowest item (not coins), when it takes longer than `coinsSeconds` (the time to
+// save its coins): `{ name, seconds }`, `seconds` null when the plan never makes enough; else
+// null. `requirements` is the plan's level_up.requirements (JsLevelUpRequirement in wasm.rs:
+// `{ name, need, have, per_second, seconds }`, `seconds` null for never).
+export function slowerItemThanCoins(requirements, coinsSeconds) {
+    let slowest = null;
+    for (const r of Array.isArray(requirements) ? requirements : []) {
+        if (!r || r.name === 'coins') continue;
+        const seconds = r.seconds === null ? Infinity : r.seconds;
+        if (typeof seconds !== 'number' || Number.isNaN(seconds)) continue;
+        if (!slowest || seconds > slowest.seconds) slowest = { name: r.name, seconds };
+    }
+    if (!slowest || !(slowest.seconds > (Number.isFinite(coinsSeconds) ? coinsSeconds : 0))) return null;
+    return { name: slowest.name, seconds: Number.isFinite(slowest.seconds) ? slowest.seconds : null };
+}
+
 // The status line when there is nothing to solve (no solvable change shown or deferred), else
 // null: the lowest RV level a shown upgrade waits for, or that everything owned is at its top.
 export function emptyRoadmapStatus(candidates, deferred, homeLevel, { simple = false } = {}) {
@@ -221,7 +209,7 @@ export function scoreRoadmap(candidates, baseTop, results, { coinsPerHour = null
     const rows = (candidates || []).map((c, i) => {
         const cost = Number.isFinite(c.cost) ? c.cost : null;
         const row = {
-            id: c.id, label: c.label, kind: c.kind, note: c.note || null, cost, needsRv: c.needsRv ?? null,
+            id: c.id, label: c.label, kind: c.kind, level: c.level ?? null, note: c.note || null, cost, needsRv: c.needsRv ?? null,
             status: 'pending', gainPerHour: null, paybackHours: null, affordInHours: null, proven: null, order: i,
         };
         if (row.needsRv !== null || !c.input) {
@@ -253,4 +241,15 @@ export function scoreRoadmap(candidates, baseTop, results, { coinsPerHour = null
         || (group(a) === 1 ? b.gainPerHour - a.gainPerHour : 0)
         || (group(a) === 5 ? a.needsRv - b.needsRv : 0)
         || a.order - b.order);
+}
+
+// Whether a new 'plan' value should stop a check that is running (`running`) from the plan
+// `previous`: no plan is on screen any more (null: another Aniimo setup is solving, or the solve
+// failed), or the inputs were solved again (a different setupHash). The same setupHash
+// stops nothing, so a repeat of the plan on screen leaves the run alone.
+export function shouldStop(running, previous, next) {
+    if (!running) return false;
+    if (!next) return true;
+    if (!previous) return false;
+    return next.setupHash !== previous.setupHash;
 }

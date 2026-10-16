@@ -7,7 +7,7 @@ import { planRows } from '../reminders.js?v=fork-m9-2';
 
 const SHORTFALL_BELOW = 0.9;
 const MAX_GUESSES = 5;
-const EMPTY = 'Save two snapshots (or run the watcher) to compare.';
+const EMPTY = 'Save two snapshots, or let the game watcher on your PC log your coins, then come back to compare.';
 
 export function mount(el, ctx) {
     ctx.addStylesheet('css/insight.css');

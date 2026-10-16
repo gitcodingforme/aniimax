@@ -3,8 +3,12 @@
 #roadmap-card .roadmap-table th.roadmap-num,
 #roadmap-card .roadmap-table td.roadmap-num {
     text-align: right;
-    white-space: nowrap;
     font-variant-numeric: tabular-nums;
+}
+
+/* Numbers stay on one line; headings may wrap, so the table stays narrow on a phone. */
+#roadmap-card .roadmap-table td.roadmap-num {
+    white-space: nowrap;
 }
 
 /* style.css highlights every table's first row; here only the best change is (the rules below
@@ -27,12 +31,8 @@
     color: var(--success);
 }
 
-#roadmap-card .roadmap-note {
-    display: block;
-    margin-top: 0.15rem;
-    font-size: 0.75rem;
-    font-weight: normal;
-    color: var(--text-muted);
+#roadmap-card .roadmap-footnote {
+    margin: 0.4rem 0 0;
 }
 
 #roadmap-card.roadmap-stale .roadmap-table {
@@ -44,8 +44,17 @@
 }
 
 @media (max-width: 600px) {
+    #roadmap-card .roadmap-table {
+        font-size: 0.78rem;
+    }
+
     #roadmap-card .roadmap-table th,
     #roadmap-card .roadmap-table td {
-        padding: 0.4rem 0.5rem;
+        padding: 0.35rem 0.4rem;
+    }
+
+    #roadmap-card .roadmap-table th {
+        font-size: 0.68rem;
+        letter-spacing: 0;
     }
 }

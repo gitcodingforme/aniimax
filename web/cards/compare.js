@@ -3,8 +3,8 @@
 // next RV level. The other side lives in memory only; nothing of it is stored. Logic in
 // web/compare.js and web/setup-input.js; the card contract is in web/panels.js.
 
-import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText } from '../compare.js?v=fork-m9-2';
-import { planInputFromSetup, sameInput } from '../setup-input.js?v=fork-m9-2';
+import { compareResults, compareSetups, otherFromSetup, otherFromSnapshot, otherFromText, NOTHING_LOADED, planMoved, shouldStop } from '../compare.js?v=fork-m9-2';
+import { aniimoTabOf, planInputFromSetup, sameInput } from '../setup-input.js?v=fork-m9-2';
 import { formatSeconds, setupHash } from '../history.js?v=fork-m9-2';
 import { readShareHash } from '../share-config.js?v=fork-m9-2';
 
@@ -34,7 +34,7 @@ export function mount(el, ctx) {
         <div class="feature-actions">
             <button type="button" id="compare-run" class="skip-add-btn">Compare</button>
             <button type="button" id="compare-solve" class="skip-add-btn" disabled>Solve both</button>
-            <button type="button" id="compare-stop" class="skip-add-btn" hidden>Stop</button>
+            <button type="button" id="compare-stop" class="skip-add-btn" hidden disabled>Stop</button>
             <button type="button" id="compare-clear" class="skip-add-btn">Forget the other side</button>
         </div>
         <p class="feature-status" id="compare-status" role="status" aria-live="polite"></p>
@@ -57,7 +57,9 @@ export function mount(el, ctx) {
     let fileName = '';
     let fileRead = 0; // counts file picks, so a slow read of an earlier file is ignored
     let other = null; // { setup, actual, source } of the comparison on screen
-    let shown = null; // { mineHash } of the solved results on screen
+    let shown = null; // { setupHash, setup } of the page plan the solved results were taken against
+    let started = null; // the same, for a "Solve both" that is running
+    let stopReason = '';
     let controller = null;
 
     const sourceLabel = o => (o.source === 'profile' && fileName && kind === 'file' ? `profile file ${fileName}` : o.source);
@@ -87,12 +89,12 @@ export function mount(el, ctx) {
 
     async function resolveOther() {
         if (kind === 'file') {
-            if (!fileText) throw new Error('choose a profile file first');
+            if (!fileText) throw new Error(NOTHING_LOADED);
             return otherFromText(fileText);
         }
         if (kind === 'snapshot') {
             const snapshot = ctx.getHistory().find(s => s.id === snapEl.value);
-            if (!snapshot) throw new Error('pick one of your snapshots first');
+            if (!snapshot) throw new Error(NOTHING_LOADED);
             return otherFromSnapshot(snapshot);
         }
         const text = textEl.value.trim();
@@ -147,7 +149,7 @@ export function mount(el, ctx) {
             other = null;
             outputEl.innerHTML = '';
             solveBtn.disabled = true;
-            statusEl.textContent = `Could not read the other side: ${error.message}.`;
+            statusEl.textContent = error.message === NOTHING_LOADED ? NOTHING_LOADED : `Could not read the other side: ${error.message}.`;
         }
     }
 
@@ -189,13 +191,16 @@ export function mount(el, ctx) {
         const mine = ctx.getSetup();
         const mineHash = setupHash(mine);
         const last = ctx.last('plan');
-        const reuse = !!(last?.plan && last.input && last.setupHash === mineHash);
+        const reuse = !!(last?.plan && last.input && last.setupHash === mineHash && last.tab === aniimoTabOf(mine));
         const mineInput = reuse ? last.input : planInputFromSetup(mine, ctx.config);
         const otherInput = planInputFromSetup(other.setup, ctx.config);
         controller = new AbortController();
+        started = { setupHash: reuse ? last.setupHash : mineHash, setup: last?.setup };
+        stopReason = '';
         solveBtn.disabled = true;
         runBtn.disabled = true;
         stopBtn.hidden = false;
+        stopBtn.disabled = false;
         resultsEl.innerHTML = '';
         statusEl.textContent = reuse ? 'Using your plan on screen; solving the other homeland…' : 'Solving both plans…';
         const [planA, planB] = await Promise.all([
@@ -205,13 +210,14 @@ export function mount(el, ctx) {
         const stopped = controller.signal.aborted;
         controller = null;
         stopBtn.hidden = true;
+        stopBtn.disabled = true;
         runBtn.disabled = false;
         solveBtn.disabled = false;
         if (stopped) {
-            statusEl.textContent = 'Stopped.';
+            statusEl.textContent = stopReason || 'Stopped.';
             return;
         }
-        shown = { mineHash };
+        shown = started;
         renderResults(compareResults(planA, planB), planA, planB);
         statusEl.textContent = 'Done. The other side is compared as saved, with their own strategy and Aniimo choices.';
     }
@@ -254,6 +260,7 @@ export function mount(el, ctx) {
         outputEl.innerHTML = '';
         resultsEl.innerHTML = '';
         solveBtn.disabled = true;
+        stopReason = '';
         statusEl.textContent = 'The other side is forgotten.';
     });
 
@@ -262,6 +269,10 @@ export function mount(el, ctx) {
     // A new plan never starts a solve; it re-runs the drift check and marks old results.
     ctx.on('plan', (value) => {
         selfCheck();
-        resultsEl.classList.toggle('compare-stale', !!shown && !!value && value.setupHash !== shown.mineHash);
+        if (shouldStop(!!controller, started, value)) {
+            stopReason = "Stopped because the page's plan changed. Press Solve both to start again.";
+            controller.abort();
+        }
+        resultsEl.classList.toggle('compare-stale', !!shown && planMoved(shown, value));
     });
 }
