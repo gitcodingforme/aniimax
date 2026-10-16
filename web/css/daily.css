@@ -1,0 +1,37 @@
+/* Daily checklist card (web/cards/daily.js). Colours come from the variables in style.css, so both themes work. */
+
+#daily-card .daily-group {
+    margin: 0.9rem 0 0.25rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+#daily-card .daily-item {
+    padding: 0.15rem 0;
+}
+
+#daily-card .daily-item label {
+    cursor: pointer;
+}
+
+#daily-card .daily-item.done .daily-title {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+#daily-card .daily-when {
+    display: inline-block;
+    min-width: 3.4rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+#daily-card .daily-late {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.45rem;
+    border: 1px solid var(--warning);
+    border-radius: 999px;
+    color: var(--warning);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
