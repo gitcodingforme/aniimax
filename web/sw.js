@@ -70,6 +70,9 @@ const SW = {
     WORKER_ENTRY_FILES: ['worker.js', 'layout-worker.js'],
     // Files the page's workers load, which the page itself cannot list (see `warm`). Saved in the
     // background after the first visit so the solver works offline without a solve first.
+    // shared.js is not listed: app.js imports the same shared.js?v=<tag> address that worker.js uses,
+    // so the page warm-up saves it under the key the worker asks for (an untagged entry here would
+    // be saved under another key). tests/sw.test.mjs checks this parity.
     CORE_FILES: [
         './', 'worker.js', 'layout-worker.js', 'layout.js',
         'pkg/aniimax.js', 'pkg/aniimax_bg.wasm', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
@@ -87,6 +90,26 @@ self.SW = SW;
 // The site folder this worker looks after, e.g. https://gitcodingforme.github.io/aniimax/.
 SW.scope = function () {
     return self.registration.scope;
+};
+
+// True for a local development server: localhost names, loopback, the .localhost and .test
+// suffixes, and private LAN addresses (a phone on the same Wi-Fi opening the dev server). The same
+// rule as isLocalHost in sw-register.js, copied here because this file cannot import anything.
+SW.LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1'];
+SW.isLocalHost = function (hostname) {
+    const host = String(hostname || '').toLowerCase();
+    if (SW.LOCAL_HOSTS.includes(host) || host.endsWith('.localhost') || host.endsWith('.test')) return true;
+    return /^(10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+$/.test(host);
+};
+
+// True when this worker's site folder is served from a local development host. The published
+// site (github.io) is never local, so a missing version.json there is an error, not a dev build.
+SW.scopeIsLocal = function () {
+    try {
+        return SW.isLocalHost(new URL(SW.scope()).hostname);
+    } catch (_) {
+        return false;
+    }
 };
 
 // A file in the site folder as a full URL.
@@ -359,13 +382,15 @@ SW.startCheck = function () {
 // Fetches the live version.json (bypassing the browser's own short-term cache) and acts on it.
 // Started by every page navigation and every worker start (see `startCheck`); never rejects.
 // A timeout or a failed fetch is not a success, so nothing is saved until a later check works.
-// A 404 counts only while the active cache is 'aniimax-dev' (a local build has no version.json).
+// A 404 counts only on a local development host (see `scopeIsLocal`) and while the active cache is
+// 'aniimax-dev': a local build has no version.json. On the published site a 404 means something is
+// wrong, so nothing is saved until a check really succeeds.
 SW.checkVersion = async function () {
     try {
         const url = SW.scopeFile('version.json');
         const response = await SW.withTimeout(self.fetch(url, { cache: 'no-store' }), SW.NETWORK_TIMEOUT_MS);
         if (response === TIMED_OUT) return false;
-        if (response.status === 404 && (await SW.activeCacheName()) === SW.cacheNameFor(null)) {
+        if (response.status === 404 && SW.scopeIsLocal() && (await SW.activeCacheName()) === SW.cacheNameFor(null)) {
             SW.state.verified = true;
             return false;
         }

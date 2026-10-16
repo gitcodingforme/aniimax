@@ -6,8 +6,12 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
+import { isLocalHost as registerIsLocalHost } from '../web/sw-register.js';
+
 const SOURCE = readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
 const SCOPE = 'https://gitcodingforme.github.io/aniimax/';
+// A local development server: the worker's scope is the whole origin, and there is no version.json.
+const LOCAL = 'http://localhost:8080/';
 const MATHJAX = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
 
 // Objects made inside the vm have another realm's prototypes; compare them as plain JSON.
@@ -58,12 +62,13 @@ function fakeClient(url, { controlled = true } = {}) {
 
 // Loads sw.js into a fresh fake service worker global. `routes` maps full URLs to responses (or
 // to functions returning one); anything else answers 404. `env.offline = true` makes fetch fail.
-function loadWorker({ source = SOURCE, routes = {}, clients = [], caches = fakeCaches(), cachesGetter = null } = {}) {
+// `scope` is the site folder the worker looks after (the published site unless a test says local).
+function loadWorker({ source = SOURCE, routes = {}, clients = [], caches = fakeCaches(), cachesGetter = null, scope = SCOPE } = {}) {
     const env = { listeners: {}, routes, clients, caches, fetched: [], offline: false, claimed: 0, skipped: 0, unregistered: 0 };
     const context = {
         console, URL, Response, setTimeout, clearTimeout,
         addEventListener: (type, listener) => { env.listeners[type] = listener; },
-        registration: { scope: SCOPE, unregister: async () => { env.unregistered += 1; return true; } },
+        registration: { scope, unregister: async () => { env.unregistered += 1; return true; } },
         skipWaiting: async () => { env.skipped += 1; },
         clients: {
             matchAll: async ({ includeUncontrolled = false } = {}) => env.clients.filter((c) => includeUncontrolled || c.controlled),
@@ -134,8 +139,8 @@ test('test_route_for_sends_each_kind_of_request_to_its_route', () => {
     ]) assert.equal(route(path), 'network-first', path);
 
     for (const path of [
-        'app.js?v=fork-m9-2', 'i18n.js', 'style.css', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
-        'icons/icon-192.png', 'manifest.webmanifest', 'sw-register.js?v=fork-m9-2',
+        'app.js?v=fork-m10-1', 'i18n.js', 'style.css', 'vendor/highs/highs.mjs', 'vendor/highs/highs.wasm',
+        'icons/icon-192.png', 'manifest.webmanifest', 'sw-register.js?v=fork-m10-1',
     ]) assert.equal(route(path), 'swr', path);
 
     assert.equal(route('version.json', { method: 'POST' }), 'bypass');
@@ -158,7 +163,7 @@ test('test_cache_key_strips_load_and_keeps_v', () => {
     const { SW } = loadWorker();
     assert.equal(SW.cacheKey(`${SCOPE}worker.js?load=1760000000000`), `${SCOPE}worker.js`);
     assert.equal(SW.cacheKey(`${SCOPE}pkg/aniimax.js?load=1&v=2`), `${SCOPE}pkg/aniimax.js?v=2`);
-    assert.equal(SW.cacheKey(`${SCOPE}app.js?v=fork-m9-2`), `${SCOPE}app.js?v=fork-m9-2`);
+    assert.equal(SW.cacheKey(`${SCOPE}app.js?v=fork-m10-1`), `${SCOPE}app.js?v=fork-m10-1`);
     assert.equal(SW.cacheKey(`${SCOPE}a.js?v=1&load=2&x=a%20b#frag`), `${SCOPE}a.js?v=1&x=a%20b`);
     assert.equal(SW.pageKey(`${SCOPE}index.html?sw=on#config=abc`), SCOPE);
     assert.equal(SW.keyFor(navigation('./?nosw'), SCOPE), SCOPE);
@@ -184,7 +189,8 @@ test('test_worker_urls_with_different_load_tags_share_one_saved_copy', async () 
 });
 
 test('test_stale_while_revalidate_answers_from_cache_and_refreshes_it', async () => {
-    const env = loadWorker({ routes: { [`${SCOPE}style.css`]: fakeResponse('old css') } });
+    // A dev stamp: on the published scope a missing version.json no longer verifies the cache.
+    const env = loadWorker({ routes: { [`${SCOPE}version.json`]: stamp('dev'), [`${SCOPE}style.css`]: fakeResponse('old css') } });
     await lifecycle(env, 'install');
     assert.deepEqual(cacheNames(env), ['aniimax-dev']);
 
@@ -200,7 +206,7 @@ test('test_stale_while_revalidate_answers_from_cache_and_refreshes_it', async ()
 });
 
 test('test_network_first_falls_back_to_the_cache_on_timeout_and_offline', async () => {
-    const env = loadWorker({ routes: { [`${SCOPE}locales/en.json`]: fakeResponse('{"v":1}') } });
+    const env = loadWorker({ routes: { [`${SCOPE}version.json`]: stamp('dev'), [`${SCOPE}locales/en.json`]: fakeResponse('{"v":1}') } });
     await lifecycle(env, 'install');
     assert.equal((await fetchEvent(env, get('locales/en.json'))).response.body, '{"v":1}');
 
@@ -222,6 +228,7 @@ test('test_network_first_falls_back_to_the_cache_on_timeout_and_offline', async 
 test('test_solver_files_wait_for_a_slow_network_and_use_the_cache_only_when_it_fails', async () => {
     const env = loadWorker({
         routes: {
+            [`${SCOPE}version.json`]: stamp('dev'),
             [`${SCOPE}worker.js?load=1`]: fakeResponse('worker A'),
             [`${SCOPE}pkg/aniimax_bg.wasm`]: fakeResponse('wasm A'),
             [`${SCOPE}layout.js?load=1`]: fakeResponse('layout A'),
@@ -336,6 +343,7 @@ test('test_a_new_version_json_rotates_before_it_is_stored', async () => {
 test('test_only_ok_basic_responses_are_saved', async () => {
     const env = loadWorker({
         routes: {
+            [`${SCOPE}version.json`]: stamp('dev'),
             [`${SCOPE}gone.js`]: fakeResponse('nope', { ok: false, status: 404 }),
             [`${SCOPE}broken.json`]: fakeResponse('oops', { ok: false, status: 500 }),
             [`${SCOPE}opaque.js`]: fakeResponse('', { type: 'opaque', ok: false, status: 0 }),
@@ -348,7 +356,8 @@ test('test_only_ok_basic_responses_are_saved', async () => {
     const missing = await fetchEvent(env, get('gone.js'));
     assert.equal(missing.response.status, 404, 'the error still reaches the page');
     for (const path of ['broken.json', 'opaque.js', 'cors.js', 'moved.js', 'fine.js']) await fetchEvent(env, get(path));
-    assert.deepEqual([...env.caches.stores.get('aniimax-dev').keys()], [`${SCOPE}fine.js`]);
+    // Besides fine.js, the version check saved its own version.json.
+    assert.deepEqual([...env.caches.stores.get('aniimax-dev').keys()].sort(), [`${SCOPE}fine.js`, `${SCOPE}version.json`]);
 });
 
 test('test_bypassed_requests_are_left_to_the_browser', async () => {
@@ -373,6 +382,119 @@ test('test_missing_version_file_names_the_cache_dev_and_install_skips_waiting', 
     assert.deepEqual(cacheNames(env), ['aniimax-dev']);
     await lifecycle(env, 'activate');
     assert.equal(env.claimed, 1);
+});
+
+// A request to the local server (the helpers above build URLs under the published scope).
+const localGet = (path, extra = {}) => ({ ...get(path, extra), url: new URL(path, LOCAL).href });
+
+test('test_on_the_published_site_a_missing_version_file_never_verifies_or_saves', async () => {
+    const env = loadWorker({
+        routes: { [SCOPE]: fakeResponse('<html></html>'), [`${SCOPE}style.css`]: fakeResponse('css'), [`${SCOPE}app.js?v=1`]: fakeResponse('app') },
+    });
+    await lifecycle(env, 'install');
+    env.caches.log.length = 0;
+    assert.equal(env.SW.scopeIsLocal(), false);
+
+    // The page and its files still load, but nothing is trusted or saved.
+    assert.equal((await fetchEvent(env, navigation())).response.body, '<html></html>');
+    assert.equal((await fetchEvent(env, get('style.css'))).response.body, 'css');
+    assert.equal(env.SW.state.verified, false);
+
+    // A later check (the retry delay passed) gets the same 404 and still does not verify.
+    env.SW.state.lastCheckEnd = 0;
+    assert.equal(await env.SW.checkVersion(), false);
+    await fetchEvent(env, get('app.js?v=1'));
+    assert.equal(env.SW.state.verified, false);
+    assert.deepEqual(env.caches.log, [], 'no put and no delete');
+    assert.equal(env.caches.stores.get('aniimax-dev').size, 0);
+
+    // Nothing was saved, so offline there is nothing to fall back on.
+    env.offline = true;
+    assert.equal((await fetchEvent(env, get('style.css'))).response.type, 'error');
+
+    // Once the real version.json is back, the cache is trusted and saving starts.
+    env.offline = false;
+    env.routes[`${SCOPE}version.json`] = stamp('aaa1111');
+    await fetchEvent(env, navigation());
+    assert.equal(env.SW.state.verified, true);
+    assert.deepEqual(cacheNames(env), ['aniimax-aaa1111']);
+});
+
+test('test_on_a_local_server_a_missing_version_file_verifies_and_uses_the_dev_cache', async () => {
+    const env = loadWorker({
+        scope: LOCAL,
+        routes: { [LOCAL]: fakeResponse('<html></html>'), [`${LOCAL}style.css`]: fakeResponse('css') },
+    });
+    assert.equal(env.SW.scopeIsLocal(), true);
+    await lifecycle(env, 'install');
+    assert.deepEqual(cacheNames(env), ['aniimax-dev']);
+
+    assert.equal((await fetchEvent(env, localGet('style.css'))).response.body, 'css');
+    assert.equal(env.SW.state.verified, true);
+    assert.equal(env.caches.stores.get('aniimax-dev').get(`${LOCAL}style.css`).body, 'css');
+    assert.deepEqual(cacheNames(env), ['aniimax-dev']);
+
+    // Offline, the saved copy answers.
+    env.offline = true;
+    assert.equal((await fetchEvent(env, localGet('style.css'))).response.body, 'css');
+});
+
+test('test_on_a_local_server_a_missing_version_file_does_not_verify_over_a_real_builds_cache', async () => {
+    // A cache from a real build is in the way: the 404 says nothing about which build it is.
+    const caches = fakeCaches();
+    await caches.open('aniimax-aaa1111');
+    const env = loadWorker({ scope: LOCAL, caches, routes: { [`${LOCAL}style.css`]: fakeResponse('css') } });
+    await lifecycle(env, 'install');
+    caches.log.length = 0;
+    await fetchEvent(env, localGet('style.css'));
+    assert.equal(env.SW.state.verified, false);
+    assert.deepEqual(caches.log, []);
+});
+
+test('test_local_scopes_are_told_apart_from_the_published_site_and_agree_with_sw_register', () => {
+    const scopeIsLocal = (scope) => loadWorker({ scope }).SW.scopeIsLocal();
+    for (const scope of [
+        'http://localhost:8080/', 'http://127.0.0.1:8080/', 'http://[::1]:8080/', 'http://dev.localhost:3000/',
+        'http://aniimax.test/', 'http://localhost:8080/aniimax/',
+    ]) assert.equal(scopeIsLocal(scope), true, scope);
+    for (const scope of [
+        SCOPE, 'https://example.com/', 'https://localhost.example.com/', 'https://notlocalhost/', 'https://latest/',
+    ]) assert.equal(scopeIsLocal(scope), false, scope);
+
+    // sw.js carries its own copy of the rule (it cannot import); the copies must not drift apart.
+    const { SW } = loadWorker();
+    for (const host of [
+        'localhost', 'LOCALHOST', '127.0.0.1', '[::1]', '::1', 'dev.localhost', 'a.b.test', 'test', '10.0.0.5', '192.168.1.20',
+        '172.16.0.1', '172.31.255.1', '172.32.0.1', '169.254.1.1', '11.0.0.1', 'gitcodingforme.github.io', 'localhost.evil.com',
+        'notlocalhost', '', null, undefined,
+    ]) assert.equal(SW.isLocalHost(host), registerIsLocalHost(host), String(host));
+});
+
+test('test_every_module_the_solver_worker_imports_is_warmed_for_offline_use', async () => {
+    // A worker's own imports do not show up in the page's resource list, so a module only the
+    // worker loads must be in CORE_FILES. A module the page imports too (same ?v= address) is
+    // warmed from that list instead, and needs no entry: an untagged entry would be saved under
+    // another address than the tagged one the worker asks for.
+    const workerSource = readFileSync(new URL('../web/worker.js', import.meta.url), 'utf8');
+    const pageSource = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
+    const imports = [...workerSource.matchAll(/^\s*import\b[^'"]*?from\s+'(\.\/[^']+)'/gm)].map((match) => match[1]);
+    assert.ok(imports.some((specifier) => specifier.startsWith('./shared.js')), 'worker.js imports shared.js');
+
+    const { SW } = loadWorker();
+    for (const specifier of imports) {
+        const name = specifier.slice(2).split('?')[0];
+        const warmedByCore = SW.CORE_FILES.includes(name);
+        const warmedByPage = specifier.includes('?v=') && pageSource.includes(`'${specifier}'`);
+        assert.ok(warmedByCore || warmedByPage, `${specifier} is warmed for offline use`);
+    }
+
+    // And the page-list route works end to end: warmed with the tag, found offline under the tag.
+    const tagged = imports.find((specifier) => specifier.startsWith('./shared.js'));
+    const env = loadWorker({ routes: { [`${SCOPE}version.json`]: stamp('aaa1111'), [new URL(tagged, SCOPE).href]: fakeResponse('shared') } });
+    await lifecycle(env, 'install');
+    await lifecycle(env, 'message', { type: 'aniimax-warm', urls: [new URL(tagged, SCOPE).href] });
+    env.offline = true;
+    assert.equal((await fetchEvent(env, get(tagged.slice(2)))).response.body, 'shared');
 });
 
 test('test_a_new_commit_rotates_caches_and_tells_open_tabs', async () => {
@@ -440,6 +562,7 @@ test('test_the_pages_own_version_fetch_also_rotates', async () => {
 
 test('test_warm_saves_core_files_and_the_pages_files_but_not_bypassed_ones', async () => {
     const routes = {
+        [`${SCOPE}version.json`]: stamp('dev'),
         [SCOPE]: fakeResponse('<html></html>'),
         [`${SCOPE}worker.js`]: fakeResponse('worker'),
         [`${SCOPE}worker.js?load=5`]: fakeResponse('worker'),
@@ -457,7 +580,7 @@ test('test_warm_saves_core_files_and_the_pages_files_but_not_bypassed_ones', asy
     });
     const keys = [...env.caches.stores.get('aniimax-dev').keys()].sort();
     assert.deepEqual(keys, [SCOPE, `${SCOPE}app.js?v=1`, `${SCOPE}pkg/aniimax.js`, `${SCOPE}pkg/aniimax_bg.wasm`,
-        `${SCOPE}vendor/highs/highs.wasm`, `${SCOPE}worker.js`].sort());
+        `${SCOPE}vendor/highs/highs.wasm`, `${SCOPE}version.json`, `${SCOPE}worker.js`].sort());
     assert.equal(env.fetched.some((call) => call.url.endsWith('reading.json') || call.url === MATHJAX), false);
 
     // Warming again fetches only what is still missing.
