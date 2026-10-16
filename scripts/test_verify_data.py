@@ -243,6 +243,78 @@ class VerifyDataTest(unittest.TestCase):
         self.assertIn("| scales | Floral Windmill | seen, not confirmed (agree): a row of floral_windmill.csv: facility_level 1 (data: 1); environment not read (data: Adequate) |", rows)
         self.assertIn("| quick_scales | Floral Windmill | seen, not confirmed (agree):", rows)
 
+    def write_emode(self, rows: list[tuple[str, str, str]]) -> None:
+        path = self.root / "data" / "overrides" / "emode_times.csv"
+        path.write_text("item, facility, emode_seconds, source, fetched_on\n# a comment line\n"
+                        + "".join(f"{i}, {f}, {sec}, test, 2026-10-16\n" for i, f, sec in rows), encoding="utf-8")
+
+    def test_a_processor_cards_time_is_judged_against_the_emode_table(self):
+        self.write_emode([("wheatmeal", "Carousel Mill", "54"), ("cider_vinegar", "Pickling Jar", "54"), ("rose", "Farmland", "99"),
+                          ("ginseng_water", "Bouncy Brew Keg", "108"), ("moondew_radish_slices", "Blazing Stove", "162"), ("tofu", "Carousel Mill", "x")])
+        self.assertEqual(vd.load_emode_times(self.root)[("Carousel Mill", "wheatmeal")], 54)
+        self.assertNotIn(("Carousel Mill", "tofu"), vd.load_emode_times(self.root), "a row without a whole number of seconds is skipped")
+        summary = run_with(self.root, [
+            card("Carousel Mill", "wheatmeal", 1, "54s"),                                   # agree: time = E-mode base time
+            card("Blazing Stove", "moondew_radish_slices", 1, "2m 42s"),                    # agree: a seasonal row with an E-mode row
+            card("Pickling Jar", "cider_vinegar", 2, "1m 48s", frame="x.png"),              # disagree: table says 54
+            card("Simmering Pot", "rose_concentrate", 2, "1m 48s"),                         # no E-mode row: time listed, as before
+            card("Bouncy Brew Keg", "ginseng_water", 3, workload=162),                      # a Workload card stays a workload judgement
+            card("Farmland", "rose", 4, "40m 0s", environment="Cool"),                      # a crop is judged on production_time, never E-mode
+        ])
+        self.assertEqual((summary["observations"], summary["agree"], summary["disagree"], summary["unknown"]), (6, 5, 1, 0))
+        cards = self.report().split("## Item cards")[1].split("## Seen, not comparable")[0]
+        self.assertIn("| wheatmeal | Carousel Mill | 1 | 54s |  | agree | a row of carousel_mill.csv: facility_level 1 (data: 1); emode_seconds 54 (data: 54) |", cards)
+        self.assertIn("| moondew_radish_slices | Blazing Stove | 1 | 2m 42s |  | agree | a row of harvest_moon_festival.csv: facility_level 1 (data: 1); emode_seconds 162 (data: 162) |", cards)
+        self.assertIn("| cider_vinegar | Pickling Jar | 2 | 1m 48s |  | disagree | screen: emode_seconds 108; pickling_jar.csv says 54 |", cards)
+        self.assertIn("| rose_concentrate | Simmering Pot | 2 | 1m 48s |  | agree | a row of simmering_pot.csv: facility_level 2 (data: 2) |", cards)
+        self.assertIn("| ginseng_water | Bouncy Brew Keg | 3 | Workload 162 |  | agree | a row of bouncy_brew_keg.csv: facility_level 3 (data: 3); workload 162 (data: 162) |", cards)
+        self.assertIn("production_time 2400 (data: 2400)", cards)
+        self.assertNotIn("emode_seconds 2400", cards)
+        self.assertIn("E-mode base time", cards)
+        fenced = cards.split("```csv")[1].split("```")[0].strip().splitlines()
+        self.assertEqual(fenced, ["item, facility, emode_seconds, source, fetched_on",
+                                  "cider_vinegar, Pickling Jar, 108, seen on the item card in x.png (table said 54), 2026-10-15"])
+        self.assertIn("replaces that item's row in data/overrides/emode_times.csv", cards)
+        self.assertNotIn("Proposed row(s) for data/overrides/values.csv", cards, "an E-mode disagreement is not a values.csv row")
+        self.assertEqual(vd.load_emode_times(self.root)[("Pickling Jar", "cider_vinegar")], 54, "the report never writes the table")
+
+    def test_a_processor_card_whose_time_could_not_be_parsed_is_not_complete(self):
+        self.write_emode([("wheatmeal", "Carousel Mill", "54")])
+        verdict = vd.judge(vd.load_observations(self.write_log([card("Carousel Mill", "wheatmeal", 1, "fifty-four")])),
+                           *self.tables())[0]
+        self.assertEqual(verdict["status"], "agree")
+        self.assertFalse(verdict["complete"])
+        self.assertIn("emode_seconds not read (data: 54)", verdict["detail"])
+
+    def write_log(self, observations: list[dict]) -> Path:
+        log = self.root / "screenshots" / "observations.jsonl"
+        log.parent.mkdir(exist_ok=True)
+        log.write_text("".join(json.dumps(o) + "\n" for o in observations), encoding="utf-8")
+        return log
+
+    def tables(self) -> tuple:
+        files, unlocks = vd.load_facilities(self.root)
+        own, seasonal = vd.load_recipes(self.root, files)
+        own_rows, seasonal_rows = vd.load_item_rows(self.root, files)
+        return unlocks, files, own, seasonal, own_rows, seasonal_rows, vd.load_emode_times(self.root)
+
+    def test_the_real_emode_table_matches_the_nine_cards_seen_on_screen(self):
+        table = vd.load_emode_times(ROOT)
+        self.assertGreater(len(table), 100)
+        files, _ = vd.load_facilities(ROOT)
+        own_rows, seasonal_rows = vd.load_item_rows(ROOT, files)
+        for (facility, item) in table:
+            self.assertIn(facility, files, item)
+            self.assertTrue(item in own_rows.get(facility, {}) or item in seasonal_rows.get(facility, {}), f"{item} ({facility}) is not a fork row")
+        for item, facility, seconds in [("wheatmeal", "Carousel Mill", 54), ("cotton_fabric", "Joy Wheel Loom", 54), ("cider_vinegar", "Pickling Jar", 54),
+                                        ("plain_rice_porridge", "Simmering Pot", 108), ("rose_concentrate", "Simmering Pot", 108),
+                                        ("ginseng_porridge", "Simmering Pot", 108), ("moondew_radish_slices", "Blazing Stove", 162),
+                                        ("dried_ginseng", "Jukebox Dryer", 54), ("ginseng_water", "Bouncy Brew Keg", 108),
+                                        ("coarse_sifted_ore", "Chimney Kiln", 27)]:
+            self.assertEqual(table[(facility, item)], seconds, item)
+        self.assertNotIn(("Starfall Hammock", "star"), table, "Leisure facilities have no E-mode")
+        self.assertNotIn(("Farmland", "rose"), table, "plots have no E-mode")
+
     def test_card_lines_without_an_item_are_skipped_and_an_empty_log_says_no_card_yet(self):
         path = self.root / "screenshots" / "observations.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)

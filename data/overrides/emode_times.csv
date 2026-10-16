@@ -1,0 +1,141 @@
+item, facility, emode_seconds, source, fetched_on
+# E-mode base time per processor recipe (seconds), as listed on wikily.gg's facility pages; the time a processed item's
+# information card shows once E-mode exists (RV 12). Fan data, INFERRED (docs/research/game-facts.md, second pass).
+# Read by scripts/verify_data.py to judge a processor card's Time. Not an upstream file; upstream pull request 31 may replace it.
+aniipod, Aniipod Maker, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+aniipod_mega, Aniipod Maker, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, 2026-10-16
+cherry_blossom_rice_ball, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+cranberry_chocolate, Blazing Stove, 270, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+creamy_potato_soup, Blazing Stove, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+ginseng_chestnut_cake, Blazing Stove, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+jello, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+moondew_radish_slices, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+premium_jello, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+premium_potato_soup, Blazing Stove, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+rich_grape_compote, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+soy_sauce_fried_rice, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+soy_sauce_tofu, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+steamed_vermicelli_roll, Blazing Stove, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+strawberry_candy, Blazing Stove, 216, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+strawberry_cream_puff, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+sugar_roasted_chestnuts, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+tanghulu, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+umbral_hot_pot, Blazing Stove, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, 2026-10-16
+agave_drink, Bouncy Brew Keg, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+apple_juice, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+coconut_cocoa, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+coconut_cooler, Bouncy Brew Keg, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+cranberry_juice, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+ginseng_water, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+grape_juice, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+grape_lemon_drink, Bouncy Brew Keg, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+hot_cocoa, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+orange_flower_dew, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+potato_kvass, Bouncy Brew Keg, 216, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+strawberry_juice, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+sugarcane_juice, Bouncy Brew Keg, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+toasted_rice_green_tea, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+walnut_milk, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+wheat_tea, Bouncy Brew Keg, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, 2026-10-16
+cocoa_powder, Carousel Mill, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+coconut_milk, Carousel Mill, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+coconut_oil, Carousel Mill, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+ginseng_powder, Carousel Mill, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+milled_rice, Carousel Mill, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+refined_flour, Carousel Mill, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+rice_drink, Carousel Mill, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+wheatmeal, Carousel Mill, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, 2026-10-16
+coarse_sifted_ore, Chimney Kiln, 27, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+refined_ore, Chimney Kiln, 27, https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, 2026-10-16
+apple_candy, Claw Game Cooker, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+apple_tart, Claw Game Cooker, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+berry_chocolate_coconut_pudding, Claw Game Cooker, 378, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+bread, Claw Game Cooker, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+caramel_nut_chips, Claw Game Cooker, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+coconut_cookie, Claw Game Cooker, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+maple_candy_roasted_potatoes, Claw Game Cooker, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+premium_berry_chocolate_coconut_pudding, Claw Game Cooker, 378, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+premium_bread, Claw Game Cooker, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+roasted_waxing_moon_pepper, Claw Game Cooker, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+rose_shortbread, Claw Game Cooker, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, 2026-10-16
+advanced_gemstone_dust, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+advanced_wind_chime, Crafting Table, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+bamboo_ware, Crafting Table, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+bouquet, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+doll, Crafting Table, 216, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+dream_catcher, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+dye, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+flowers_in_a_bottle, Crafting Table, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+gemstone_dust, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+harvest_platter, Crafting Table, 270, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+lavender_sachet, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+pearl_necklace, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+porcelain, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+pottery, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+premium_river_washed_stones, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+premium_rose_freshener, Crafting Table, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+river_washed_stones, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+rose_freshener, Crafting Table, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+rubber_duck, Crafting Table, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+shell_ornament, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+star_wish_lantern, Crafting Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+wood_sculpture, Crafting Table, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+woven_toy, Crafting Table, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, 2026-10-16
+growth_bud, Dance Pad Polisher, 1200, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+growth_fruit, Dance Pad Polisher, 3600, https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, 2026-10-16
+cotton_fabric, Joy Wheel Loom, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+cotton_thread, Joy Wheel Loom, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+palm_rope, Joy Wheel Loom, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, 2026-10-16
+dried_apple_slices, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_bean_curd, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_cherry_blossom, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_cranberries, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_flowers, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_ginseng, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_grapes, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+dried_strawberries, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+nuts, Jukebox Dryer, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+potato_chips, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+shredded_coconut, Jukebox Dryer, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, 2026-10-16
+quartz_ore, Mine, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+rock, Mine, 900, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+shell, Mine, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/mine, 2026-10-16
+advanced_lemon_incense, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+bamboo_joss_stick, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+cherry_incense, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+herbal_ginseng_aroma, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+lemon_incense, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+lotion, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+mixed_perfume, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+orange_flower_incense, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+premium_mixed_perfume, Phonolfactory Table, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+premium_soap, Phonolfactory Table, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, 2026-10-16
+candied_strawberries, Pickling Jar, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+cider_vinegar, Pickling Jar, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+premium_salted_lemon, Pickling Jar, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+premium_sweet_rice_wine, Pickling Jar, 216, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+rice_vinegar, Pickling Jar, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+salted_cherry_blossom, Pickling Jar, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+salted_lemon, Pickling Jar, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+soy_sauce, Pickling Jar, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+umbral_pickle, Pickling Jar, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, 2026-10-16
+agave_syrup, Simmering Pot, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+chestnut_puree, Simmering Pot, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+cranberry_jam, Simmering Pot, 216, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+ginseng_porridge, Simmering Pot, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+grape_jam, Simmering Pot, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+malt_sugar, Simmering Pot, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+maple_candy_apple_jam, Simmering Pot, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+plain_rice_porridge, Simmering Pot, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+rose_concentrate, Simmering Pot, 108, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+strawberry_jam, Simmering Pot, 54, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+umbral_sweet_and_spicy_sauce, Simmering Pot, 162, https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, 2026-10-16
+deep_rock_spring_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+fresh_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+natural_mineral_spring_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+quick_deep_rock_spring_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+quick_natural_mineral_spring_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+quick_well_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+well_water, Well, 1800, https://wikily.gg/aniimo/homeland-crafting/facilities/well, 2026-10-16
+laminated_beams, Woodworking Bench, 27, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16
+rough_lumber, Woodworking Bench, 27, https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, 2026-10-16

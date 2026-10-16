@@ -438,6 +438,14 @@ class Watcher:
                 # Dried Ginseng given Ginseng Water's Bouncy Brew Keg Lv.3), so such a reading is dropped;
                 # the rest is kept but marked, and the report treats it as a weaker sighting.
                 front = found[0] if found else None
+                # It also copies the half-hidden card's time onto the front card (the same frame: Ginseng
+                # Water, which says "Workload 162", read as Dried Ginseng's 54s). The same time on two
+                # different items is taken as copied: the front card's time is dropped (listed as not read,
+                # never judged). With one card open the model answers the second-card question by repeating
+                # the front card, item and all; that is not a copy, and the repeat is dropped below.
+                if front and time_text and front["time"] == time_text and item != front["item"]:
+                    notes.append(f"{frame}: the front card's time {time_text} repeats the card behind's and is dropped (probably copied)")
+                    front["time"], front["time_seconds"] = None, None
                 if front and (front["facility"], front["facility_level"]) == (facility, fact["facility_level"]):
                     notes.append(f"{frame}: card behind ({item}) not logged (its facility line repeats the front card's, probably copied)")
                     continue

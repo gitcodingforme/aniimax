@@ -462,6 +462,26 @@ class PipelineTest(unittest.TestCase):
             kept = json.loads((Path(d) / "observations.json").read_text(encoding="utf-8"))
             self.assertTrue(any("Moon Base" in n for n in kept["notes"]), "skip notes reach the disk")
 
+    def test_a_front_card_time_that_repeats_the_card_behind_is_dropped(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [
+                # the overlapping frame as the model reads it: Ginseng Water (really "Workload 162") given Dried Ginseng's 54s
+                {"kind": "stock", "fields": {"items": []}, "card": {"item": "Ginseng Water", "facility": "Bouncy Brew Keg", "facility_level": 3, "time": "54s", "workload": None, "environment": None},
+                 "behind": {"item": "Dried Ginseng", "facility": "Jukebox Dryer", "facility_level": 5, "time": "54s"}},
+                # two different times: both kept
+                {"kind": "stock", "fields": {"items": []}, "card": self.ROSE,
+                 "behind": {"item": "Rose Concentrate", "facility": "Simmering Pot", "facility_level": 2, "time": "1m 48s"}},
+                # one card open: the model answers the second-card question by repeating the front card; its time stays
+                {"kind": "facility", "fields": self._panel(), "card": {"item": "Wheatmeal", "facility": "Carousel Mill", "facility_level": 1, "time": "54s", "workload": None, "environment": None},
+                 "behind": {"item": "Wheatmeal", "facility": "Carousel Mill", "facility_level": 1, "time": "54s"}},
+            ])
+            self._feed(w, [(30, 30, 30), (120, 120, 120), (200, 200, 200)], make=card_frame)
+            logged = [o for o in self._observations(d) if o["fact"] == "card"]
+            self.assertEqual([(o["item"], o["time"], o["time_seconds"]) for o in logged],
+                             [("ginseng_water", None, None), ("dried_ginseng", "54s", 54), ("rose", "40m 0s", 2400), ("rose_concentrate", "1m 48s", 108), ("wheatmeal", "54s", 54)])
+            self.assertEqual(logged[0]["facility_level"], 3, "the rest of the front card is kept")
+            self.assertIn("repeats the card behind's and is dropped", " ".join(w.observation_notes))
+
     def test_card_facts_survive_a_restart_and_a_failed_card_question_keeps_the_rest(self):
         with tempfile.TemporaryDirectory() as d:
             w = self._card_watcher(d, [{"kind": "stock", "fields": {"items": []}, "card": self.ROSE}])

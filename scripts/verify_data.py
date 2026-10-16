@@ -26,15 +26,18 @@ This script compares them with the data and writes a short report:
            its environment: the row of that facility's CSV (or the seasonal file) is looked up by the
            item name and each column the card shows is judged on its own. facility_level always;
            production_time against the card's time in seconds where the CSV has that column (crops);
-           workload only when the card itself says "Workload N" (the processor CSVs hold a workload,
-           not seconds, so a processor card's "Time" is listed, never judged); environment when the
+           for a processed item the card's "Time" against emode_seconds in data/overrides/emode_times.csv
+           (the recipe's E-mode base time, which the card shows once E-mode exists at RV 12; see
+           docs/design.md section 7, question 8), or listed, not judged, when that table has no row for
+           the item; workload only when the card itself says "Workload N" (the processor CSVs hold a
+           workload, not seconds); environment when the
            card shows one. One disagreeing column makes the card disagree; a card whose item is a row
            of another facility's file disagrees too; an item that is no row anywhere is unknown.
            A card that agrees for an item listed in data/unverified.csv confirms that row.
 
 Nothing is written to the overrides: a disagreement prints a ready-to-paste fragment for
-data/overrides/structure.json (unlocks) or row for data/overrides/values.csv (card columns) that you
-accept or reject.
+data/overrides/structure.json (unlocks), a row for data/overrides/values.csv (card columns) or a row
+for data/overrides/emode_times.csv (a processed item's time) that you accept or reject.
 
 Usage (from the repository root):
   python scripts/verify_data.py [--root R] [--observations FILE] [--out-md FILE] [--out-json FILE] [--web-dir DIR]
@@ -55,6 +58,7 @@ from pathlib import Path
 
 REPORT_FORMAT = "aniimax-verification"
 SEASONAL_FILE = "harvest_moon_festival.csv"
+EMODE_FILE = "overrides/emode_times.csv"  # under data/: item, facility, emode_seconds, source, fetched_on
 ENTRY = re.compile(r"name: '([^']+)',\s*slug: '([^']+)'")
 
 
@@ -109,6 +113,20 @@ def load_item_rows(root: Path, files: dict[str, str]) -> tuple[dict[str, dict[st
             if row.get("name") and row.get("facility"):
                 seasonal.setdefault(row["facility"], {})[row["name"]] = row
     return own, seasonal
+
+
+def load_emode_times(root: Path) -> dict[tuple[str, str], int]:
+    """{(facility, item): E-mode base time in seconds} from data/overrides/emode_times.csv, the time a
+    processed item's card shows (fan data, see the file's header). Rows without a whole number of
+    seconds are skipped. Empty when the file is missing."""
+    path = root / "data" / EMODE_FILE
+    if not path.is_file():
+        return {}
+    table = {}
+    for row in read_rows(path):
+        if row.get("item") and row.get("facility") and row.get("emode_seconds", "").isdigit():
+            table[(row["facility"], row["item"])] = int(row["emode_seconds"])
+    return table
 
 
 def load_unverified(root: Path) -> list[dict]:
@@ -190,11 +208,14 @@ def whole(v) -> bool:
     return isinstance(v, int) and not isinstance(v, bool)
 
 
-def judge_card(obs: dict, files: dict[str, str], own_rows: dict[str, dict[str, dict]], seasonal_rows: dict[str, dict[str, dict]]) -> dict:
+def judge_card(obs: dict, files: dict[str, str], own_rows: dict[str, dict[str, dict]], seasonal_rows: dict[str, dict[str, dict]],
+               emode: dict[tuple[str, str], int] | None = None) -> dict:
     """The verdict for one item card: {obs, status, detail, columns: [{column, screen, data, status}],
-    proposals: [values.csv rows as dicts]}. Columns are judged one by one (see the module docstring);
-    a column the card did not show, or that the data holds in another unit, is listed as "listed"."""
+    proposals: [values.csv or emode_times.csv rows as dicts, each with a "table"]}. Columns are judged
+    one by one (see the module docstring); a column the card did not show, or that the data holds in
+    another unit, is listed as "listed". `emode` is the E-mode time table (load_emode_times)."""
     facility, item = obs["facility"], obs["item"]
+    emode = emode or {}
     if facility not in files:
         return {"obs": obs, "status": "unknown", "detail": "facility not in the table", "columns": [], "proposals": []}
     row, file = None, files[facility]
@@ -224,9 +245,12 @@ def judge_card(obs: dict, files: dict[str, str], own_rows: dict[str, dict[str, d
     seconds = obs.get("time_seconds") if whole(obs.get("time_seconds")) else None
     if row.get("production_time", "").strip():  # a crop or seasonal crop: the data holds seconds
         compare("production_time", seconds, row["production_time"], lambda s, d: d.isdigit() and int(d) == s)
-    elif "workload" in row:  # a processor: the card's time is listed; only an explicit "Workload N" is judged
+    elif "workload" in row:  # a processor: the card's time is the E-mode base time when the table has it, else listed
         if obs.get("time"):
-            columns.append({"column": "time", "screen": obs["time"], "data": f"workload {row.get('workload', '')}", "status": "listed"})
+            if (facility, item) in emode:
+                compare("emode_seconds", seconds, str(emode[(facility, item)]), lambda s, d: d.isdigit() and int(d) == s)
+            else:
+                columns.append({"column": "time", "screen": obs["time"], "data": f"workload {row.get('workload', '')}", "status": "listed"})
         workload = obs.get("workload") if whole(obs.get("workload")) else None
         if workload is not None:
             compare("workload", workload, row.get("workload", ""), lambda s, d: d.isdigit() and int(d) == s)
@@ -246,8 +270,11 @@ def judge_card(obs: dict, files: dict[str, str], own_rows: dict[str, dict[str, d
     detail = f"a row of {file}" + (f": {'; '.join(said)}" if said else "")
     if bad:
         detail = f"screen: " + "; ".join(f"{c['column']} {c['screen']}" for c in bad) + "; " + file + " says " + "; ".join(f"{c['data'] or 'none'}" for c in bad)
-    proposals = [{"file": file, "match": item, "column": c["column"], "value": str(c["screen"]), "upstream_value": c["data"],
-                  "verified_on": day(obs.get("t")), "note": f"seen on the item card in {obs.get('frame')}"} for c in bad]
+    proposals = [{"table": "values", "file": file, "match": item, "column": c["column"], "value": str(c["screen"]), "upstream_value": c["data"],
+                  "verified_on": day(obs.get("t")), "note": f"seen on the item card in {obs.get('frame')}"} for c in bad if c["column"] != "emode_seconds"]
+    proposals += [{"table": "emode", "item": item, "facility": facility, "emode_seconds": str(c["screen"]),
+                   "source": f"seen on the item card in {obs.get('frame')} (table said {c['data']})", "fetched_on": day(obs.get("t"))}
+                  for c in bad if c["column"] == "emode_seconds"]
     if obs.get("behind"):
         detail += " (read off a half-hidden card behind another: weaker)"
     # complete: every column the data holds for this item was read off the card and agreed, and the card was in front
@@ -261,7 +288,8 @@ def slug(text) -> str:
 
 def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: dict[str, str],
           own: dict[str, set[str]], seasonal: dict[str, set[str]],
-          own_rows: dict[str, dict[str, dict]] | None = None, seasonal_rows: dict[str, dict[str, dict]] | None = None) -> list[dict]:
+          own_rows: dict[str, dict[str, dict]] | None = None, seasonal_rows: dict[str, dict[str, dict]] | None = None,
+          emode: dict[tuple[str, str], int] | None = None) -> list[dict]:
     """One verdict per observation: {obs, status: agree|disagree|unknown, detail, [table_rv]}."""
     out = []
     # The same unlock line seen with different numbers in different frames: the model misreads a
@@ -273,7 +301,7 @@ def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: d
     for obs in observations:
         facility = obs["facility"]
         if obs["fact"] == "card":
-            out.append(judge_card(obs, files, own_rows or {}, seasonal_rows or {}))
+            out.append(judge_card(obs, files, own_rows or {}, seasonal_rows or {}, emode))
         elif obs["fact"] == "unlock":
             fl, rv = obs.get("facility_level"), obs.get("rv_level")
             table = unlocks.get(facility)
@@ -330,9 +358,15 @@ def confirmed_unverified(verdicts: list[dict], unverified: list[dict]) -> list[d
     return out
 
 
+VALUES_HEADER = "file, match, column, value, upstream_value, verified_on, note"
+EMODE_HEADER = "item, facility, emode_seconds, source, fetched_on"
+
+
 def override_row(p: dict) -> str:
-    """One data/overrides/values.csv line (file, match, column, value, upstream_value, verified_on, note)."""
-    return ", ".join(str(p[k]).replace(",", ";") for k in ("file", "match", "column", "value", "upstream_value", "verified_on", "note"))
+    """One data/overrides/values.csv line (file, match, column, value, upstream_value, verified_on, note),
+    or one data/overrides/emode_times.csv line (item, facility, emode_seconds, source, fetched_on)."""
+    keys = EMODE_HEADER.split(", ") if p.get("table") == "emode" else VALUES_HEADER.split(", ")
+    return ", ".join(str(p[k]).replace(",", ";") for k in keys)
 
 
 def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]] | None = None, unverified: list[dict] | None = None) -> str:
@@ -381,9 +415,11 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
     # Item cards: one row per card seen, judged column by column against the item's CSV row.
     lines += ["## Item cards", "",
               "An item's information card names the facility and level that make it, its time and, for a crop, its environment: "
-              "the facility_level, production_time and environment columns of that facility's CSV. A processor's CSV holds a workload, "
-              "not seconds, so on a processor's card the time is listed and not judged (only a card that itself says 'Workload N' is "
-              "compared with the workload column). Verdict: agree when every judged column agrees, disagree when one does not.", ""]
+              "the facility_level, production_time and environment columns of that facility's CSV. A processed item's time is its "
+              "recipe's E-mode base time (shown once E-mode exists, RV 12), judged against emode_seconds in data/overrides/emode_times.csv "
+              "(fan data from wikily.gg, not upstream's) and listed, not judged, when that table has no row for the item; a card that "
+              "itself says 'Workload N' is compared with the workload column. Verdict: agree when every judged column agrees, disagree "
+              "when one does not.", ""]
     if not cards:
         lines += ["No item card seen yet. Click an item on the Home Management screen while the watcher runs.", ""]
     else:
@@ -397,15 +433,21 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
         if bad:
             lines += ["### Card disagreements", "",
                       "Open the card in game and read the line yourself before pasting anything (two cards can overlap, and the model has "
-                      "mixed the front card with the one behind it). Each proposed line goes into data/overrides/values.csv; run "
-                      "`python scripts/apply_overrides.py --check` afterwards. Nothing is applied for you.", ""]
+                      "mixed the front card with the one behind it). Each proposed line goes into data/overrides/values.csv (run "
+                      "`python scripts/apply_overrides.py --check` afterwards) or, for an E-mode time, replaces that item's row in "
+                      "data/overrides/emode_times.csv. Nothing is applied for you.", ""]
         for v in bad:
             o = v["obs"]
             lines += [f"#### {o['item']} ({o['facility']})", "", f"- {v['detail']}", f"- Frame {o.get('frame')}, seen {day(o.get('t'))}."]
-            if v.get("proposals"):
-                lines += ["- Proposed row(s) for data/overrides/values.csv:", "", "```csv", "file, match, column, value, upstream_value, verified_on, note"]
-                lines += [override_row(p) for p in v["proposals"]] + ["```", ""]
-            else:
+            values = [p for p in v.get("proposals", []) if p.get("table") != "emode"]
+            emodes = [p for p in v.get("proposals", []) if p.get("table") == "emode"]
+            if values:
+                lines += ["- Proposed row(s) for data/overrides/values.csv:", "", "```csv", VALUES_HEADER]
+                lines += [override_row(p) for p in values] + ["```", ""]
+            if emodes:
+                lines += ["- Proposed row(s) for data/overrides/emode_times.csv (replace the item's current row):", "", "```csv", EMODE_HEADER]
+                lines += [override_row(p) for p in emodes] + ["```", ""]
+            if not v.get("proposals"):
                 lines += ["- Placement is not an override (the CSV rows are upstream's). Check the card in game, then tell upstream.", ""]
         lines += ["### Rows of data/unverified.csv", "",
                   "Upstream marks these values as not yet confirmed in game. A card confirms a row when every column the data holds "
@@ -439,7 +481,7 @@ def run(root: Path, observations: Path, out_md: Path, out_json: Path, web_json: 
     own, seasonal = load_recipes(root, files)
     own_rows, seasonal_rows = load_item_rows(root, files)
     unverified = load_unverified(root)
-    verdicts = judge(load_observations(observations), unlocks, files, own, seasonal, own_rows, seasonal_rows)
+    verdicts = judge(load_observations(observations), unlocks, files, own, seasonal, own_rows, seasonal_rows, load_emode_times(root))
     updated = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now if now is not None else time.time()))
     try:
         report = out_md.resolve().relative_to(root.resolve()).as_posix()
