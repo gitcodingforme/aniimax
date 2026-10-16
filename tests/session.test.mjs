@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    DEFAULTS, adaptPlan, aimInput, cappedRows, fillSeconds, firstCollectBy, levelUpLosses, longRecipes, readSettings, rowRates,
+    DEFAULTS, adaptPlan, aimInput, batchInterval, cappedRows, fillSeconds, firstCollectBy, levelUpLosses, longRecipes, readSettings, rowRates,
     shouldStop, unknownCapRows, windowCoins, windowSecondsFor, writeSettings,
 } from '../web/session.js';
-import { planRows } from '../web/reminders.js';
+import { effectiveCycle, planRows } from '../web/reminders.js';
 import { stripVariant } from '../web/plan-summary.js';
 
 // Shaped like find_plan's answer (JsProductionPlan in src/wasm.rs), cut down to what matters here.
@@ -281,4 +281,91 @@ test('shouldStop: a run stops when no plan is left or the inputs were solved aga
     assert.equal(shouldStop(false, previous, null), false);
     assert.equal(shouldStop(false, previous, { setupHash: 'h2' }), false);
     assert.equal(shouldStop(true, null, { setupHash: 'h2' }), false);
+});
+
+// --- a processor's wait for its ingredients (effectiveCycle from reminders.js) ----------------
+
+// The same plan, but the mill is busy only half the time (its suppliers are slow): planRows turns
+// busy_units 0.5 into a batch every 400 s instead of every 200 s. These rows are not overridden.
+const starvedPlan = { ...plan, coin_items: plan.coin_items.map(s => (s.item_name === 'milled_rice' ? { ...s, busy_units: 0.5 } : s)) };
+const starvedRows = planRows(starvedPlan, { recipes, facilities });
+const [, sRock, sMill, sRoseA, sRoseB] = starvedRows;
+const fedMill = rows[2]; // the shared fixture's mill: its interval between batches is its batch time
+
+test('test_batch_interval_is_the_reminders_effective_cycle', () => {
+    assert.equal(sMill.cycleSeconds, 200);
+    assert.equal(sMill.effectiveCycleSeconds, 400, 'planRows stretches a starved processor');
+    assert.equal(batchInterval(sMill), 400);
+    assert.equal(batchInterval(sMill), effectiveCycle(sMill));
+    assert.equal(batchInterval(sRock), 600, 'a gatherer works at its own pace');
+    // Never below the batch time, and the batch time for a row saved without the field.
+    assert.equal(batchInterval({ ...sMill, effectiveCycleSeconds: 50 }), 200);
+    assert.equal(batchInterval({ ...sMill, effectiveCycleSeconds: NaN }), 200);
+    assert.equal(batchInterval({ ...sMill, effectiveCycleSeconds: undefined }), 200);
+});
+
+test('test_a_starved_processor_fills_later_and_the_session_lists_follow', () => {
+    // 2000 s until the first ingredients, then 20 batches, one every 400 s: not every 200 s.
+    assert.equal(fillSeconds(sMill, caps), 2000 + 20 * 400);
+    assert.equal(fillSeconds(fedMill, caps), 2000 + 20 * 200, 'the fed mill, for comparison');
+    // A smaller interval than the batch time (a stale row) cannot make the store fill sooner than a batch allows.
+    assert.equal(fillSeconds({ ...sMill, effectiveCycleSeconds: 50 }, caps), 2000 + 20 * 200);
+
+    // Overnight list: the mill now fills at 10000 s, between the rice (1800) and the mine (19800).
+    assert.deepEqual(cappedRows(starvedRows, caps, 8 * HOUR).map(r => [r.item, r.fillSeconds]), [
+        ['rice', 1800], ['milled_rice', 10000], ['rock', 19800],
+    ]);
+    // Inside a 2-hour window the starved mill is no longer on the list (the fed one filled at 6000 s).
+    assert.deepEqual(cappedRows(starvedRows, caps, 2 * HOUR).map(r => r.item), ['rice']);
+    assert.deepEqual(cappedRows(rows, caps, 2 * HOUR).map(r => r.item), ['rice', 'milled_rice']);
+    // First collect-by: with the rice out of the picture the mill still comes before the mine, but later.
+    assert.equal(firstCollectBy([sMill, sRock], caps).fillSeconds, 10000);
+    assert.equal(firstCollectBy([fedMill, sRock], caps).fillSeconds, 6000);
+    assert.equal(firstCollectBy(starvedRows, caps).item, 'rice');
+});
+
+test('test_window_coins_run_until_the_starved_processor_fills', () => {
+    // Overnight: the mill's 0.5 coins a second now run for 10000 s (not 6000 s) before its store is full.
+    const night = windowCoins(starvedPlan, starvedRows, caps, 8 * HOUR);
+    assert.ok(Math.abs(night - (0.5 * 10000 + 0.25 * 19800 + 0.25 * 8 * HOUR)) < 1e-6, String(night));
+    const fed = windowCoins(plan, rows, caps, 8 * HOUR);
+    assert.ok(night > fed, 'a slower mill keeps earning for longer before it fills');
+    assert.ok(night <= plan.rate_per_second * 8 * HOUR);
+    // Short window: inside every fill time, the plain rate times the window.
+    assert.ok(Math.abs(windowCoins(starvedPlan, starvedRows, caps, 1800) - 1800) < 1e-6);
+});
+
+test('test_overnight_adaptation_uses_the_real_pace_of_a_starved_processor', async () => {
+    // A 2.5-hour window (9000 s): rice fills at 1800 s. The fed mill fills at 6000 s, the starved one at 10000 s.
+    const planner = (source) => async (input) => {
+        const out = new Set(input.exclude);
+        return { ...source, coin_items: source.coin_items.filter(s => !s.item_name || !out.has(stripVariant(s.item_name))) };
+    };
+    const starved = await adaptPlan({
+        base: { exclude: [] }, plan: starvedPlan, mode: 'overnight', windowSeconds: 9000, findPlan: planner(starvedPlan), recipes, facilities, caps,
+    });
+    assert.deepEqual(starved.excluded, ['rice']);
+    assert.equal(starved.complete, true);
+    const fed = await adaptPlan({
+        base: { exclude: [] }, plan: { ...plan, coin_items: plan.coin_items }, mode: 'overnight', windowSeconds: 9000, findPlan: planner(plan), recipes, facilities, caps,
+    });
+    assert.deepEqual(fed.excluded, ['rice', 'milled_rice'], 'a mill that is kept supplied fills inside the window');
+});
+
+test('test_a_processor_that_does_not_repeat_is_done_after_its_wait_and_one_interval', () => {
+    const off = { processorsRepeat: false, plotsResow: false };
+    // 2000 s for the ingredients, then one batch at the real pace (400 s): 2400 s, not 2200 s.
+    assert.equal(fillSeconds(sMill, caps, off), 2400);
+    assert.equal(fillSeconds(fedMill, caps, off), 2200, 'a fed mill is unchanged');
+    // No wait for ingredients, but a slow supply: the one batch still takes the real interval.
+    assert.equal(fillSeconds({ ...sMill, leadSeconds: 200, effectiveCycleSeconds: 600 }, caps, off), 600);
+    // Crops and gatherers keep their batch time.
+    assert.equal(fillSeconds(sRoseA, caps, off), 7200);
+    assert.equal(fillSeconds(sRock, caps, off), 19800);
+    assert.deepEqual(cappedRows(starvedRows, caps, 8 * HOUR, off).map(r => [r.item, r.fillSeconds]), [
+        ['rice', 1800], ['milled_rice', 2400], ['rose__by1', 5400], ['rose__uncovered__by2', 7200], ['rock', 19800],
+    ]);
+    assert.equal(firstCollectBy([sMill, sRoseB], caps, off).fillSeconds, 2400);
+    const night = windowCoins(starvedPlan, starvedRows, caps, 8 * HOUR, off);
+    assert.ok(Math.abs(night - (0.5 * 2400 + 0.25 * 19800 + (0.25 / 3) * 7200 + (0.5 / 3) * 5400)) < 1e-6, String(night));
 });

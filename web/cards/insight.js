@@ -1,6 +1,9 @@
 // "Why am I behind?" card: the plan's predicted coins an hour against what actually happened
 // between your snapshots, and, when the latest stretch fell short, ranked guesses at why. Logic in
-// web/insight.js; the card contract is in web/panels.js. Nothing is stored.
+// web/insight.js; the card contract is in web/panels.js. Nothing is stored. It follows the 'plan',
+// 'history' and 'coins' topics. 'coins' is only a cue to redraw when new watcher readings come in,
+// snapshot or not; the points themselves are always read from ctx.getCoinSeries(), so a profile
+// import or a cleared log never leaves old points on screen.
 
 import { gaps as findGaps, gapsWithin, guesses, intervals } from '../insight.js?v=fork-m10-1';
 import { planRows } from '../reminders.js?v=fork-m10-1';
@@ -89,6 +92,7 @@ export function mount(el, ctx) {
             shortfallPerHour: latest.predictedPerHour - latest.actualPerHour,
             snapshotHash: snapshot?.setupHash ?? null,
             hours: latest.hours,
+            recipes: ctx.getRecipes(),
         }).slice(0, MAX_GUESSES);
         const items = list.map(g => `<li class="insight-guess">
             <span class="insight-confidence insight-confidence-${escape(g.confidence)}">${escape(g.confidence)}</span>
@@ -118,4 +122,9 @@ export function mount(el, ctx) {
 
     ctx.on('history', render);
     ctx.on('plan', render);
+    // A cue to redraw only; the value is not used. undefined is the replay of a topic the page has
+    // not published yet: no change.
+    ctx.on('coins', (value) => {
+        if (value !== undefined) render();
+    });
 }

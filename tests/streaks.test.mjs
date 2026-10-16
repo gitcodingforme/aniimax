@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { chips, personalBests, rvMilestones, snapshotDays, streaks, summarize } from '../web/streaks.js';
+import { mount } from '../web/cards/streaks.js';
 
 const utc = date => date.toISOString().slice(0, 10);
 const snap = (id, rv, perHour) => ({
@@ -72,4 +73,75 @@ test('test_chips_show_six_labels', () => {
     assert.equal(full[2].value, '1');
     assert.equal(full[3].value, 'RV 4 (2026-10-14)');
     assert.equal(full[4].value, '12,345 (2026-10-14)');
+});
+
+// --- the card follows the coins topic ----------------------------------------------------------
+
+// A card context that remembers each topic's listener, so a test can send values the way the page
+// does. Like the bus, a listener is called right away with the latest value (undefined here: the
+// page may not have published 'coins' yet).
+function cardContext({ history, series: initialSeries = [] }) {
+    const nodes = {};
+    const el = {
+        set innerHTML(html) { this.html = html; },
+        querySelector(selector) { return (nodes[selector] ||= { innerHTML: '' }); },
+    };
+    let series = initialSeries;
+    const calls = { getCoinSeries: 0, getHistory: 0 };
+    const handlers = {};
+    const ctx = {
+        format: { escape: s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;') },
+        addStylesheet: () => {},
+        on: (topic, fn) => { handlers[topic] = fn; fn(); return () => {}; },
+        getHistory: () => { calls.getHistory++; return history; },
+        getCoinSeries: () => { calls.getCoinSeries++; return series; },
+    };
+    // What the page's getCoinSeries() hands out from now on (the topic's value is never read).
+    const setSeries = (next) => { series = next; };
+    return { el, nodes, ctx, handlers, calls, setSeries };
+}
+const rising = [{ t: T0, coins: 0 }, { t: T0 + 2 * HOUR, coins: 4000 }]; // 2000 coins an hour
+
+test('test_the_card_redraws_when_coin_points_arrive_on_the_coins_topic', () => {
+    const history = [snap('2026-10-14T10:00:00Z', 4, 12345)];
+    const { el, nodes, ctx, handlers, calls, setSeries } = cardContext({ history, series: [] });
+    mount(el, ctx);
+    assert.equal(typeof handlers.coins, 'function', 'the card listens on the coins topic');
+    assert.match(nodes['#streaks-body'].innerHTML, /Best actual coins\/h:<\/strong> none yet/);
+    const drawn = calls.getHistory;
+
+    // Nothing published yet (the topic replays undefined): no change, no redraw.
+    handlers.coins(undefined);
+    assert.equal(calls.getHistory, drawn, 'nothing was drawn again');
+
+    // The page publishes: the card redraws and reads the points from getCoinSeries(), so the best
+    // actual pace shows up without a new snapshot.
+    setSeries(rising);
+    handlers.coins(rising);
+    assert.equal(calls.getHistory, drawn + 1, 'one redraw');
+    assert.match(nodes['#streaks-body'].innerHTML, /Best actual coins\/h:<\/strong> 2,000 \(/);
+
+    // The topic's value is never kept: the log is cleared with no publish, and the next redraw
+    // (a snapshot, say) shows the cleared state.
+    setSeries([]);
+    handlers.history();
+    assert.match(nodes['#streaks-body'].innerHTML, /Best actual coins\/h:<\/strong> none yet/);
+    // A publish that carries old points while the page's series is empty draws nothing from them.
+    handlers.coins(rising);
+    assert.match(nodes['#streaks-body'].innerHTML, /Best actual coins\/h:<\/strong> none yet/);
+});
+
+test('test_the_card_reads_get_coin_series_until_the_topic_has_a_value', () => {
+    const history = [snap('2026-10-14T10:00:00Z', 4, 12345)];
+    const { el, nodes, ctx, handlers, calls } = cardContext({ history, series: rising });
+    mount(el, ctx);
+    assert.ok(calls.getCoinSeries >= 1);
+    assert.match(nodes['#streaks-body'].innerHTML, /Best actual coins\/h:<\/strong> 2,000 \(/, 'the getter alone is enough');
+    handlers.coins(undefined);
+    assert.match(nodes['#streaks-body'].innerHTML, /Best actual coins\/h:<\/strong> 2,000 \(/);
+    // No snapshot at all: the empty prompt stays, with or without coin points.
+    const bare = cardContext({ history: [], series: rising });
+    mount(bare.el, bare.ctx);
+    bare.handlers.coins(rising);
+    assert.match(bare.nodes['#streaks-body'].innerHTML, /Save a snapshot to start a streak/);
 });

@@ -12,7 +12,7 @@
 // Output caps are fan-wiki figures (OUTPUT_CAPS in facility-config.js), not checked in game. A row
 // whose cap (or batch size) is unknown counts as "never fills" and is listed apart.
 
-import { DEFAULT_ASSUMPTIONS, batchesUntilFull, outputCap, planRows } from './reminders.js?v=fork-m10-1';
+import { DEFAULT_ASSUMPTIONS, batchesUntilFull, effectiveCycle, outputCap, planRows } from './reminders.js?v=fork-m10-1';
 import { stripVariant } from './plan-summary.js?v=fork-m10-1';
 
 export const SESSION_KEY = 'aniimax-session-v1';
@@ -97,26 +97,32 @@ export function longRecipes(plan, windowSeconds) {
         .reduce((names, step) => addName(names, step.item_name), []);
 }
 
-// Seconds between finished batches: the row's effectiveCycleSeconds (from the plan's output rate,
-// set by planRows) when it has one, else the batch time.
+// Seconds between finished batches: reminders.js's effectiveCycle, the row's effectiveCycleSeconds
+// (a processor works only as fast as its ingredients arrive, so this is longer than its batch time
+// when it waits on suppliers), never less than the batch time. Kept as a name of its own for the
+// callers that already use it.
 export function batchInterval(row) {
-    const interval = Number(row?.effectiveCycleSeconds ?? row?.cycleSeconds);
-    return interval > 0 ? interval : row?.cycleSeconds;
+    return effectiveCycle(row);
+}
+
+// Seconds a processor row waits for its first ingredients before its first batch can start (0 for
+// every other row, and for a processor nothing blocks): leadSeconds holds that wait and one batch.
+function ingredientWait(row) {
+    return row?.kind === 'processor' && row.leadSeconds > row.cycleSeconds ? row.leadSeconds - row.cycleSeconds : 0;
 }
 
 // Seconds from setup until this row's output store is full (a planRows row), or null when the cap
 // or the batch size is unknown. The same moment as the reminders' "collect" event: the store's
-// batches times the interval between finished batches (batchInterval), plus, for a processor, the
-// wait for its first ingredients (its leadSeconds already holds that wait and its first batch). A
-// row that does not repeat (see `repeats`) stops after one batch, as the reminders assume, cap or
-// no cap.
+// batches times the interval between finished batches (effectiveCycle, which for a processor
+// short of ingredients is longer than its batch time), plus, for a processor, the wait for its
+// first ingredients. A row that does not repeat (see `repeats`) stops after one batch, as the
+// reminders assume, cap or no cap: that batch is done after the same wait plus one interval.
 export function fillSeconds(row, caps, assumptions = DEFAULT_ASSUMPTIONS) {
     if (!row || !(row.cycleSeconds > 0)) return null;
-    if (!repeats(row, assumptions)) return row.kind === 'processor' && row.leadSeconds > 0 ? row.leadSeconds : row.cycleSeconds;
+    if (!repeats(row, assumptions)) return ingredientWait(row) + effectiveCycle(row);
     const batches = batchesUntilFull(outputCap(caps, row.facility, row.level), row.yieldPerBatch);
     if (!batches) return null;
-    const wait = row.kind === 'processor' && row.leadSeconds > row.cycleSeconds ? row.leadSeconds - row.cycleSeconds : 0;
-    return batches * batchInterval(row) + wait;
+    return batches * effectiveCycle(row) + ingredientWait(row);
 }
 
 // Rows whose store fills before the window ends, soonest first: `[{ key, item, facility, fillSeconds }]`.

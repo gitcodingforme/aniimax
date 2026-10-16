@@ -1,5 +1,7 @@
 // "Streaks and milestones" card: snapshot streaks, first day of each RV level, personal bests.
-// Reads the history through ctx; stores nothing.
+// Reads the history through ctx; stores nothing. It redraws on 'history' and on 'coins' (a cue that
+// the watcher's coin points changed, since the best actual coins/h comes from them); the points
+// themselves are always read from ctx.getCoinSeries(), never kept from the topic.
 import { chips, localDay, summarize } from '../streaks.js?v=fork-m10-1';
 
 const MAX_MILESTONES = 8;
@@ -28,4 +30,9 @@ export function mount(el, ctx) {
     }
 
     ctx.on('history', render);
+    // A cue to redraw only; the value is not used. undefined is the replay of a topic the page has
+    // not published yet: no change.
+    ctx.on('coins', (value) => {
+        if (value !== undefined) render();
+    });
 }

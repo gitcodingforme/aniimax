@@ -3,6 +3,7 @@
 // tests/insight.test.mjs; web/cards/insight.js draws it. The app cannot see the game, so every
 // reason here is a guess from the plan and from gaps in the watcher's readings, never a measurement.
 import { batchesUntilFull, effectiveCycle, outputCap, pretty } from './reminders.js?v=fork-m10-1';
+import { stripVariant } from './plan-summary.js?v=fork-m10-1';
 
 export const MIN_INTERVAL_MINUTES = 30;
 export const WATERING_LOSS = 0.25; // two waterings of an eighth of the grow time each
@@ -121,16 +122,63 @@ export function shareOfRate(rows, plan) {
     return shares;
 }
 
+// The share (0 to 1) of the plan's income that rides on each crop row because the crop is an
+// ingredient of something the plan sells, as a Map keyed by row.key (crops that feed nothing are
+// left out). A crop that only feeds a processor has no income stream of its own, so shareOfRate
+// gives it 0 even though the product made from it pays for the crop's work. This walks `recipes`
+// (the page's recipe index; `ingredients` is a list of item names) from each income stream down
+// to the crop rows: a stream's income is split equally between its recipe's ingredients, an
+// ingredient that a processor makes passes its part further down the same way, and a part that
+// reaches an ingredient with no crop row in the plan (mined, bought, unknown) is dropped. Several
+// rows of one crop share their part by facility count. The split is a guess: what a short crop
+// really costs depends on which ingredient is scarcest. Without income_streams or without recipes
+// there is nothing to follow and the Map is empty.
+export function feederShares(rows, plan, recipes) {
+    const shares = new Map();
+    const result = plan?.plan ?? plan;
+    const streams = (result?.income_streams || []).filter(s => s && s.rate_per_second > 0);
+    const total = streams.reduce((sum, s) => sum + s.rate_per_second, 0);
+    const index = Array.isArray(recipes) ? recipes.filter(r => r && typeof r.name === 'string') : [];
+    if (!(total > 0) || index.length === 0) return shares;
+    const crops = new Map(); // item name without variant suffixes -> its crop rows
+    for (const row of Array.isArray(rows) ? rows : []) {
+        if (row?.kind !== 'crop') continue;
+        const name = stripVariant(row.item);
+        crops.set(name, [...(crops.get(name) || []), row]);
+    }
+    if (crops.size === 0) return shares;
+    const recipeOf = (name, facility) => index.find(r => r.name === name && r.facility === facility) || index.find(r => r.name === name) || null;
+    const credit = (name, fraction) => {
+        const makers = crops.get(name);
+        const weight = row => (row.count > 0 ? row.count : 1);
+        const weights = makers.reduce((sum, row) => sum + weight(row), 0);
+        for (const row of makers) shares.set(row.key, (shares.get(row.key) || 0) + fraction * weight(row) / weights);
+    };
+    const spread = (name, facility, fraction, path) => {
+        if (path.length > 8 || path.includes(name)) return;
+        const recipe = recipeOf(name, facility);
+        const parts = [...new Set((recipe?.ingredients || recipe?.raw_materials || []).filter(p => typeof p === 'string').map(stripVariant))];
+        for (const part of parts) {
+            if (crops.has(part)) credit(part, fraction / parts.length);
+            else spread(part, null, fraction / parts.length, [...path, name]);
+        }
+    };
+    for (const stream of streams) spread(stripVariant(stream.item_name), stream.facility, stream.rate_per_second / total, []);
+    return shares;
+}
+
 // --- guesses ------------------------------------------------------------------
 
 // Ranked guesses at why the pace fell short, as { cause, coinsPerHour (null when it cannot be
 // sized), text, confidence: 'high' | 'medium' | 'low' }, biggest first. `plan` is the 'plan' topic
 // value ({ plan, setupHash, tab }); `rows` are planRows() for it; `caps` is OUTPUT_CAPS; `gaps`
 // are the watcher gaps inside the interval; `setup` and `snapshotHash` belong to the snapshot the
-// interval started at; `hours` is the interval's length. Row-level guesses need the plan's setup
-// to be the snapshot's (same setupHash); otherwise only the general ones are given. Sizes are
-// capped at the shortfall, since no single cause can explain more than was missing.
-export function guesses({ plan = null, rows = [], caps = null, gaps: gapList = [], setup = null, shortfallPerHour = null, snapshotHash = null, hours = null } = {}) {
+// interval started at; `hours` is the interval's length; `recipes` is the page's recipe index, which
+// lets the watering guess count crops that only feed a processor (see feederShares). Row-level
+// guesses need the plan's setup to be the snapshot's (same setupHash); otherwise only the general
+// ones are given. Sizes are capped at the shortfall, since no single cause can explain more than
+// was missing.
+export function guesses({ plan = null, rows = [], caps = null, gaps: gapList = [], setup = null, shortfallPerHour = null, snapshotHash = null, hours = null, recipes = null } = {}) {
     const result = plan?.plan ?? null;
     const ratePerHour = finite(result?.rate_per_second) ? result.rate_per_second * 3600 : 0;
     const limit = finite(shortfallPerHour) && shortfallPerHour > 0 ? shortfallPerHour : Infinity;
@@ -163,15 +211,20 @@ export function guesses({ plan = null, rows = [], caps = null, gaps: gapList = [
             }
         }
 
+        // Every crop row counts, including one that only feeds a processor: its own income is 0, but
+        // the product made from it is paid for by its work (feederShares), so that income counts too.
         const crops = rows.filter(r => r.kind === 'crop');
-        const cropIncome = crops.reduce((sum, r) => sum + perHour(r), 0);
+        const feeding = feederShares(rows, plan, recipes);
+        const cropIncome = crops.reduce((sum, r) => sum + perHour(r) + (feeding.get(r.key) || 0) * ratePerHour, 0);
         if (cropIncome > 0) {
+            const feeders = crops.filter(r => (feeding.get(r.key) || 0) > 0 && (shares.get(r.key) || 0) === 0);
             out.push({
                 cause: 'watering',
                 coinsPerHour: size(cropIncome * WATERING_LOSS),
                 confidence: (gapList || []).length > 0 ? 'medium' : 'low',
                 text: `Crops (${crops.map(r => pretty(r.item)).join(', ')}) ask for water twice as they grow, and each watering takes an eighth off the grow time. `
-                    + 'Missing both costs a quarter of their income; missing one costs about half of that.',
+                    + 'Missing both costs a quarter of their income; missing one costs about half of that.'
+                    + (feeders.length > 0 ? ` ${feeders.map(r => pretty(r.item)).join(', ')} only feed other recipes, so the income of what they go into is counted too.` : ''),
             });
         }
 
