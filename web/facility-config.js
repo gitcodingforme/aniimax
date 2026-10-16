@@ -328,6 +328,45 @@ export const MODULE_MAX_LEVELS = {
 };
 
 // The value for RV level `homeLevel` in a per-RV list, keeping the last value past its end.
+
+// How much finished output a facility holds before it stops and waits to be collected, by
+// facility level (index = facility level - 1). Growers and gatherers count items; a processor
+// makes one item a batch, so its 20 means 20 batches. Keys are facility names as in FACILITIES;
+// facilities without levels (Starfall Hammock, Floral Windmill, the environment buildings) have
+// no entry.
+//
+// FAN-SOURCED, NOT VERIFIED IN GAME. Read from fan sites on 2026-10-15 and 2026-10-16:
+//   - wikily.gg facility pages (https://wikily.gg/aniimo/homeland-crafting): the "Output
+//     capacity" line of each level, and its level 1 build blocks for Well (300), Mine (120),
+//     Dewy House (80), Nimbus Bed (80) and Tidewhisper Sandcastle (200).
+//   - Farmland level 1 (5) and Woodland level 1 (8) are missing from wikily's level 1 blocks, so
+//     they come from GameWith's "How to Farm Crops" (Item Count table, 5 to 35 for Farmland),
+//     aniimotools.dev (Farmland storage 5) and metabot.gg (Woodland 8 to 28, Mine 120 then 200).
+// Replace a value as soon as it is checked in game, and say so in the pull request.
+export const OUTPUT_CAPS = {
+    Farmland: [5, 10, 15, 20, 25, 30, 35],
+    Woodland: [8, 12, 16, 20, 24, 28],
+    Mine: [120, 200, 200, 200, 200, 200],
+    Well: [300, 300, 340, 340, 340],
+    'Tidewhisper Sandcastle': [200, 460, 460],
+    'Dewy House': [80, 240],
+    'Nimbus Bed': [80, 120, 120],
+    'Carousel Mill': [20, 20, 20, 20, 20, 20],
+    'Crafting Table': [20, 20, 20, 20, 20, 20, 20, 20],
+    'Claw Game Cooker': [20, 20, 20, 20, 20, 20, 20],
+    'Jukebox Dryer': [20, 20, 20, 20, 20, 20, 20],
+    'Simmering Pot': [20, 20, 20, 20, 20, 20],
+    'Phonolfactory Table': [20, 20, 20, 20, 20, 20],
+    'Bouncy Brew Keg': [20, 20, 20, 20, 20],
+    'Blazing Stove': [20, 20, 20, 20, 20],
+    'Pickling Jar': [20, 20, 20, 20, 20],
+    'Joy Wheel Loom': [20, 20, 20, 20],
+    'Dance Pad Polisher': [20, 20, 20],
+    'Aniipod Maker': [20, 20, 20],
+    'Woodworking Bench': [20, 20, 20, 20],
+    'Chimney Kiln': [20, 20, 20, 20],
+};
+
 function atHomeLevel(list, homeLevel) {
     return list[Math.min(homeLevel, list.length) - 1];
 }
