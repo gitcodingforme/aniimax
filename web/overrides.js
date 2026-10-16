@@ -4,9 +4,12 @@
 // Pure function, tested in tests/overrides.test.mjs.
 
 const nonNegativeInts = list => Array.isArray(list) && list.length > 0 && list.every(n => Number.isInteger(n) && n >= 0);
+// Output caps allow `null` for "unknown at this level".
+const capsList = list => Array.isArray(list) && list.length > 0 && list.every(n => n === null || (Number.isInteger(n) && n >= 0));
 
 // Mutates the given constants in place. Returns what was applied and what was ignored, as text.
-export function applyStructureOverrides(overrides, { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS }) {
+// `OUTPUT_CAPS` is optional so older callers (and tests) keep working without it.
+export function applyStructureOverrides(overrides, { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, OUTPUT_CAPS = null }) {
     const applied = [];
     const problems = [];
     if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
@@ -35,6 +38,16 @@ export function applyStructureOverrides(overrides, { FACILITIES, LEVEL_UP_COSTS,
                 applied.push(`${name} unlocks`);
             } else {
                 problems.push(`${name} unlocks must map facility level to RV level`);
+            }
+        }
+        if ('outputCaps' in patch) {
+            if (!OUTPUT_CAPS) {
+                problems.push(`${name} outputCaps: this page has no output-cap table to override`);
+            } else if (capsList(patch.outputCaps)) {
+                OUTPUT_CAPS[name] = [...patch.outputCaps];
+                applied.push(`${name} output caps`);
+            } else {
+                problems.push(`${name} outputCaps must be a list of whole numbers (or null), one per facility level`);
             }
         }
     }

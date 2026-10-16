@@ -5,30 +5,30 @@ import './math-translation.js';
 
 import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
-    MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, simpleSetup,
+    MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, OUTPUT_CAPS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-verify-1';
+} from './facility-config.js?v=fork-caps-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
 import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-verify-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-verify-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-caps-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-caps-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-verify-1';
+} from './upstream-check.js?v=fork-caps-1';
 import {
     addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-verify-1';
+} from './history.js?v=fork-caps-1';
 import {
-    DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
-    ntfyRequests, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-verify-1';
-import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-verify-1';
+    DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown,
+    icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
+} from './reminders.js?v=fork-caps-1';
+import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-caps-1';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-verify-1';
+} from './checklist.js?v=fork-caps-1';
 
 let wasmReady = false;
 
@@ -1143,10 +1143,12 @@ let reminderTicker = null;
 function readReminderSettings() {
     try {
         const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        const assumptions = { ...DEFAULT_ASSUMPTIONS, ...(saved.assumptions && typeof saved.assumptions === 'object' ? saved.assumptions : {}) };
+        if (!(assumptions.secondWatering in WATERING_POINTS)) assumptions.secondWatering = DEFAULT_ASSUMPTIONS.secondWatering;
         return {
             tab: !!saved.tab,
             ntfyTopic: typeof saved.ntfyTopic === 'string' ? saved.ntfyTopic : '',
-            assumptions: { ...DEFAULT_ASSUMPTIONS, ...(saved.assumptions && typeof saved.assumptions === 'object' ? saved.assumptions : {}) },
+            assumptions,
         };
     } catch (e) {
         return { tab: false, ntfyTopic: '', assumptions: { ...DEFAULT_ASSUMPTIONS } };
@@ -1188,6 +1190,7 @@ function reminderEvents(timers = readTimers()) {
     const { assumptions } = readReminderSettings();
     return buildEvents(timers.rows, {
         startedAt: timers.startedAt, assumptions, levelUpSeconds: timers.levelUpSeconds, levelUpTarget: timers.levelUpTarget,
+        caps: OUTPUT_CAPS,
     });
 }
 
@@ -1288,7 +1291,9 @@ function setUpPerPlan() {
         showReminderStatus('Your inputs changed since the last solve. Solve again, set up as that plan says, then press this.');
         return false;
     }
-    const rows = reminderRows(lastPlan);
+    // The recipe list gives each row's yield per batch and the setup its facility level, so the
+    // events can say when each output store fills up (see OUTPUT_CAPS).
+    const rows = reminderRows(lastPlan, { recipes: recipeIndex, facilities: getPlanInputValues().facilities });
     if (rows.length === 0) {
         showReminderStatus('This plan has no producing rows to remind you about.');
         return false;
@@ -1333,6 +1338,8 @@ function renderReminders() {
     document.getElementById('assume-processors-repeat').checked = settings.assumptions.processorsRepeat;
     document.getElementById('assume-plots-resow').checked = settings.assumptions.plotsResow;
     document.getElementById('assume-watering').checked = settings.assumptions.wateringPrompts;
+    document.getElementById('assume-second-watering').value = settings.assumptions.secondWatering;
+    document.getElementById('assume-first-batch').checked = settings.assumptions.firstBatch !== false;
     document.getElementById('channel-tab').checked = settings.tab;
     document.getElementById('ntfy-topic').value = settings.ntfyTopic;
     renderNotificationState();
@@ -1340,10 +1347,19 @@ function renderReminders() {
     if (!timers) return;
 
     document.getElementById('reminders-started').textContent = `Set up ${formatProfileTime(timers.startedAt)}.`;
-    document.getElementById('reminders-rows').innerHTML = `<table><thead><tr><th>On</th><th>Facility</th><th>Making</th><th>Batch</th><th>Started at</th></tr></thead><tbody>${
+    // "Store": what the facility holds before it stops, and how long that takes from the first batch.
+    const storeCell = r => {
+        const cap = outputCap(OUTPUT_CAPS, r.facility, r.level);
+        const batches = batchesUntilFull(cap, r.yieldPerBatch);
+        if (!batches) return '<span class="hint small">no cap known</span>';
+        const full = formatSeconds(batches * r.cycleSeconds);
+        return r.kind === 'processor' ? `${cap} batches, full in ${full}` : `${cap} (${batches} × ${r.yieldPerBatch}), full in ${full}`;
+    };
+    document.getElementById('reminders-rows').innerHTML = `<table><thead><tr><th>On</th><th>Facility</th><th>Making</th><th>Batch</th><th>Store</th><th>Started at</th></tr></thead><tbody>${
         timers.rows.map((r, i) => `<tr><td><input type="checkbox" data-row="${i}" class="reminder-row-on" ${r.on === false ? '' : 'checked'} aria-label="Remind about ${escapeText(r.facility)}"></td>`
-            + `<td>${r.count}× ${escapeText(r.facility)}</td><td>${escapeText(prettyItem(r.item))}${r.kind === 'processor' && r.leadSeconds > r.cycleSeconds ? ' <span class="hint small">(first batch after ingredients)</span>' : ''}</td>`
+            + `<td>${r.count}× ${escapeText(r.facility)}${r.level ? ` <span class="hint small">Lv.${r.level}</span>` : ''}</td><td>${escapeText(prettyItem(r.item))}${r.kind === 'processor' && r.leadSeconds > r.cycleSeconds ? ' <span class="hint small">(first batch after ingredients)</span>' : ''}</td>`
             + `<td>${formatSeconds(r.cycleSeconds)}</td>`
+            + `<td>${storeCell(r)}</td>`
             + `<td><input type="datetime-local" data-row="${i}" class="reminder-row-start" value="${toLocalInputValue(r.startedAt || timers.startedAt)}"></td></tr>`).join('')
     }</tbody></table>`;
 
@@ -1351,8 +1367,8 @@ function renderReminders() {
     const events = reminderEvents(timers);
     const next = upcoming(events, now);
     document.getElementById('reminders-count').textContent = next.length === 0
-        ? 'Nothing left in the next 24 hours of this setup. Press the button again after your next setup.'
-        : `${next.length} reminder${next.length === 1 ? '' : 's'} still to come in the 24 hours after setup${events.length > next.length ? ` (${events.length - next.length} already passed)` : ''}.`;
+        ? 'Nothing left from this setup. Press the button again after your next setup.'
+        : `${next.length} reminder${next.length === 1 ? '' : 's'} still to come: the first fill-up of every row, plus what else falls in the 24 hours after setup${events.length > next.length ? ` (${events.length - next.length} already passed)` : ''}.`;
     document.getElementById('reminders-events').innerHTML = next.slice(0, 15).map(e =>
         `<li><strong>${escapeText(e.title)}</strong> ${formatCountdown(e.at - now)} (${formatProfileTime(e.at)})${e.approximate ? ' <span class="hint small">approx.</span>' : ''}</li>`).join('')
         + (next.length > 15 ? `<li class="hint">… and ${next.length - 15} more.</li>` : '');
@@ -1482,13 +1498,19 @@ function attachReminderHandlers() {
         writeTimers(timers);
         renderReminders();
     });
-    [['assume-processors-repeat', 'processorsRepeat'], ['assume-plots-resow', 'plotsResow'], ['assume-watering', 'wateringPrompts']].forEach(([id, key]) => {
+    [['assume-processors-repeat', 'processorsRepeat'], ['assume-plots-resow', 'plotsResow'], ['assume-watering', 'wateringPrompts'], ['assume-first-batch', 'firstBatch']].forEach(([id, key]) => {
         document.getElementById(id).addEventListener('change', event => {
             const settings = readReminderSettings();
             settings.assumptions[key] = event.target.checked;
             writeReminderSettings(settings);
             renderReminders();
         });
+    });
+    document.getElementById('assume-second-watering').addEventListener('change', event => {
+        const settings = readReminderSettings();
+        settings.assumptions.secondWatering = event.target.value in WATERING_POINTS ? event.target.value : DEFAULT_ASSUMPTIONS.secondWatering;
+        writeReminderSettings(settings);
+        renderReminders();
     });
     document.getElementById('channel-tab').addEventListener('change', async event => {
         const settings = readReminderSettings();
@@ -1529,7 +1551,7 @@ async function loadStructureOverrides() {
     try {
         const response = await fetch(new URL('./structure-overrides.json', import.meta.url), { cache: 'no-cache' });
         if (!response.ok) return;
-        const { applied, problems } = applyStructureOverrides(await response.json(), { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS });
+        const { applied, problems } = applyStructureOverrides(await response.json(), { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, OUTPUT_CAPS });
         if (applied.length > 0) console.log(`Structure overrides applied: ${applied.join(', ')}`);
         problems.forEach(problem => console.warn(`Structure override ignored: ${problem}`));
     } catch (error) {
@@ -3026,7 +3048,7 @@ document.addEventListener('aniimax-language-change', () => {
 async function loadRecipeIndex() {
     try {
         recipeIndex = JSON.parse(await callWorker('get_all_items'))
-            .map(r => ({ name: r.name, facility: r.facility, cost: r.cost || 0, seasonSeedCost: r.season_seed_cost || 0, environment: r.environment || null, jobs: r.jobs || [], ingredients: r.raw_materials || [], amounts: r.required_amount || [], yieldAmount: r.yield_amount || 1, byproduct: r.byproduct_item || null, byproductAmount: r.byproduct?.[1] || 0, turns: r.sell_currency === 'none' }))
+            .map(r => ({ name: r.name, facility: r.facility, cost: r.cost || 0, seasonSeedCost: r.season_seed_cost || 0, environment: r.environment || null, jobs: r.jobs || [], ingredients: r.raw_materials || [], amounts: r.required_amount || [], yieldAmount: r.yield_amount || 1, facilityLevel: r.facility_level || 1, byproduct: r.byproduct_item || null, byproductAmount: r.byproduct?.[1] || 0, turns: r.sell_currency === 'none' }))
             .sort((a, b) => a.facility.localeCompare(b.facility) || a.name.localeCompare(b.name));
         renderRecipeOptions();
         renderSkippedRecipes();

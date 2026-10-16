@@ -47,3 +47,17 @@ test('test_structure_overrides_ignore_bad_entries_and_say_why', () => {
     assert.deepEqual(applyStructureOverrides(null, c).problems.length, 1);
     assert.deepEqual(applyStructureOverrides({ facilities: {}, levelUpCosts: {}, moduleMaxLevels: {} }, c), { applied: [], problems: [] });
 });
+
+
+test('test_structure_overrides_patch_output_caps', () => {
+    const c = { ...constants(), OUTPUT_CAPS: { Farmland: [null, 10, 15], Well: [null, 300] } };
+    const { applied, problems } = applyStructureOverrides({
+        facilities: { Farmland: { outputCaps: [5, 10, 15] }, Well: { outputCaps: [260, -1] } },
+    }, c);
+    assert.deepEqual(applied, ['Farmland output caps']);
+    assert.deepEqual(problems, ['Well outputCaps must be a list of whole numbers (or null), one per facility level']);
+    assert.deepEqual(c.OUTPUT_CAPS, { Farmland: [5, 10, 15], Well: [null, 300] });
+    // Without a caps table the patch is reported, not applied.
+    const bare = constants();
+    assert.deepEqual(applyStructureOverrides({ facilities: { Farmland: { outputCaps: [5] } } }, bare).problems, ['Farmland outputCaps: this page has no output-cap table to override']);
+});

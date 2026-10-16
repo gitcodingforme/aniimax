@@ -327,6 +327,39 @@ export const MODULE_MAX_LEVELS = {
     crafting_module: [0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 5, 6, 7, 7],
 };
 
+// How much finished output a facility holds before it stops and waits to be collected, by
+// facility level (index = facility level - 1; `null` where unknown). Items for crops and
+// gatherers; a processor makes one item a batch, so its 20 is "20 batches". From wikily.gg's
+// facility pages (docs/research/web-data-check.md section 1, downloaded 2026-10-16): a fan
+// wiki, so INFERRED, not verified in game. The wiki lists the cap for each upgrade level only;
+// level 1 is filled in where every listed level shares one value (processors, Mine, Dewy
+// House, Nimbus Bed, Sandcastle) and left `null` where the cap grows with the level
+// (Farmland, Woodland, Well). The reminders fall back to batch check-ins for a `null`.
+// Overridable per facility from data/overrides/structure.json (`outputCaps`).
+export const OUTPUT_CAPS = {
+    Farmland: [null, 10, 15, 20, 25, 30, 35],
+    Woodland: [null, 12, 16, 20, 24, 28],
+    Mine: [200, 200, 200, 200, 200, 200],
+    Well: [null, 300, 340, 340, 340],
+    'Tidewhisper Sandcastle': [460, 460, 460],
+    'Dewy House': [240, 240],
+    'Nimbus Bed': [120, 120, 120],
+    'Carousel Mill': [20, 20, 20, 20, 20, 20],
+    'Crafting Table': [20, 20, 20, 20, 20, 20, 20, 20],
+    'Claw Game Cooker': [20, 20, 20, 20, 20, 20, 20],
+    'Jukebox Dryer': [20, 20, 20, 20, 20, 20, 20],
+    'Simmering Pot': [20, 20, 20, 20, 20, 20],
+    'Phonolfactory Table': [20, 20, 20, 20, 20, 20],
+    'Bouncy Brew Keg': [20, 20, 20, 20, 20],
+    'Blazing Stove': [20, 20, 20, 20, 20],
+    'Pickling Jar': [20, 20, 20, 20, 20],
+    'Joy Wheel Loom': [20, 20, 20, 20],
+    'Dance Pad Polisher': [20, 20, 20],
+    'Aniipod Maker': [20, 20, 20],
+    'Woodworking Bench': [20, 20, 20, 20],
+    'Chimney Kiln': [20, 20, 20, 20],
+};
+
 // The value for RV level `homeLevel` in a per-RV list, keeping the last value past its end.
 function atHomeLevel(list, homeLevel) {
     return list[Math.min(homeLevel, list.length) - 1];

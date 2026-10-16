@@ -463,17 +463,25 @@
                 <div class="card-head">
                     <h2>Reminders</h2>
                     <div class="config-actions">
-                        <button type="button" id="reminders-start-btn" class="toggle-button small" title="Starts timers from the plan's batch times, as of right now.">I just set everything up per the plan</button>
+                        <button type="button" id="reminders-start-btn" class="toggle-button small" title="Starts timers from the plan's batch times and each facility's output store, as of right now.">I just set everything up per the plan</button>
                         <button type="button" id="reminders-clear-btn" class="toggle-button small">Clear reminders</button>
                     </div>
                 </div>
                 <p id="reminders-status" class="hint small" role="status" aria-live="polite"></p>
-                <p class="hint">The app cannot see the game, so every reminder assumes you did exactly what the plan says at the moment you pressed the button. Untick rows you set up differently, or fix their start time.</p>
+                <p class="hint">The app cannot see the game, so every reminder assumes you did exactly what the plan says at the moment you pressed the button. Facilities keep working until their output store is full, then stop: a processor holds 20 batches, a plot 10 to 35 crops by level, a Mine 200. The main reminder per row is "collect before it fills up". Untick rows you set up differently, or fix their start time.</p>
                 <details class="explain">
                     <summary>Assumptions about the game (switch off any that are wrong)</summary>
-                    <label class="reminder-option"><input type="checkbox" id="assume-processors-repeat"> Processors start their next batch by themselves once one finishes <span class="hint small">(assumed, not verified in game)</span></label>
-                    <label class="reminder-option"><input type="checkbox" id="assume-plots-resow"> Staffed plots are re-sown after a harvest, so crops repeat <span class="hint small">(assumed, not verified)</span></label>
-                    <label class="reminder-option"><input type="checkbox" id="assume-watering"> Crops ask for water at about one third and two thirds of their growth <span class="hint small">(approximate)</span></label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-processors-repeat"> A processor keeps working by itself until it holds 20 batches <span class="hint small">(fan wikis; not verified in game)</span></label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-plots-resow"> Staffed plots are re-sown after a harvest until the plot's store is full <span class="hint small">(fan wikis; not verified)</span></label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-first-batch"> Also remind me when the first batch of each row is done</label>
+                    <label class="reminder-option"><input type="checkbox" id="assume-watering"> Crops ask for water twice as they grow <span class="hint small">(moments approximate)</span></label>
+                    <label class="reminder-option">Second watering at
+                        <select id="assume-second-watering">
+                            <option value="two-thirds">two thirds of the grow time (the engine's model)</option>
+                            <option value="three-quarters">75% of the grow time (upstream issue 14)</option>
+                        </select>
+                    </label>
+                    <p class="hint small">Output caps come from wikily.gg (docs/research/web-data-check.md), not from the game. The cap for level 1 Farmland, Woodland and Well is unknown; those rows get batch check-ins instead. Override a cap in data/overrides/structure.json (outputCaps).</p>
                 </details>
                 <p id="reminders-empty" class="hint">Solve a plan, set up your homeland as it says, then press "I just set everything up per the plan".</p>
                 <div id="reminders-body" hidden>
@@ -676,6 +684,6 @@
             }
         });
     </script>
-    <script type="module" src="app.js?v=fork-verify-1"></script>
+    <script type="module" src="app.js?v=fork-caps-1"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { simpleSetup } from '../web/facility-config.js';
+import { FACILITIES, OUTPUT_CAPS, simpleSetup } from '../web/facility-config.js';
 
 const countAt = (homeLevel, facility) => simpleSetup(homeLevel).facilities[facility][0].count;
 
@@ -45,4 +45,17 @@ test('RV 20 keeps the RV 19 grower limits', () => {
     assert.equal(countAt(20, 'Farmland'), 40);
     assert.equal(countAt(19, 'Woodland'), 20);
     assert.equal(countAt(20, 'Woodland'), 20);
+});
+
+
+test('output caps cover every leveled producing facility, one entry per level', () => {
+    for (const [name, caps] of Object.entries(OUTPUT_CAPS)) {
+        const facility = FACILITIES.find(f => f.name === name);
+        assert.ok(facility, `${name} is a facility`);
+        const levels = Object.keys(facility.unlocks || {}).length;
+        assert.equal(caps.length, levels, `${name} has one cap per facility level`);
+        assert.ok(caps.every(c => c === null || (Number.isInteger(c) && c > 0)), `${name} caps are whole numbers or null`);
+    }
+    assert.equal(OUTPUT_CAPS.Farmland[6], 35);
+    assert.equal(OUTPUT_CAPS['Carousel Mill'][0], 20);
 });

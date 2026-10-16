@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    DEFAULT_ASSUMPTIONS, NTFY_DAILY_LIMIT, buildEvents, cancelNtfy, formatCountdown, icsCalendar, isValidTopic,
-    ntfyRequests, planRows, sendNtfy, suggestTopic, upcoming,
+    DEFAULT_ASSUMPTIONS, NTFY_DAILY_LIMIT, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown, icsCalendar,
+    isValidTopic, ntfyRequests, outputCap, planRows, rowLevel, sendNtfy, suggestTopic, upcoming, wateringFractions,
 } from '../web/reminders.js';
 
 const plan = {
@@ -144,4 +144,119 @@ test('test_send_and_cancel_report_what_happened', async () => {
     assert.deepEqual(deleted, [['https://ntfy.sh/topic/msg1', 'DELETE'], ['https://ntfy.sh/topic/msg2', 'DELETE']]);
     assert.deepEqual(await cancelNtfy([{ id: '' }], 'topic', fetchDelete), { ok: 0, failed: 1 });
     await assert.rejects(cancelNtfy(sent, 'bad topic', fetchDelete), /no valid ntfy topic/);
+});
+
+
+// --- output caps: "collect before the store is full" ----------------------------------------
+
+const recipes = [
+    { name: 'rice', facility: 'Farmland', yield_amount: 18, facility_level: 3 },
+    { name: 'rock', facility: 'Mine', yieldAmount: 6, facilityLevel: 1 },
+    { name: 'milled_rice', facility: 'Carousel Mill', yield_amount: 1, facility_level: 2 },
+];
+const facilities = { Farmland: [{ count: 9, level: 7 }], Mine: [{ count: 2, level: 3 }], 'Carousel Mill': [{ count: 1, level: 4 }] };
+const caps = { Farmland: [null, 10, 15, 20, 25, 30, 35], Mine: [200, 200, 200, 200, 200, 200], 'Carousel Mill': [20, 20, 20, 20, 20, 20] };
+
+test('test_output_cap_looks_up_the_level_and_falls_back_sensibly', () => {
+    assert.equal(outputCap(caps, 'Farmland', 7), 35);
+    assert.equal(outputCap(caps, 'Farmland', 2), 10);
+    assert.equal(outputCap(caps, 'Farmland', 1), null, 'unknown at level 1');
+    assert.equal(outputCap(caps, 'Farmland', 9), 35, 'past the end keeps the last entry');
+    assert.equal(outputCap(caps, 'Carousel Mill', null), 20, 'no level, but every level agrees');
+    assert.equal(outputCap(caps, 'Farmland', null), null, 'no level and the levels differ');
+    assert.equal(outputCap(caps, 'Starfall Hammock', 1), null, 'no entry');
+    assert.equal(outputCap(null, 'Mine', 1), null);
+    assert.equal(batchesUntilFull(20, 1), 20);
+    assert.equal(batchesUntilFull(200, 6), 33, 'whole batches only');
+    assert.equal(batchesUntilFull(35, 18), 1);
+    assert.equal(batchesUntilFull(10, 18), 1, 'a batch bigger than the store still needs collecting');
+    assert.equal(batchesUntilFull(null, 6), null);
+    assert.equal(batchesUntilFull(20, null), null);
+    assert.equal(rowLevel([{ count: 2, level: 2 }, { count: 1, level: 5 }], 3), 5, 'lowest tier that can make the item');
+    assert.equal(rowLevel([{ count: 2, level: 2 }, { count: 1, level: 5 }], 1), 2);
+    assert.equal(rowLevel([{ count: 0, level: 6 }, { count: 1, level: 2 }], 4), 2, 'nothing able: lowest owned');
+    assert.equal(rowLevel([{ count: 0, level: 6 }], 1), null);
+    assert.equal(rowLevel(undefined, 1), null);
+});
+
+test('test_plan_rows_carry_yield_and_level_when_given_recipes_and_setup', () => {
+    const rows = planRows(plan, { recipes, facilities });
+    assert.deepEqual(rows.map(r => [r.key, r.yieldPerBatch, r.level]), [
+        ['Farmland|rice', 18, 7], ['Mine|rock', 6, 3], ['Carousel Mill|milled_rice', 1, 4],
+    ]);
+    const bare = planRows(plan);
+    assert.deepEqual(bare.map(r => [r.yieldPerBatch, r.level]), [[null, null], [null, null], [null, null]]);
+    // An uncovered-crop row still finds its recipe; an unknown item gets no yield.
+    const odd = planRows({ coin_items: [
+        { item_name: 'rice__uncovered', facility: 'Farmland', facility_count: 1, status: 'producing', is_grower: true, cycle_time: 3000 },
+        { item_name: 'mystery', facility: 'Mine', facility_count: 1, status: 'producing', is_grower: true, cycle_time: 600 },
+    ] }, { recipes, facilities });
+    assert.deepEqual(odd.map(r => [r.yieldPerBatch, r.level]), [[18, 7], [null, 3]]);
+});
+
+test('test_collect_events_come_when_the_store_is_full', () => {
+    const rows = planRows(plan, { recipes, facilities });
+    const events = buildEvents(rows, { startedAt: T0, caps });
+    // Mine: 200 rock at 6 a batch = 33 batches of 600 s; first batch done, then collect at batch 33.
+    const rock = events.filter(e => e.key === 'Mine|rock');
+    assert.deepEqual(rock.slice(0, 2).map(e => [e.kind, (e.at - T0) / 1000, e.title]), [['done', 600, 'Rock batch done'], ['collect', 33 * 600, 'Collect Rock']]);
+    assert.match(rock[1].body, /Mine at level 3 holds 200 Rock \(33 batches of 6\), then stops/);
+    assert.match(rock[1].body, /fan wiki/);
+    // Repeats every 33 batches within the day, under the per-row budget.
+    assert.equal((rock[2].at - T0) / 1000, 66 * 600);
+    assert.match(rock[2].body, /Fill-up 2 since setup/);
+    assert.ok(rock.every(e => e.kind !== 'checkin'), 'no batch check-ins when the cap is known');
+    assert.ok(rock.filter(e => e.kind === 'collect').length <= 6);
+    // Processor: 20 batches of 200 s after a 2000 s lead; the first batch is approximate, so is the collect.
+    const mill = events.filter(e => e.key === 'Carousel Mill|milled_rice');
+    assert.deepEqual(mill.slice(0, 2).map(e => [e.kind, (e.at - T0) / 1000, e.approximate]), [['done', 2200, true], ['collect', 2200 + 19 * 200, true]]);
+    assert.match(mill[1].body, /Carousel Mill at level 4 holds 20 batches/);
+    // Farmland at level 7 holds 35 rice, one harvest of 18: the collect replaces the "done" event.
+    const rice = events.filter(e => e.key === 'Farmland|rice');
+    assert.deepEqual(rice.slice(0, 3).map(e => [e.kind, (e.at - T0) / 1000]), [['water', 600], ['water', 1200], ['collect', 1800]]);
+    assert.ok(!rice.some(e => e.kind === 'done'));
+    assert.match(rice[2].body, /holds 35 Rice \(1 batch of 18\)/);
+    // The collect event is the main one even past the horizon.
+    const slow = buildEvents([{ ...rows[1], cycleSeconds: 3600 }], { startedAt: T0, caps });
+    assert.equal(slow.filter(e => e.kind === 'collect').length, 1);
+    assert.equal((slow.find(e => e.kind === 'collect').at - T0) / 1000, 33 * 3600);
+    // "First batch" off: only the collect events remain (plus watering).
+    const noFirst = buildEvents(rows, { startedAt: T0, caps, assumptions: { ...DEFAULT_ASSUMPTIONS, firstBatch: false } });
+    assert.equal(noFirst.filter(e => e.kind === 'done').length, 0);
+    assert.equal(noFirst.filter(e => e.key === 'Mine|rock')[0].kind, 'collect');
+    // Processors that do not repeat get only their first batch.
+    const once = buildEvents(rows, { startedAt: T0, caps, assumptions: { ...DEFAULT_ASSUMPTIONS, processorsRepeat: false } });
+    assert.deepEqual(once.filter(e => e.key === 'Carousel Mill|milled_rice').map(e => e.kind), ['done']);
+    // ntfy tags the collect events.
+    const { requests } = ntfyRequests(rock.slice(1, 2), 'topic', { now: T0 });
+    assert.equal(requests[0].headers['X-Tags'], 'package');
+});
+
+test('test_rows_without_a_cap_fall_back_to_batch_check_ins', () => {
+    const rows = planRows(plan, { recipes, facilities: { ...facilities, Farmland: [{ count: 9, level: 1 }] } });
+    const events = buildEvents(rows, { startedAt: T0, caps: { ...caps, Mine: undefined } });
+    const rock = events.filter(e => e.key === 'Mine|rock');
+    assert.equal(rock[0].kind, 'done');
+    assert.equal(rock[1].kind, 'checkin');
+    assert.match(rock[1].body, /No output cap is known for this Mine at level 3/);
+    const rice = events.filter(e => e.key === 'Farmland|rice');
+    assert.deepEqual(rice.slice(0, 3).map(e => e.kind), ['water', 'water', 'done'], 'level 1 Farmland has no known cap');
+    assert.equal(rice[3].kind, 'checkin');
+    // No recipe list at all: the yield is unknown, so every row falls back.
+    assert.ok(buildEvents(planRows(plan), { startedAt: T0, caps }).every(e => e.kind !== 'collect'));
+    // No caps table at all behaves the same.
+    assert.ok(buildEvents(rows, { startedAt: T0 }).every(e => e.kind !== 'collect'));
+});
+
+test('test_second_watering_point_is_a_setting', () => {
+    assert.deepEqual(wateringFractions(DEFAULT_ASSUMPTIONS), [1 / 3, 2 / 3]);
+    assert.deepEqual(wateringFractions({ secondWatering: 'three-quarters' }), [1 / 3, 3 / 4]);
+    assert.deepEqual(wateringFractions({ secondWatering: 'nonsense' }), [1 / 3, 2 / 3]);
+    assert.deepEqual(Object.keys(WATERING_POINTS), ['two-thirds', 'three-quarters']);
+    const rows = planRows(plan);
+    const later = buildEvents(rows, { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, secondWatering: 'three-quarters' } });
+    const water = later.filter(e => e.kind === 'water');
+    assert.deepEqual(water.map(e => (e.at - T0) / 1000), [600, 1350]);
+    assert.match(water[1].body, /at 75% of the grow time/);
+    assert.match(buildEvents(rows, { startedAt: T0 }).filter(e => e.kind === 'water')[1].body, /at 67% of the grow time/);
 });
