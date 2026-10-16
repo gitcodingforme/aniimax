@@ -1,0 +1,60 @@
+/* "Why am I behind?" card (web/cards/insight.js). Colours come from style.css's theme variables. */
+
+#insight-card .insight-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* style.css highlights every table's first row; here no row is special. */
+#insight-card .insight-table tbody tr:where(:first-child) td {
+    color: inherit;
+    font-weight: normal;
+}
+
+#insight-card .insight-table tbody tr td.delta-up {
+    color: var(--success);
+}
+
+#insight-card .insight-table tbody tr td.delta-down {
+    color: var(--error);
+}
+
+#insight-card .insight-heading {
+    font-size: 1rem;
+    margin: 1rem 0 0.4rem;
+}
+
+#insight-card .insight-guesses {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#insight-card .insight-guess {
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+}
+
+#insight-card .insight-confidence {
+    display: inline-block;
+    margin-right: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+#insight-card .insight-confidence-high {
+    color: var(--text);
+    border-color: var(--text);
+}
+
+#insight-card .insight-amount {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
