@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Farmland - synthetic test page</title>
+<!-- Synthetic fixture written by hand for scripts/test_web_check.py: a growing facility whose level 1
+     build block shows no output capacity, so the parser has to take it from the embedded data. One
+     recipe name carries an @-mention and Markdown to test name sanitising. Numbers are test values. -->
+</head>
+<body>
+<main>
+<h1>Farmland</h1>
+<p>Plots grow crops by themselves. This text exists so the page reads like a page.</p>
+<section>
+  <h2>Build requirements</h2>
+  <dl>
+    <div class="wgt-stat"><dd>1</dd><dt>RV level</dt></div>
+    <div class="wgt-stat"><dd>1</dd><dt>Aniimo slots</dt></div>
+  </dl>
+  <p>Build cost: Home Coin &times;10.</p>
+  <p>Initial construction. Reach RV Level 1.</p>
+  <h3>Available at level 1</h3>
+  <p>Open a recipe for ingredients, output and production steps</p>
+  <ul>
+    <li><a>Wheat</a><span>Growing</span><span>4m</span><em>New at this level</em></li>
+    <li><a>Star Fruit @here [x](y)</a><span>Growing</span><span>13m 20s</span><em>New at this level</em></li>
+  </ul>
+</section>
+<section>
+  <h2>Upgrade requirements</h2>
+  <dl>
+    <div class="wgt-stat"><dd>2</dd><dt>RV level</dt></div>
+    <div class="wgt-stat"><dd>1</dd><dt>Aniimo slots</dt></div>
+    <div class="wgt-stat"><dd>10</dd><dt>Output capacity</dt></div>
+  </dl>
+  <p>Cost for this upgrade: Home Coin &times;60.</p>
+  <p>Upgrade from facility level 1. Reach RV level 2.</p>
+  <details><summary>Need RV level 2?</summary>
+    <p>Requirements to reach this RV level (separate from the facility upgrade):
+
+Place 4 plots in your Home.
+
+RV upgrade cost: Home Coin &times;140 &middot; Wood Block &times;3.
+
+RV upgrade time: 5m.</p>
+  </details>
+  <h3>Available at level 2</h3>
+  <ul>
+    <li><a>Wheat</a><span>Growing</span><span>4m</span></li>
+    <li><a>Star Fruit @here [x](y)</a><span>Growing</span><span>13m 20s</span></li>
+    <li><a>Potato</a><span>Growing</span><span>10m 40s</span><em>New at this level</em></li>
+    <li><a>Quick Formula: Wheat</a><span>Quick recipe</span><span>20m</span><em>New at this level</em><small>Unlocks at Ecological Module Level 1</small></li>
+    <li><a>Grapes</a><span>Growing</span><span>40m</span><em>New at this level</em></li>
+  </ul>
+</section>
+</main>
+<footer><p>Join the creator community</p><p>Wikis for the games you play.</p></footer>
+<script>self.__next_f.push([1,"4:[\"$\",\"$1\",\"craft-lv-1-stats\",{\"children\":[[\"$\",\"dl\",null,{\"children\":[[\"$\",\"div\",\"0\",{\"className\":\"wgt-stat\",\"children\":\"$L86\"}],[\"$\",\"div\",\"1\",{\"className\":\"wgt-stat\",\"children\":[[\"$\",\"dd\",null,{\"className\":\"wgt-stat-value\",\"children\":[false,\"1\"]}],[\"$\",\"dt\",null,{\"className\":\"wgt-stat-label\",\"children\":\"Aniimo slots\"}]]}],[\"$\",\"div\",\"2\",{\"className\":\"wgt-stat\",\"children\":[[\"$\",\"dd\",null,{\"className\":\"wgt-stat-value\",\"children\":[false,\"5\"]}],[\"$\",\"dt\",null,{\"className\":\"wgt-stat-label\",\"children\":\"Output capacity\"}]]}]]}]]}]\n5:[\"$\",\"$1\",\"craft-lv-2-stats\",{\"children\":[[\"$\",\"dd\",null,{\"className\":\"wgt-stat-value\",\"children\":[false,\"99\"]}],[\"$\",\"dt\",null,{\"className\":\"wgt-stat-label\",\"children\":\"E-mode power\"}]]}]\n"])</script>
+</body>
+</html>

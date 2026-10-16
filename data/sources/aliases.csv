@@ -1,0 +1,13 @@
+wiki_name, facility, fork_name, note
+# Fan-site names that differ from the snake_case names in data/*.csv, read by scripts/web_check.py.
+# facility empty = any facility (also used for ingredient names). A trailing * in wiki_name matches the rest of
+# the name, which replaces the * in fork_name as a snake_case slug. Names that only differ in case, spaces,
+# accents (Puree) or & (and) need no row. INFERRED rows are my reading of the pages, not checked in game.
+High-Speed Formula: *, , quick_*, wikily and aniimotools name for a module-unlocked quick recipe
+Quick Recipe: *, , quick_*, wikily and aniimotools name for a quick recipe
+Quick Formula: *, , quick_*, wikily and aniimotools name for a quick recipe (Farmland wheat)
+Grapes, , grape, plural on both sites; the data and every recipe use grape
+Umbral Sweet Spicy Sauce, Simmering Pot, umbral_sweet_and_spicy_sauce, wikily drops the & of the festival recipe's name
+Plain Fresh Water, , fresh_water, INFERRED (high): Well level 2 with 2250 workload on both sites, as fresh_water in well.csv; also an ingredient
+Natural Mineral Spring, , natural_mineral_spring_water, INFERRED (high): Well level 5 with 2700 workload, as in well.csv; also an ingredient
+Quick Recipe: Natural Mineral Water, Well, quick_natural_mineral_spring_water, INFERRED (high): Well level 5 quick recipe with 2700 workload

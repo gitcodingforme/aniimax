@@ -1,0 +1,30 @@
+url, facility, kind, fixture
+# Pages read by scripts/web_check.py (weekly, .github/workflows/web-check.yml). kind: facility (a wikily.gg
+# facility page; facility = the name in web/facility-config.js) or recipes (the aniimotools.dev recipes page).
+# fixture: the synthetic page in scripts/fixtures/web_check/ that the offline tests use for this row; empty means
+# --offline looks for <slug>.html or <site>-<slug>.html (e.g. wikily-well.html). Fan sites, not the game.
+# The environment facilities (Cooling Unit, Heat Furnace, Sunlamp) have no recipes or data CSV and are not listed.
+https://wikily.gg/aniimo/homeland-crafting/facilities/aniipod-maker, Aniipod Maker, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/blazing-stove, Blazing Stove, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/bouncy-brew-keg, Bouncy Brew Keg, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/carousel-mill, Carousel Mill, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/chimney-kiln, Chimney Kiln, facility, wikily-chimney-kiln
+https://wikily.gg/aniimo/homeland-crafting/facilities/claw-game-cooker, Claw Game Cooker, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/crafting-table, Crafting Table, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/dance-pad-polisher, Dance Pad Polisher, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/dewy-house, Dewy House, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/farmland, Farmland, facility, wikily-farmland
+https://wikily.gg/aniimo/homeland-crafting/facilities/floral-windmill, Floral Windmill, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/joy-wheel-loom, Joy Wheel Loom, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/jukebox-dryer, Jukebox Dryer, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/mine, Mine, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/nimbus-bed, Nimbus Bed, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/phonolfactory-table, Phonolfactory Table, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/pickling-jar, Pickling Jar, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/simmering-pot, Simmering Pot, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/starfall-hammock, Starfall Hammock, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/tidewhisper-sandcastle, Tidewhisper Sandcastle, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/well, Well, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/woodland, Woodland, facility,
+https://wikily.gg/aniimo/homeland-crafting/facilities/woodworking-bench, Woodworking Bench, facility,
+https://aniimotools.dev/systems/recipes/, , recipes, aniimotools-recipes

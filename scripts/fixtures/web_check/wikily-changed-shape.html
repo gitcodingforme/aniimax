@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chimney Kiln - synthetic page after a redesign</title>
+<!-- Synthetic fixture written by hand for scripts/test_web_check.py: the same facility after an imagined
+     site redesign. None of the markers the parsers look for are left (no requirement blocks, no "Available
+     at level" sections, no embedded level 1 stats, no station headers), so every parser must say the page
+     shape changed instead of guessing or raising. -->
+</head>
+<body>
+<main>
+<h1>Chimney Kiln</h1>
+<nav><a href="#overview">Overview</a> <a href="#tiers">Tiers</a> <a href="#costs">Costs</a></nav>
+<section id="overview">
+  <h2>Overview</h2>
+  <p>Ore goes in, refined ore comes out. The kiln is a processing facility with four tiers.</p>
+  <p>Tier data moved to an interactive widget that loads after the page, so the server-rendered page
+     only shows this summary text.</p>
+</section>
+<section id="tiers">
+  <h2>Tiers</h2>
+  <div class="widget" data-widget="tier-table" data-facility="chimney-kiln">Loading tier table...</div>
+  <p>Tier 1: ore sifting. Tier 2: brick sintering. Tier 3: refining. Tier 4: plates.</p>
+</section>
+<section id="costs">
+  <h2>Costs</h2>
+  <div class="widget" data-widget="cost-table">Loading costs...</div>
+  <p>Costs are paid in Home Coin. Numbers like 4,200 or 16,300 may appear in prose without any label:
+     12 farmland plots, 6 woodland plots, 3 mines, 1,450,000 coins in total, 20 slots.</p>
+  <p>Some words the old parser liked, out of context: Growing, Aniimo work, E-mode, workload, RV level,
+     Output capacity, Production, From tier, Electric, real time.</p>
+</section>
+<section>
+  <h2>Related</h2>
+  <ul>
+    <li><a href="#a">Woodworking Bench</a></li>
+    <li><a href="#b">Carousel Mill</a></li>
+    <li><a href="#c">Crafting Table</a></li>
+  </ul>
+</section>
+</main>
+<aside>
+  <h2>About this page</h2>
+  <p>Facility pages now load their numbers in the browser. A checker that reads the server-rendered page
+     sees only the summary above and should report that it could not read the page.</p>
+</aside>
+<footer><p>Footer text of the redesigned site.</p></footer>
+</body>
+</html>

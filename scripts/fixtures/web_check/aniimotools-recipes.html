@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Recipes - synthetic test page</title>
+<!-- Synthetic fixture written by hand for scripts/test_web_check.py. It mimics the layout of a recipes
+     table per station (a header with a row count, then rows ending in a tier cell); the numbers are test
+     values and none of the text is taken from a real page. -->
+<script type="application/ld+json">{"name": "Coarse-Sifted Ore|Production|1|Open the station: X"}</script>
+</head>
+<body>
+<main>
+<h1>Every recipe</h1>
+<p>Rows list what a recipe yields, what it consumes, its cost and the station tier it needs.</p>
+<section>
+  <h2>Chimney Kiln</h2><span>Production</span><span>4</span>
+  <a href="#kiln">Open the station: Chimney Kiln &rarr;</a>
+  <p>Electric mode from RV level 12: these recipes run on it.</p>
+  <table>
+    <tr><th>Yields</th><th>Consumes</th><th>Cost</th><th>From tier</th></tr>
+    <tr><td>Coarse-Sifted Ore</td><td><span>Mineral Sand</span><b>&times;8</b></td><td>34 work</td><td>34 s at Lv 2 &rarr; 9 s at Lv 4</td><td>T1</td></tr>
+    <tr><td>Coarse-Sifted Ore</td><td><i>Electric</i></td><td><span>Mineral Sand</span><b>&times;8</b></td><td>27 s</td><td>real time</td><td>T1</td></tr>
+    <tr><td>Sintered Ore Brick</td><td><span>Coarse-Sifted Ore</span><b>×8</b></td><td>34 work</td><td>34 s at Lv 2 &rarr; 9 s at Lv 4</td><td>T2</td></tr>
+    <tr><td>Sintered Ore Brick</td><td><i>Electric</i></td><td><span>Coarse-Sifted Ore</span><b>×8</b></td><td>27 s</td><td>real time</td><td>T2</td></tr>
+  </table>
+</section>
+<section>
+  <h2>Farmland</h2><span>Growing</span><span>2</span>
+  <a href="#farm">Open the station: Farmland &rarr;</a>
+  <table>
+    <tr><th>Yields</th><th>Consumes</th><th>Cost</th><th>From tier</th></tr>
+    <tr><td>Wheat</td><td><b>&times;5</b></td><td><small>sped up by a tonic</small></td><td><span>Wheat Seed</span><b>&times;1</b></td><td>4 min</td><td>real time</td><td>T1</td></tr>
+    <tr><td>Quick Formula: Wheat</td><td><i>Quick</i></td><td><small>sped up by a tonic</small></td><td><span>Wheat Seed</span><b>&times;1</b></td><td>20 min</td><td>real time</td><td>T2</td></tr>
+  </table>
+</section>
+<section>
+  <h2>Test Lab</h2><span>Production</span><span>1</span>
+  <a href="#lab">Open the station: Test Lab &rarr;</a>
+  <table>
+    <tr><th>Yields</th><th>Consumes</th><th>Cost</th><th>From tier</th></tr>
+    <tr><td>Sample</td><td>nothing</td><td>60 work</td><td>1 min at Lv 1 &rarr; 20 s at Lv 4</td><td>T1</td></tr>
+  </table>
+</section>
+<section><h2>Questions</h2><p>Why does a recipe take different times? Because the cost is work, not time.</p></section>
+</main>
+</body>
+</html>

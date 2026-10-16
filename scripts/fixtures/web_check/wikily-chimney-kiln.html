@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chimney Kiln - synthetic test page</title>
+<!-- Synthetic fixture written by hand for scripts/test_web_check.py. It only mimics the layout of a
+     wiki facility page (stat grids, level sections, RV notes, an embedded data script); every number
+     is chosen for the tests, none of the text is taken from a real page. -->
+<style>.wgt-stat{display:grid}</style>
+<script>window.decoy = "Available at level 9|Upgrade requirements|99|RV level|";</script>
+</head>
+<body>
+<main>
+<h1>Chimney Kiln</h1>
+<p>Test page for the parser. Choose a facility level to see its recipes, capacity and upgrade requirements.</p>
+<section class="level" id="lv-1">
+  <h2>Build requirements</h2>
+  <dl>
+    <div class="wgt-stat"><dd>6</dd><dt>RV level</dt></div>
+    <div class="wgt-stat"><dd>1</dd><dt>Aniimo slots</dt></div>
+    <div class="wgt-stat"><dd>20</dd><dt>Output capacity</dt></div>
+    <div class="wgt-stat"><dd>15</dd><dt>E-mode power</dt></div>
+  </dl>
+  <p>Build cost: Home Coin &times;4,200.</p>
+  <p>Initial construction. Reach RV Level 6.</p>
+  <details><summary>Need RV level 6?</summary>
+    <p>Requirements to reach this RV level (separate from the facility upgrade):
+
+Place some plots in your Home.
+
+RV upgrade cost: Home Coin &times;32,000 &middot; Wood Block &times;1,300 &middot; Mineral Sand &times;700.
+
+RV upgrade time: 1h 30m.</p>
+  </details>
+  <h3>Available at level 1</h3>
+  <p>Open a recipe for ingredients, output and production steps</p>
+  <ul>
+    <li><a href="#r1">Coarse-Sifted Ore</a><span>Aniimo work</span><span>34 workload</span><em>New at this level</em></li>
+    <li><a href="#r1">Coarse-Sifted Ore</a><span>E-mode</span><span>27s</span><em>New at this level</em></li>
+  </ul>
+</section>
+<section class="level" id="lv-2">
+  <h2>Upgrade requirements</h2>
+  <dl>
+    <div class="wgt-stat"><dd>10</dd><dt>RV level</dt></div>
+    <div class="wgt-stat"><dd>1</dd><dt>Aniimo slots</dt></div>
+    <div class="wgt-stat"><dd>20</dd><dt>Output capacity</dt></div>
+    <div class="wgt-stat"><dd>30</dd><dt>E-mode power</dt></div>
+  </dl>
+  <p>Cost for this upgrade: Home Coin &times;16,300.</p>
+  <p>Upgrade from facility level 1. Reach RV Level 10.</p>
+  <details><summary>Need RV level 10?</summary>
+    <p>Requirements to reach this RV level (separate from the facility upgrade):
+
+RV upgrade cost: Home Coin &times;510,000 &middot; Rough Lumber &times;2,000 &middot; Coarse-Sifted Ore &times;2,400.
+
+RV upgrade time: 3h 30m.</p>
+  </details>
+  <h3>Available at level 2</h3>
+  <ul>
+    <li><a>Coarse-Sifted Ore</a><span>Aniimo work</span><span>34 workload</span></li>
+    <li><a>Sintered Ore Brick</a><span>Aniimo work</span><span>34 workload</span><em>New at this level</em></li>
+    <li><a>Coarse-Sifted Ore</a><span>E-mode</span><span>27s</span></li>
+    <li><a>Sintered Ore Brick</a><span>E-mode</span><span>27s</span></li>
+  </ul>
+</section>
+<section class="level" id="lv-3">
+  <h2>Upgrade requirements</h2>
+  <dl>
+    <div class="wgt-stat"><dd>14</dd><dt>RV level</dt></div>
+    <div class="wgt-stat"><dd>1</dd><dt>Aniimo slots</dt></div>
+    <div class="wgt-stat"><dd>20</dd><dt>Output capacity</dt></div>
+    <div class="wgt-stat"><dd>45</dd><dt>E-mode power</dt></div>
+  </dl>
+  <p>Cost for this upgrade: Home Coin &times;75,000.</p>
+  <p>Upgrade from facility level 2. Reach RV level 14.</p>
+  <h3>Available at level 3</h3>
+  <ul>
+    <li><a>Coarse-Sifted Ore</a><span>Aniimo work</span><span>34 workload</span></li>
+    <li><a>Sintered Ore Brick</a><span>Aniimo work</span><span>34 workload</span></li>
+    <li><a>Refined Ore</a><span>Aniimo work</span><span>41 workload</span><em>New at this level</em></li>
+    <li><a>Refined Ore</a><span>E-mode</span><span>1m 48s</span></li>
+  </ul>
+</section>
+</main>
+<footer><p>Join the creator community</p></footer>
+<script>self.__next_f.push([1,"9:[\"$\",\"$1\",\"craft-lv-1-stats\",{\"children\":[[\"$\",\"dl\",null,{\"children\":[[\"$\",\"div\",\"0\",{\"className\":\"wgt-stat\",\"children\":[[\"$\",\"dd\",null,{\"className\":\"wgt-stat-value\",\"children\":[false,\"6\"]}],[\"$\",\"dt\",null,{\"className\":\"wgt-stat-label\",\"children\":\"RV level\"}]]}],[\"$\",\"div\",\"2\",{\"className\":\"wgt-stat\",\"children\":[[\"$\",\"dd\",null,{\"className\":\"wgt-stat-value\",\"children\":[false,\"20\"]}],[\"$\",\"dt\",null,{\"className\":\"wgt-stat-label\",\"children\":\"Output capacity\"}]]}]]}]]}]\n"])</script>
+</body>
+</html>

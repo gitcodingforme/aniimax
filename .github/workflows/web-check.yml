@@ -1,0 +1,91 @@
+name: Web check
+
+# Once a week (or by hand) compares the fan-site numbers (wikily.gg facility pages, the aniimotools.dev
+# recipes page; list in data/sources/pages.csv) with this fork's data after my overrides are applied,
+# using scripts/web_check.py. Differences go into one open issue labelled web-check, which GitHub
+# e-mails; the issue is updated only when the list of differences changes, and closed only after a
+# clean run (exit 0: every page read, no differences). Exit 2 (a site unreachable or a page layout
+# changed, even if the pages read agree) only warns and leaves the issue alone: runners are often
+# rate-limited.
+# Uses only the built-in GITHUB_TOKEN. Note: GitHub stops scheduled runs on a public repository after
+# 60 days without commits; a manual run from the Actions tab starts them again.
+
+on:
+  schedule:
+    - cron: '41 7 * * 2'  # Tuesdays 07:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: web-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply my verified overrides
+        run: python3 scripts/apply_overrides.py
+
+      - name: Compare the web sources with the data
+        id: check
+        run: |
+          set +e
+          python3 scripts/web_check.py --report web-check.md --json web-check.json
+          code=$?
+          set -e
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ -f web-check.md ]; then cat web-check.md >> "$GITHUB_STEP_SUMMARY"; fi
+          case "$code" in
+            0|1) ;;
+            2) echo "::warning::sites unreachable or page shape changed" ;;
+            *) echo "::error::scripts/web_check.py crashed (exit $code); see the log above"; exit 1 ;;
+          esac
+
+      - name: Open, update or close the web-check issue
+        if: steps.check.outputs.code == '0' || steps.check.outputs.code == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODE: ${{ steps.check.outputs.code }}
+        run: |
+          enabled=$(gh repo view "$GITHUB_REPOSITORY" --json hasIssuesEnabled -q .hasIssuesEnabled || echo unknown)
+          if [ "$enabled" != "true" ]; then
+            if [ "$CODE" = "1" ]; then
+              echo "::error::Differences found; enable Issues to get them as an issue"
+              exit 1
+            fi
+            echo "No differences, and Issues are off: nothing to do."
+            exit 0
+          fi
+          gh label create web-check --force --repo "$GITHUB_REPOSITORY" \
+            --description "Weekly check of wiki numbers against the data"
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --label web-check --state open --limit 1 \
+            --json number -q '.[0].number // empty')
+          today=$(date -u +%Y-%m-%d)
+          new_mark=$(grep -o 'web-check:[0-9a-f]*' web-check.md | tail -n 1 || true)
+          if [ "$CODE" = "1" ]; then
+            if [ -z "$number" ]; then
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "Web sources differ from data" \
+                --label web-check --body-file web-check.md
+            else
+              old_mark=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body -q .body \
+                | grep -o 'web-check:[0-9a-f]*' | tail -n 1 || true)
+              if [ "$old_mark" != "$new_mark" ]; then
+                gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --body-file web-check.md
+                gh issue comment "$number" --repo "$GITHUB_REPOSITORY" \
+                  --body "The differences changed on $today; the description now shows the new list."
+              else
+                echo "Issue #$number already lists these differences."
+              fi
+            fi
+          elif [ -n "$number" ]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "No differences on $today."
+            gh issue close "$number" --repo "$GITHUB_REPOSITORY"
+          fi
