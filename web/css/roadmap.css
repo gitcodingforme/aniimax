@@ -1,0 +1,51 @@
+/* Upgrade roadmap card (web/cards/roadmap.js). Colours come from style.css's theme variables. */
+
+#roadmap-card .roadmap-table th.roadmap-num,
+#roadmap-card .roadmap-table td.roadmap-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* style.css highlights every table's first row; here only the best change is (the rules below
+   outrank this one, which :where keeps low). */
+#roadmap-card .roadmap-table tbody tr:where(:first-child) td {
+    color: inherit;
+    font-weight: normal;
+}
+
+#roadmap-card .roadmap-table tbody tr.roadmap-best td {
+    color: var(--success);
+    font-weight: bold;
+}
+
+#roadmap-card .roadmap-table tbody tr.roadmap-muted td {
+    color: var(--text-muted);
+}
+
+#roadmap-card .roadmap-gain {
+    color: var(--success);
+}
+
+#roadmap-card .roadmap-note {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.75rem;
+    font-weight: normal;
+    color: var(--text-muted);
+}
+
+#roadmap-card.roadmap-stale .roadmap-table {
+    opacity: 0.55;
+}
+
+#roadmap-card.roadmap-stale .feature-status {
+    color: var(--warning);
+}
+
+@media (max-width: 600px) {
+    #roadmap-card .roadmap-table th,
+    #roadmap-card .roadmap-table td {
+        padding: 0.4rem 0.5rem;
+    }
+}
