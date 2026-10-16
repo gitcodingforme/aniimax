@@ -64,22 +64,26 @@ class VerifyDataTest(unittest.TestCase):
     def test_agree_disagree_unknown_and_listed_times(self):
         summary = run_with(self.root, [
             unlock("Chimney Kiln", 3, 14),                                   # agree
-            unlock("Chimney Kiln", 4, 19),                                   # disagree (table: RV 18)
+            unlock("Chimney Kiln", 4, 19),                                   # unclear: off by one (table: RV 18), one frame
+            unlock("Chimney Kiln", 4, 21),                                   # disagree: off by three
             unlock("Not A Facility", 2, 5),                                  # unknown facility
             unlock("Chimney Kiln", 9, 40),                                   # unknown level
             recipe("Chimney Kiln", "coarse_sifted_ore", "2s"),               # agree
             recipe("Chimney Kiln", "wheatmeal", "35s"),                      # disagree: it is a Carousel Mill recipe
             recipe("Chimney Kiln", "wood_block", None),                      # unknown: an ingredient, not a recipe row
         ])
-        self.assertEqual((summary["observations"], summary["agree"], summary["disagree"], summary["unknown"]), (7, 2, 2, 3))
+        self.assertEqual((summary["observations"], summary["agree"], summary["disagree"], summary["unclear"], summary["unknown"]), (8, 2, 2, 1, 3))
         self.assertEqual(summary["format"], "aniimax-verification")
         self.assertEqual(summary["report"], "screenshots/verification.md")
         text = self.report()
         self.assertTrue(text.startswith("# Game data check\n"))
         self.assertEqual(len([l for l in text.splitlines()[:8] if l.startswith("- ")]), 5, "a 5-line summary comes first")
-        self.assertIn("Screens observed: 2 (7 facts: 7 from facility panels, 0 from item cards)", text)
+        self.assertIn("Screens observed: 2 (8 facts: 8 from facility panels, 0 from item cards)", text)
         self.assertIn("Last observation: 2026-10-15T10:01:00Z", text)
-        self.assertIn("screen: Lv.4 needs RV 19; table says RV 18", text)
+        self.assertIn("screen: Lv.4 needs RV 21; table says RV 18", text)
+        unclear = text.split("## Unclear")[1].split("## Unknown")[0]
+        self.assertIn("screen: Lv.4 needs RV 19; table says RV 18; off by one in a single frame: open the panel again", unclear)
+        self.assertIn("Disagree with the data: 2 (plus 1 unclear", text)
         self.assertIn("carousel_mill.csv", text)
         self.assertIn("a row of chimney_kiln.csv", text)
         listed = text.split("## Seen, not comparable")[1]
@@ -87,7 +91,8 @@ class VerifyDataTest(unittest.TestCase):
         self.assertIn("| Chimney Kiln | wheatmeal | 35s |", listed, "times are listed, never judged")
 
     def test_the_proposed_override_fragment_is_correct_and_nothing_is_applied(self):
-        run_with(self.root, [unlock("Simmering Pot", 5, 16, frame="facility-20261015-101010.png")])
+        run_with(self.root, [unlock("Simmering Pot", 5, 16, frame="facility-20261015-101010.png"),
+                             unlock("Simmering Pot", 5, 16, frame="facility-20261015-101011.png")])  # off by one: two frames make it a disagreement
         text = self.report()
         fenced = text.split("```json")[1].split("```")[0]
         # the whole table, with level 5 corrected, because the site replaces the table with the override
@@ -105,8 +110,8 @@ class VerifyDataTest(unittest.TestCase):
         marker = wrong.index("3: 14", end)
         wrong = wrong[:marker] + "3: 13" + wrong[marker + len("3: 14"):]
         config.write_text(wrong, encoding="utf-8")
-        summary = run_with(self.root, [unlock("Chimney Kiln", 3, 14)])
-        self.assertEqual((summary["agree"], summary["disagree"]), (0, 1))
+        summary = run_with(self.root, [unlock("Chimney Kiln", 3, 14), unlock("Chimney Kiln", 3, 14, frame="facility-20261015-100001.png")])
+        self.assertEqual((summary["agree"], summary["disagree"]), (0, 2), "off by one, seen in two frames: a disagreement")
         fenced = self.report().split("```json")[1].split("```")[0]
         self.assertEqual(json.loads(fenced), {"facilities": {"Chimney Kiln": {"unlocks": {"1": 6, "2": 10, "3": 14, "4": 18}}}})
         self.assertIn("table says RV 13", self.report())
@@ -115,12 +120,13 @@ class VerifyDataTest(unittest.TestCase):
         (self.root / "data" / "overrides" / "structure.json").write_text(
             json.dumps({"facilities": {"Chimney Kiln": {"unlocks": {"3": 13}}, "Mine": {"unlocks": {"7": 21}}}}), encoding="utf-8")
         summary = run_with(self.root, [unlock("Chimney Kiln", 3, 13), unlock("Chimney Kiln", 3, 14), unlock("Mine", 7, 21), unlock("Chimney Kiln", 2, 10)])
-        self.assertEqual((summary["agree"], summary["disagree"], summary["unknown"]), (2, 1, 1),
-                         "the override replaces the table, as the site does: 3 -> 13 agrees, 14 disagrees, Mine's new level agrees, and Chimney Kiln's level 2 is no longer in the table")
+        self.assertEqual((summary["agree"], summary["disagree"], summary["unclear"], summary["unknown"]), (2, 0, 1, 1),
+                         "the override replaces the table, as the site does: 3 -> 13 agrees, 14 is one off in one frame (unclear), Mine's new level agrees, and Chimney Kiln's level 2 is no longer in the table")
 
     def test_conflicting_sightings_of_one_line_are_flagged_and_disagreements_warn(self):
-        summary = run_with(self.root, [unlock("Carousel Mill", 4, 13), unlock("Carousel Mill", 4, 12, frame="facility-20261015-100500.png")])
-        self.assertEqual((summary["agree"], summary["disagree"]), (1, 1))
+        summary = run_with(self.root, [unlock("Carousel Mill", 4, 13), unlock("Carousel Mill", 4, 12, frame="facility-20261015-100500.png"),
+                                       unlock("Carousel Mill", 4, 12, frame="facility-20261015-100501.png")])
+        self.assertEqual((summary["agree"], summary["disagree"]), (1, 2))
         text = self.report()
         self.assertIn("conflicting sightings of this line: RV 12, 13", text)
         self.assertIn("read the line yourself before pasting", text)
@@ -361,8 +367,9 @@ class SummaryRowsTest(unittest.TestCase):
         summary = run_with(self.root, [
             card("Farmland", "rose", 4, "40m 0s", environment="Cool", t="2026-10-14T10:00:00Z"),
             card("Farmland", "rose", 4, "41m 0s", environment="Cool", t="2026-10-16T10:00:00Z"),   # production_time disagrees this time
-            unlock("Carousel Mill", 4, 13), unlock("Carousel Mill", 4, 12),                        # a misread: one agrees, one does not
-            unlock("Chimney Kiln", 4, 19), unlock("Chimney Kiln", 4, 19, t="2026-10-16T08:00:00Z"),  # disagrees twice: stays disagree
+            unlock("Carousel Mill", 4, 13), unlock("Carousel Mill", 4, 12, frame="facility-20261015-100500.png"),
+            unlock("Carousel Mill", 4, 12, frame="facility-20261015-100501.png"),                  # a misread in two frames: one agrees, one does not
+            unlock("Chimney Kiln", 4, 19), unlock("Chimney Kiln", 4, 19, frame="facility-20261016-080000.png", t="2026-10-16T08:00:00Z"),  # disagrees twice: stays disagree
             card("Farmland", "wheatmeal", 1, "54s"),                                               # another facility's row: a recipe disagreement
         ])
         by = {(r["facility"], r["item"], r["column"], r["key"]): r for r in summary["rows"]}
@@ -391,6 +398,148 @@ class SummaryRowsTest(unittest.TestCase):
             {"obs": {}, "status": "agree"},
         ])
         self.assertEqual(rows, [{"facility": "Farmland", "item": "rose", "column": "facility_level", "key": "", "status": "agree", "day": ""}])
+
+
+def new_fact(fact, facility="", t="2099-01-01T00:00:00Z", frame="facility-20990101-000000.png", **values):
+    return {"t": t, "frame": frame, "facility": facility, "fact": fact, "v": 2, "untested": True, **values}
+
+
+class NewChecksTest(unittest.TestCase):
+    """Milestone 10: unclear unlocks, upgrade costs and caps, the facts not judged yet, the questions block."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = make_root(Path(self._tmp.name))
+
+    def report(self) -> str:
+        return (self.root / "screenshots" / "verification.md").read_text(encoding="utf-8")
+
+    def test_off_by_one_in_one_frame_is_unclear_two_frames_disagree_off_by_two_disagrees(self):
+        summary = run_with(self.root, [
+            unlock("Chimney Kiln", 3, 13, frame="facility-20990101-000000.png"),                                         # one off, one frame: unclear
+            unlock("Chimney Kiln", 4, 19, frame="facility-20990101-000001.png"),                                         # one off ...
+            unlock("Chimney Kiln", 4, 19, frame="facility-20990101-000002.png"),                                         # ... in two frames: disagree
+            unlock("Simmering Pot", 5, 17, frame="facility-20990101-000003.png"),                                        # two off: disagree at once
+            unlock("Joy Wheel Loom", 3, 16, frame="facility-20990101-000004.png"), unlock("Joy Wheel Loom", 3, 16, frame="facility-20990101-000004.png"),  # one frame twice: unclear
+        ])
+        self.assertEqual((summary["agree"], summary["disagree"], summary["unclear"], summary["unknown"]), (0, 3, 3, 0))
+        text = self.report()
+        unclear = text.split("## Unclear")[1].split("## Unknown")[0]
+        self.assertIn("Lv.3 needs RV 13; table says RV 14; off by one in a single frame: open the panel again", unclear)
+        disagree = text.split("## Disagree")[1].split("## Unclear")[0]
+        self.assertNotIn("RV 13", disagree.replace("RV 13,", ""), "no override is proposed for an unclear line")
+        fragments = [json.loads(f.split("```")[0]) for f in disagree.split("```json")[1:]]
+        self.assertEqual([list(f["facilities"]) for f in fragments], [["Chimney Kiln"], ["Chimney Kiln"], ["Simmering Pot"]])
+        self.assertNotIn("unlock", {r["column"] for r in summary["rows"] if r["facility"] == "Joy Wheel Loom"}, "unclear: no per-value row")
+        self.assertEqual(len([l for l in text.splitlines()[:8] if l.startswith("- ")]), 5, "still a 5-line summary")
+
+    def test_upgrade_costs_and_store_caps_are_judged_with_the_overrides(self):
+        facts = [new_fact("level_up", "Chimney Kiln", level=2, next_level=3, coin_cost="75 000", rv_required=14, max_level=False, materials=[]),
+                 new_fact("level_up", "Carousel Mill", level=3, next_level=4, coin_cost=None, rv_required=13, max_level=False, materials=[]),
+                 new_fact("cap", "Farmland", level=1, held=5, cap=5),
+                 new_fact("cap", "Woodland", level=2, held=3, cap=13)]
+        run_with(self.root, facts)
+        section = self.report().split("## Upgrade costs and store caps")[1].split("## Seen, not judged yet")[0]
+        self.assertIn("| Chimney Kiln | upgrade cost | agree | Lv.3 costs 75000 (table says 75000) |", section)
+        self.assertIn("| Carousel Mill | upgrade cost | listed |", section)
+        self.assertIn("| Farmland | store cap | agree | Lv.1 holds 5 (table says 5) |", section)
+        self.assertIn("| Woodland | store cap | disagree | screen: Lv.2 holds 13; table says 12 |", section)
+        fenced = json.loads(section.split("```json")[1].split("```")[0])
+        self.assertEqual(fenced, {"facilities": {"Woodland": {"outputCaps": [8, 13, 16, 20, 24, 28]}}}, "the whole list, as the site replaces it")
+        (self.root / "data" / "overrides" / "structure.json").write_text(json.dumps({
+            "upgradeCosts": {"Chimney Kiln": {"3": 80000}},
+            "facilities": {"Farmland": {"outputCaps": [6, 10]}, "Woodland": {"outputCaps": [8, 13]}}}), encoding="utf-8")
+        summary = run_with(self.root, facts)
+        section = self.report().split("## Upgrade costs and store caps")[1].split("## Seen, not judged yet")[0]
+        self.assertIn("| Chimney Kiln | upgrade cost | disagree | screen: Lv.3 costs 75000; table says 80000 |", section)
+        self.assertIn('"upgradeCosts"', section)
+        self.assertIn("| Farmland | store cap | disagree | screen: Lv.1 holds 5; table says 6 |", section)
+        self.assertIn("| Woodland | store cap | agree |", section)
+        self.assertEqual((summary["observations"], summary["agree"], summary["disagree"], summary["rows"]), (0, 0, 0, []),
+                         "the new checks stay out of the counts and the site's rows")
+        self.assertEqual(vd.load_upgrade_costs(self.root, vd.load_facilities(self.root)[0])["Chimney Kiln"], {2: 16300, 3: 80000, 4: 340000})
+
+    def test_an_unlock_from_the_level_up_tab_is_judged_but_never_a_row_or_a_fragment(self):
+        from_tab = {**unlock("Chimney Kiln", 4, 21), "v": 2, "untested": True, "source": "level_up"}
+        summary = run_with(self.root, [from_tab, {**from_tab, "frame": "facility-20990101-000001.png"}, unlock("Chimney Kiln", 3, 14)])
+        self.assertEqual((summary["disagree"], summary["agree"]), (2, 1), "still judged and counted")
+        self.assertEqual([(r["key"], r["status"]) for r in summary["rows"] if r["column"] == "unlock"], [("3", "agree")], "no served row from an untested prompt")
+        disagree = self.report().split("## Disagree")[1].split("## Unknown")[0]
+        self.assertNotIn("```json", disagree, "no structure.json fragment")
+        self.assertIn("No override is proposed: this line was read from the Level Up tab", disagree)
+
+    def test_an_output_cap_override_for_an_unknown_facility_is_skipped(self):
+        (self.root / "data" / "overrides" / "structure.json").write_text(json.dumps({
+            "facilities": {"Moon Base": {"outputCaps": [1, 2]}, "Farmland": {"outputCaps": [6]}}}), encoding="utf-8")
+        caps = vd.load_output_caps(self.root, vd.load_facilities(self.root)[0])
+        self.assertNotIn("Moon Base", caps, "skipped, as web/overrides.js skips it")
+        self.assertEqual(caps["Farmland"], {1: 6})
+        self.assertEqual(caps["Well"], {1: 300, 2: 300, 3: 340, 4: 340, 5: 340}, "read by web_check's parser")
+
+    def test_new_facts_stay_out_of_verdicts_and_rows(self):
+        facts = [new_fact("panel", "Crackle Generator", level=2, tab="Details", capacity=600, in_use=450, supply_rate=120, supply_mode=None, pairs=[]),
+                 new_fact("manage", "Chimney Kiln", level=2, slots_total=1, slots_empty=1, first_ability=None, named=False, emode_on=True),
+                 new_fact("emode", "Well", level=1, switch_visible=False, emode_on=None, power_draw=None),
+                 new_fact("food", total_food_energy="12 400", energy=12400, working_aniimo=3),
+                 {**new_fact("tick", "Chimney Kiln", recipe="coarse_sifted_ore", time="2s", time_seconds=2), "untested": False},
+                 new_fact("screen", screen="rv", read=True),
+                 unlock("Chimney Kiln", 3, 14)]
+        summary = run_with(self.root, facts)
+        self.assertEqual((summary["observations"], summary["agree"]), (1, 1), "only the unlock is a verdict")
+        self.assertEqual({r["column"] for r in summary["rows"]}, {"unlock"})
+        self.assertEqual(len(vd.load_new_facts(self.root / "screenshots" / "observations.jsonl")), 6)
+        seen = self.report().split("## Seen, not judged yet")[1].split("## Game questions")[0]
+        self.assertIn("| panel | Crackle Generator | 2 | tab Details; capacity 600; in_use 450; supply_rate 120 |", seen)
+        self.assertIn("| food |  |  | total_food_energy 12 400; working_aniimo 3 |", seen)
+        self.assertIn("tick facts): 1.", seen)
+        self.assertIn("(RV, modules, roster): rv.", seen)
+
+    def test_a_processor_card_with_neither_time_nor_workload_is_not_complete(self):
+        log = self.root / "screenshots" / "observations.jsonl"
+        log.parent.mkdir(exist_ok=True)
+        log.write_text(json.dumps(card("Bouncy Brew Keg", "ginseng_water", 3)) + "\n", encoding="utf-8")
+        files, unlocks = vd.load_facilities(self.root)
+        own, seasonal = vd.load_recipes(self.root, files)
+        own_rows, seasonal_rows = vd.load_item_rows(self.root, files)
+        verdict = vd.judge(vd.load_observations(log), unlocks, files, own, seasonal, own_rows, seasonal_rows, vd.load_emode_times(self.root))[0]
+        self.assertEqual(verdict["status"], "agree")
+        self.assertFalse(verdict["complete"])
+        self.assertIn("workload not read (data: 162)", verdict["detail"])
+
+    def test_the_json_summary_holds_only_question_counts(self):
+        web_json = self.root / "web" / "verification.json"
+        summary = run_with(self.root, [unlock("Carousel Mill", 4, 13, frame="facility-20990101-000000.png"),
+                                       unlock("Carousel Mill", 4, 13, frame="facility-20990101-000001.png"),
+                                       new_fact("food", total_food_energy="1 000", energy=1000, working_aniimo=1)], web_json=web_json)
+        data = json.loads(web_json.read_text(encoding="utf-8"))
+        self.assertEqual(set(data["questions"]), {"total", "answered", "evidence", "open"})
+        self.assertTrue(all(type(v) is int for v in data["questions"].values()), data["questions"])
+        self.assertEqual(data["questions"], {"total": 19, "answered": 1, "evidence": 1, "open": 17}, "CM answered by two frames, W1 has evidence")
+        self.assertIs(type(data["unclear"]), int)
+        self.assertEqual(data, summary)
+        text = json.dumps(data)
+        for word in ("CM", "W1", "Carousel Mill level 4", "1 000"):
+            self.assertNotIn(word, text, "no question id, text or read value in the served file")
+        questions = self.report().split("## Game questions")[1]
+        self.assertIn("1 of 19 answered, 1 with evidence waiting for you, 17 open.", questions)
+        self.assertIn("| CM | answered |", questions)
+        status = {}
+        run_with(self.root, [], question_status=status)
+        self.assertEqual(len(status), 19)
+        self.assertEqual(set(status.values()), {"open"})
+
+    def test_questions_prints_the_table_and_writes_nothing(self):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(vd.main(["--root", str(self.root), "--questions"]), 0)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(len([l for l in lines if l.split() and l.split()[1] in ("open", "evidence", "answered")]), 19)
+        self.assertIn("0 of 19 answered, 0 with evidence waiting for you, 19 open.", out.getvalue())
+        self.assertFalse((self.root / "screenshots" / "verification.md").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

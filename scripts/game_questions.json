@@ -1,0 +1,204 @@
+{
+  "format": "aniimax-game-questions",
+  "version": 1,
+  "_comment": "The game facts only a play session can settle, from docs/design.md section 7 (Q), docs/plans/emode.md section 5 (E) and the Milestone 10 survey (W1, CM, UC, L1, SC). scripts/game_questions.py gives each a status from the watcher's observation log: open (nothing captured), evidence (captured, but the prompt that read it is untested or the answer needs your eye: settle owner), answered. Set settled_by_doc to where you logged the answer (for example \"docs/DECISIONS.md 2026-10-20\") and the question counts as answered. Fields per question: id, source, question, screen, minutes, detector, settle (auto or owner), settled_by_doc. Never put a value read off your screen in this file: it is committed.",
+  "questions": [
+    {
+      "id": "Q1",
+      "source": "docs/design.md section 7, question 1",
+      "question": "When a processor finishes a batch, does it start the next one by itself?",
+      "screen": "A running processor's Formula tab, watched across the end of a batch",
+      "minutes": 3,
+      "detector": {"type": "tick_reset", "category": "processor"},
+      "settle": "owner",
+      "settled_by_doc": null
+    },
+    {
+      "id": "Q2",
+      "source": "docs/design.md section 7, question 2",
+      "question": "Do staffed plots re-sow by themselves after a harvest?",
+      "screen": "A staffed plot's Formula tab after its harvest",
+      "minutes": 3,
+      "detector": {"type": "fact", "fact": "tick", "category": "grower", "needs": ["time"]},
+      "settle": "owner",
+      "settled_by_doc": null
+    },
+    {
+      "id": "Q3",
+      "source": "docs/design.md section 7, question 3",
+      "question": "At what points on the timer do the two watering prompts appear, and what does a missed watering cost?",
+      "screen": "A growing plot, watched until each watering prompt (note the timer)",
+      "minutes": 10,
+      "detector": {"type": "manual"},
+      "settle": "owner",
+      "settled_by_doc": null
+    },
+    {
+      "id": "Q4",
+      "source": "docs/design.md section 7, question 4",
+      "question": "Does the Storage Unit have a capacity that stops production when full?",
+      "screen": "The Storage Unit's panel",
+      "minutes": 1,
+      "detector": {"type": "fact", "fact": "panel", "facility": "Storage Unit"},
+      "settle": "owner",
+      "settled_by_doc": null
+    },
+    {
+      "id": "Q6",
+      "source": "docs/design.md section 7, question 6",
+      "question": "Is the time in a facility's recipe box the time left on the current batch?",
+      "screen": "A running facility's Formula tab, left open for 70 seconds",
+      "minutes": 2,
+      "detector": {"type": "pair_over_time", "fact": "tick", "field": "time_seconds", "group": ["facility", "recipe"], "min_seconds": 60, "no_rise": true},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "Q7",
+      "source": "docs/design.md section 7, question 7",
+      "question": "What does a facility's Level Up tab show for an upgrade you can reach (coins, RV, materials)?",
+      "screen": "A facility's Level Up tab, not at its maximum level",
+      "minutes": 1,
+      "detector": {"type": "fact", "fact": "level_up", "needs_any": ["coin_cost", "rv_required"]},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "Q9",
+      "source": "docs/design.md section 7, question 9",
+      "question": "When a plot's store cannot take a whole harvest, does the harvest overflow, stop or get capped?",
+      "screen": "A full plot (its store at its cap)",
+      "minutes": 2,
+      "detector": {"type": "fact", "fact": "cap", "category": "grower", "needs": ["held", "cap"], "same": ["held", "cap"]},
+      "settle": "owner",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E1",
+      "source": "docs/plans/emode.md section 5, question 1",
+      "question": "What does the Crackle Generator's Details tab show: capacity, power in use, supply rate?",
+      "screen": "Crackle Generator, Details tab",
+      "minutes": 1,
+      "detector": {"type": "fact", "fact": "panel", "facility": "Crackle Generator", "needs": ["capacity"]},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E2",
+      "source": "docs/plans/emode.md section 5, question 2",
+      "question": "What does the generator's upgrade cost, and how many generators does your RV allow?",
+      "screen": "Crackle Generator, Level Up tab, then the Build menu",
+      "minutes": 2,
+      "detector": {"type": "fact", "fact": "level_up", "facility": "Crackle Generator"},
+      "settle": "owner",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E3",
+      "source": "docs/plans/emode.md section 5, question 3",
+      "question": "Is a facility's power draw fixed, or 15 times its level?",
+      "screen": "The same facility kind at two different levels, with E-mode on (Manage tab)",
+      "minutes": 3,
+      "detector": {"type": "fact", "fact": "emode", "needs": ["power_draw"], "distinct": "level", "min": 2},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E4",
+      "source": "docs/plans/emode.md section 5, question 4",
+      "question": "With the load just above capacity divided by 1.2, is the supply rate a step (100 or 120) or capacity divided by load?",
+      "screen": "Crackle Generator, Details tab, with the load just above capacity / 1.2",
+      "minutes": 3,
+      "detector": {"type": "supply_above", "facility": "Crackle Generator", "ratio": 1.2},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E5",
+      "source": "docs/plans/emode.md section 5, question 5",
+      "question": "Do the Well and the Mine have an E-mode switch, and does Well Water's card show 30m 0s?",
+      "screen": "The Well's and the Mine's panels, then Well Water's item card",
+      "minutes": 3,
+      "detector": {"type": "all", "of": [
+        {"type": "fact", "fact": "emode", "facility": "Well", "needs": ["switch_visible"]},
+        {"type": "fact", "fact": "emode", "facility": "Mine", "needs": ["switch_visible"]},
+        {"type": "fact", "fact": "card", "facility": "Well", "where": {"item": "well_water"}, "needs": ["time"]}
+      ]},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E6",
+      "source": "docs/plans/emode.md section 5, question 6",
+      "question": "On an electrified facility's Manage tab, is the Aniimo slot empty (the worker freed)?",
+      "screen": "An E-mode facility's Manage tab with E-mode on",
+      "minutes": 1,
+      "detector": {"type": "fact", "fact": "manage", "where": {"emode_on": true}},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "E7",
+      "source": "docs/plans/emode.md section 5, question 7",
+      "question": "While a facility runs at 120% supply, does its item card still show the base time?",
+      "screen": "A processor's item card within 10 minutes of a 120% generator reading",
+      "minutes": 2,
+      "detector": {"type": "card_near_supply", "facility": "Crackle Generator", "rate": 120, "minutes": 10, "category": "processor"},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "W1",
+      "source": "docs/research/worker-food.md (the food rate)",
+      "question": "How fast do working Aniimo eat from the Food tab (the rate on record, 10 energy a minute each, is beta data)?",
+      "screen": "The Food tab, read twice about an hour apart without adding food",
+      "minutes": 2,
+      "detector": {"type": "pair_over_time", "fact": "food", "field": "total_food_energy", "min_minutes": 45, "no_rise": true},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "CM",
+      "source": "docs/DECISIONS.md (the Carousel Mill RV 12 misread)",
+      "question": "Does Carousel Mill level 4 unlock at RV 12 or RV 13?",
+      "screen": "Carousel Mill's Formula tab with the grey line clear of the Batch button, then its Level Up tab",
+      "minutes": 2,
+      "detector": {"type": "any", "of": [
+        {"type": "corroborated_unlock", "facility": "Carousel Mill", "facility_level": 4, "frames": 2},
+        {"type": "fact", "fact": "level_up", "facility": "Carousel Mill", "where": {"next_level": 4}, "needs": ["rv_required"]}
+      ]},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "UC",
+      "source": "data/unverified.csv (Star, Scales, Quick Scales)",
+      "question": "Do the three cards upstream marks unverified (Star, Scales, Quick Scales) match the data?",
+      "screen": "The Star, Scales and Quick Scales item cards, one at a time",
+      "minutes": 3,
+      "detector": {"type": "unverified_cards"},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "L1",
+      "source": "web/facility-config.js OUTPUT_CAPS (level 1 values from fan sites)",
+      "question": "How much does a level 1 plot hold (the level 1 output caps)?",
+      "screen": "A level 1 plot's panel",
+      "minutes": 1,
+      "detector": {"type": "fact", "fact": "cap", "category": "grower", "where": {"level": 1}, "needs": ["cap"]},
+      "settle": "auto",
+      "settled_by_doc": null
+    },
+    {
+      "id": "SC",
+      "source": "docs/runbooks/watcher.md (screens never captured)",
+      "question": "Can the watcher read the RV, modules and Aniimo roster screens?",
+      "screen": "The RV screen, the modules screen and the roster",
+      "minutes": 3,
+      "detector": {"type": "screens", "screens": ["rv", "modules", "aniimo"]},
+      "settle": "auto",
+      "settled_by_doc": null
+    }
+  ]
+}

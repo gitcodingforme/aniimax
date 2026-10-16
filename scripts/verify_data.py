@@ -34,6 +34,17 @@ This script compares them with the data and writes a short report:
            card shows one. One disagreeing column makes the card disagree; a card whose item is a row
            of another facility's file disagrees too; an item that is no row anywhere is unknown.
            A card that agrees for an item listed in data/unverified.csv confirms that row.
+  unclear  an unlock line read one RV level off the table, in a single frame: the number is often
+           half hidden behind the Batch button, so it is not a disagreement (no override is proposed)
+           until a second frame shows the same number; off by two or more is judged as a disagreement.
+  level_up a Level Up tab's coin cost against FACILITY_UPGRADE_COSTS in web/facility-config.js with
+           structure.json `upgradeCosts` on top; cap, a plot's held/cap line against OUTPUT_CAPS with
+           `outputCaps` on top. Both prompts are untested, so these have their own section and stay
+           out of the verdict counts and the site's rows.
+  panel, manage, emode, food, tick, screen
+           facts from untested prompts or kept for the game questions: listed under "Seen, not judged
+           yet", never judged. scripts/game_questions.py turns all facts into the "Game questions"
+           checklist (scripts/game_questions.json).
 
 Nothing is written to the overrides: a disagreement prints a ready-to-paste fragment for
 data/overrides/structure.json (unlocks), a row for data/overrides/values.csv (card columns) or a row
@@ -41,11 +52,13 @@ for data/overrides/emode_times.csv (a processed item's time) that you accept or 
 
 Usage (from the repository root):
   python scripts/verify_data.py [--root R] [--observations FILE] [--out-md FILE] [--out-json FILE] [--web-dir DIR]
+  python scripts/verify_data.py --questions     print the game-question checklist and exit (writes nothing)
 
 Defaults: screenshots/observations.jsonl in, screenshots/verification.md and verification.json out;
 with --web-dir the JSON summary is also copied there as verification.json (the local site reads it).
 The summary's `rows` (see summary_rows) feed the site's "How sure is this data?" card; they name only
-facility, item, column, key, status and day, never frames, times of day or values read off the screen.
+facility, item, column, key, status and day, never frames, times of day or values read off the screen;
+`questions` holds four whole numbers (total, answered, evidence, open) and `unclear` one.
 Standard library only.
 """
 from __future__ import annotations
@@ -62,6 +75,9 @@ REPORT_FORMAT = "aniimax-verification"
 SEASONAL_FILE = "harvest_moon_festival.csv"
 EMODE_FILE = "overrides/emode_times.csv"  # under data/: item, facility, emode_seconds, source, fetched_on
 ENTRY = re.compile(r"name: '([^']+)',\s*slug: '([^']+)'")
+CLASSIC_FACTS = ("unlock", "recipe", "card")  # judged one by one (judge)
+NEW_FACTS = ("level_up", "panel", "manage", "food", "cap", "emode", "tick", "screen")  # watch_game.FACTS minus the classic ones
+NOT_JUDGED = ("panel", "manage", "emode", "food")  # listed under "Seen, not judged yet"
 
 
 def load_observations(path: Path) -> list[dict]:
@@ -86,6 +102,75 @@ def load_observations(path: Path) -> list[dict]:
         elif item.get("fact") == "card" and isinstance(item.get("item"), str) and item["item"]:
             found.append(item)
     return found
+
+
+def load_new_facts(path: Path) -> list[dict]:
+    """The facts of the newer types (NEW_FACTS: Level Up tabs, aux panels, Manage tabs, food, caps,
+    E-mode, recipe-box ticks, screens seen), bad lines skipped. They never reach judge(); see
+    judge_new and game_questions.py. A fact needs a time and a facility string ("" for food and
+    screens, which belong to no facility)."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    except (OSError, ValueError):
+        return []
+    found = []
+    for line in lines:
+        try:
+            item = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(item, dict) and item.get("fact") in NEW_FACTS and isinstance(item.get("facility"), str) and isinstance(item.get("t"), str):
+            found.append(item)
+    return found
+
+
+def load_categories(root: Path) -> dict[str, str]:
+    """{facility name: category} from web/facility-config.js (Materials, Aniimo Materials,
+    Environment, Materials Processing), for the game questions' grower and processor detectors."""
+    path = root / "web" / "facility-config.js"
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    return dict(re.findall(r"name: '([^']+)',\s*slug: '[^']+'[^\n]*?category: '([^']+)'", text))
+
+
+def js_table(config: str, name: str) -> dict[str, dict[int, int | None]]:
+    """`export const NAME = { Facility: [a, b, null], 'Two Words': { 2: c } };` as {facility: {level: value}}
+    (a list's index 0 is level 1), read by web_check's own parser (js_block, js_level_tables) so the
+    two scripts read the table one way. Imported here, not at the top: web_check imports this module."""
+    import web_check
+    return web_check.js_level_tables(web_check.js_block(config, name)) or {}
+
+
+def load_structure(root: Path) -> dict:
+    try:
+        data = json.loads((root / "data" / "overrides" / "structure.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def load_upgrade_costs(root: Path, files: dict[str, str]) -> dict[str, dict[int, int | None]]:
+    """FACILITY_UPGRADE_COSTS (Home Coins to reach each level) with structure.json `upgradeCosts`
+    merged per level, the way web/overrides.js applies them: a known facility, levels 2 and up, whole
+    numbers above 0, or that facility's patch is skipped."""
+    config_path = root / "web" / "facility-config.js"
+    table = js_table(config_path.read_text(encoding="utf-8"), "FACILITY_UPGRADE_COSTS") if config_path.is_file() else {}
+    for name, levels in (load_structure(root).get("upgradeCosts") or {}).items():
+        if name in files and isinstance(levels, dict) and levels and all(
+                str(k).isdigit() and int(k) >= 2 and whole(v) and v > 0 for k, v in levels.items()):
+            table[name] = {**table.get(name, {}), **{int(k): v for k, v in levels.items()}}
+    return table
+
+
+def load_output_caps(root: Path, files: dict[str, str]) -> dict[str, dict[int, int | None]]:
+    """OUTPUT_CAPS (index 0 = level 1) with a known facility's structure.json `outputCaps` replacing
+    its whole list, as web/overrides.js does (a list of whole numbers or null; unknown facilities skipped)."""
+    config_path = root / "web" / "facility-config.js"
+    table = js_table(config_path.read_text(encoding="utf-8"), "OUTPUT_CAPS") if config_path.is_file() else {}
+    for name, patch in (load_structure(root).get("facilities") or {}).items():
+        caps = patch.get("outputCaps") if isinstance(patch, dict) else None
+        if name in files and isinstance(caps, list) and caps and all(c is None or (whole(c) and c >= 0) for c in caps):
+            table[name] = {i + 1: c for i, c in enumerate(caps)}
+    return table
 
 
 TIME_PART = re.compile(r"(\d+)\s*([hms])\b")
@@ -256,6 +341,8 @@ def judge_card(obs: dict, files: dict[str, str], own_rows: dict[str, dict[str, d
         workload = obs.get("workload") if whole(obs.get("workload")) else None
         if workload is not None:
             compare("workload", workload, row.get("workload", ""), lambda s, d: d.isdigit() and int(d) == s)
+        elif not obs.get("time"):  # neither line read: the card is not complete (it showed one of them)
+            columns.append({"column": "workload", "screen": None, "data": row.get("workload", ""), "status": "listed"})
     if "environment" in row:
         env = obs.get("environment") if isinstance(obs.get("environment"), str) and obs["environment"].strip() else None
         data_env = row.get("environment", "").strip()
@@ -292,14 +379,18 @@ def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: d
           own: dict[str, set[str]], seasonal: dict[str, set[str]],
           own_rows: dict[str, dict[str, dict]] | None = None, seasonal_rows: dict[str, dict[str, dict]] | None = None,
           emode: dict[tuple[str, str], int] | None = None) -> list[dict]:
-    """One verdict per observation: {obs, status: agree|disagree|unknown, detail, [table_rv]}."""
+    """One verdict per observation: {obs, status: agree|disagree|unclear|unknown, detail, [table_rv]}.
+    An unlock read one RV level off the table in fewer than UNCLEAR_FRAMES frames is unclear, not a
+    disagreement (see the module docstring)."""
     out = []
     # The same unlock line seen with different numbers in different frames: the model misreads a
     # number that a button half hides, so every reading of that line is marked as conflicting.
     readings: dict[tuple, set] = {}
-    for obs in observations:
+    frames_of: dict[tuple, set] = {}  # (facility, level, rv) -> the frames that showed that number
+    for i, obs in enumerate(observations):
         if obs["fact"] == "unlock":
             readings.setdefault((obs["facility"], obs.get("facility_level")), set()).add(obs.get("rv_level"))
+            frames_of.setdefault((obs["facility"], obs.get("facility_level"), obs.get("rv_level")), set()).add(obs.get("frame") or f"#{i}")
     for obs in observations:
         facility = obs["facility"]
         if obs["fact"] == "card":
@@ -313,10 +404,13 @@ def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: d
                 why = "facility not in the table" if table is None else f"Lv.{fl} not in the table"
                 out.append({"obs": obs, "status": "unknown", "detail": why})
             elif table[fl] == rv:
-                out.append({"obs": obs, "status": "agree", "detail": f"Lv.{fl} needs RV {rv} (table says RV {table[fl]}){conflict}"})
+                out.append({"obs": obs, "status": "agree", "detail": f"Lv.{fl} needs RV {rv} (table says RV {table[fl]}){conflict}{untested_note(obs)}"})
+            elif abs(rv - table[fl]) == 1 and len(frames_of.get((facility, fl, rv), ())) < UNCLEAR_FRAMES:
+                out.append({"obs": obs, "status": "unclear", "table_rv": table[fl],
+                            "detail": f"screen: Lv.{fl} needs RV {rv}; table says RV {table[fl]}; off by one in a single frame: open the panel again{conflict}{untested_note(obs)}"})
             else:
                 out.append({"obs": obs, "status": "disagree", "table_rv": table[fl],
-                            "detail": f"screen: Lv.{fl} needs RV {rv}; table says RV {table[fl]}{conflict}"})
+                            "detail": f"screen: Lv.{fl} needs RV {rv}; table says RV {table[fl]}{conflict}{untested_note(obs)}"})
         else:
             recipe = obs.get("recipe")
             if facility not in files:
@@ -332,6 +426,59 @@ def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: d
                     out.append({"obs": obs, "status": "disagree", "detail": f"the data has it under {', '.join(elsewhere)}, not {files[facility]}"})
                 else:
                     out.append({"obs": obs, "status": "unknown", "detail": f"not a recipe row in {files[facility]} (maybe an ingredient or a new recipe)"})
+    return out
+
+
+UNCLEAR_FRAMES = 2  # frames that must show the same off-by-one number before it is a disagreement
+
+
+def untested_note(obs: dict) -> str:
+    return " (read from the Level Up tab, an untested prompt)" if obs.get("untested") else ""
+
+
+def digits(value) -> int | None:
+    """A whole number from a value written on screen ('81 000', '81,000', 81000), or None."""
+    if whole(value):
+        return value
+    text = re.sub(r"[^0-9]", "", str(value)) if isinstance(value, str) else ""
+    return int(text) if text else None
+
+
+def judge_new(facts: list[dict], upgrade: dict[str, dict[int, int | None]], caps: dict[str, dict[int, int | None]]) -> list[dict]:
+    """The new checks, one verdict per level_up or cap fact: {obs, check, status:
+    agree|disagree|unknown|listed, detail, fragment}. `fragment` is a structure.json patch to paste
+    on a disagreement (nothing is applied). The prompts behind both are untested, so these verdicts
+    are kept apart from judge()'s: own section, no counts in the summary, no rows."""
+    out = []
+    for f in facts:
+        facility = f.get("facility")
+        if f.get("fact") == "level_up":
+            cost, level = digits(f.get("coin_cost")), f.get("next_level")
+            table = upgrade.get(facility)
+            if cost is None or not whole(level):
+                out.append({"obs": f, "check": "upgrade cost", "status": "listed", "detail": "no cost or next level read (a cost equal to the Home Coins balance is cleared)"})
+            elif table is None or table.get(level) is None:
+                out.append({"obs": f, "check": "upgrade cost", "status": "unknown", "detail": f"no upgrade cost to Lv.{level} in the table"})
+            elif table[level] == cost:
+                out.append({"obs": f, "check": "upgrade cost", "status": "agree", "detail": f"Lv.{level} costs {cost} (table says {table[level]})"})
+            else:
+                out.append({"obs": f, "check": "upgrade cost", "status": "disagree", "detail": f"screen: Lv.{level} costs {cost}; table says {table[level]}",
+                            "fragment": {"upgradeCosts": {facility: {str(level): cost}}}})
+        elif f.get("fact") == "cap":
+            cap, level = f.get("cap"), f.get("level")
+            table = caps.get(facility)
+            if not whole(cap) or not whole(level):
+                out.append({"obs": f, "check": "store cap", "status": "listed", "detail": "no cap or facility level read"})
+            elif table is None or table.get(level) is None:
+                out.append({"obs": f, "check": "store cap", "status": "unknown", "detail": f"no output cap for Lv.{level} in the table"})
+            elif table[level] == cap:
+                out.append({"obs": f, "check": "store cap", "status": "agree", "detail": f"Lv.{level} holds {cap} (table says {table[level]})"})
+            else:
+                levels = dict(table)
+                levels[level] = cap
+                whole_list = [levels.get(i) for i in range(1, max(levels) + 1)]
+                out.append({"obs": f, "check": "store cap", "status": "disagree", "detail": f"screen: Lv.{level} holds {cap}; table says {table[level]}",
+                            "fragment": {"facilities": {facility: {"outputCaps": whole_list}}}})
     return out
 
 
@@ -400,6 +547,8 @@ def summary_rows(verdicts: list[dict]) -> list[dict]:
             if not v.get("columns") and v.get("status") == "disagree":
                 add(facility, obs.get("item"), "recipe", "", "disagree", t)
         elif fact == "unlock":
+            if obs.get("untested"):
+                continue  # read from the Level Up tab, an untested prompt: never a served row
             add(facility, "", "unlock", obs.get("facility_level"), v.get("status"), t)
         elif fact == "recipe":
             add(facility, obs.get("recipe"), "recipe", "", v.get("status"), t)
@@ -422,8 +571,9 @@ def override_row(p: dict) -> str:
     return ", ".join(str(p[k]).replace(",", ";") for k in keys)
 
 
-def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]] | None = None, unverified: list[dict] | None = None) -> str:
-    counts = {s: sum(1 for v in verdicts if v["status"] == s) for s in ("agree", "disagree", "unknown")}
+def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]] | None = None, unverified: list[dict] | None = None,
+           new_verdicts: list[dict] | None = None, new_facts: list[dict] | None = None, questions: list[dict] | None = None) -> str:
+    counts = {s: sum(1 for v in verdicts if v["status"] == s) for s in ("agree", "disagree", "unclear", "unknown")}
     frames = {v["obs"].get("frame") for v in verdicts}
     last = max((str(v["obs"].get("t") or "") for v in verdicts), default="")
     cards = [v for v in verdicts if v["obs"]["fact"] == "card"]
@@ -431,7 +581,7 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
     lines = ["# Game data check", "",
              f"- Screens observed: {len(frames)} ({len(verdicts)} facts: {len(panel)} from facility panels, {len(cards)} from item cards).",
              f"- Agree with the data: {counts['agree']}.",
-             f"- Disagree with the data: {counts['disagree']}.",
+             f"- Disagree with the data: {counts['disagree']}" + (f" (plus {counts['unclear']} unclear: off by one in a single frame, see Unclear)." if counts["unclear"] else "."),
              f"- Unknown (nothing to compare with): {counts['unknown']}.",
              f"- Last observation: {last or 'none yet'} (report written {updated}).", ""]
     by = {s: [v for v in panel if v["status"] == s] for s in counts}
@@ -452,7 +602,10 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
     for v in by["disagree"]:
         o = v["obs"]
         lines += [f"### {o['facility']}: {row(v)[1]}", "", f"- {v['detail']}", f"- Frame {o.get('frame')}, seen {day(o.get('t'))}."]
-        if o["fact"] == "unlock":
+        if o["fact"] == "unlock" and o.get("untested"):
+            lines += ["- No override is proposed: this line was read from the Level Up tab, whose prompt has no checked frames yet. "
+                      "Check the tab in game; a facility panel's grey line seen in two frames gives a fragment.", ""]
+        elif o["fact"] == "unlock":
             # The site replaces the whole table with the override, so the fragment carries every level.
             levels = dict((unlocks or {}).get(o["facility"], {}))
             levels[o["facility_level"]] = o["rv_level"]
@@ -463,6 +616,11 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
         else:
             lines += ["- Recipe placement is not an override (the CSV rows are upstream's). Check the panel in game, then fix the row in "
                       "data/overrides/values.csv or tell upstream.", ""]
+    if by["unclear"]:
+        lines += ["## Unclear", "",
+                  "Read one RV level off the table, in a single frame: the Batch button often half hides that number. No override is "
+                  "proposed; open the panel again (a second frame with the same number makes it a disagreement).", ""]
+        lines += table(headers, [row(v) for v in by["unclear"]]) + [""]
     lines += ["## Unknown", ""] + (table(headers, [row(v) for v in by["unknown"]]) if by["unknown"] else ["Nothing here."]) + [""]
 
     # Item cards: one row per card seen, judged column by column against the item's CSV row.
@@ -524,11 +682,80 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
               "The time in a facility's recipe box is not understood yet (docs/design.md section 7), so it is listed and never judged.", ""]
     lines += table(["Facility", "Recipe", "Time in the box", "Frame", "Seen"],
                    [[o["facility"], o.get("recipe"), o["time"], o.get("frame"), day(o.get("t"))] for o in times]) if times else ["Nothing yet."]
+    lines += [""] + render_new(new_verdicts or [], new_facts or [])
+    if questions is not None:
+        lines += [""] + render_questions(questions)
     return "\n".join(lines) + "\n"
 
 
-def run(root: Path, observations: Path, out_md: Path, out_json: Path, web_json: Path | None = None, now=None) -> dict:
-    """Compare, write the report and the JSON summary (and the web copy). Returns the summary."""
+def describe(fact: dict) -> str:
+    """What a not-yet-judged fact read, in a few words (the local report only)."""
+    keys = {"panel": ("tab", "capacity", "in_use", "supply_rate", "supply_mode"), "manage": ("slots_total", "slots_empty", "first_ability", "emode_on"),
+            "emode": ("switch_visible", "emode_on", "power_draw"), "food": ("total_food_energy", "working_aniimo")}.get(fact.get("fact"), ())
+    return "; ".join(f"{k} {fact.get(k)}" for k in keys if fact.get(k) is not None) or "nothing read"
+
+
+def render_new(new_verdicts: list[dict], new_facts: list[dict]) -> list[str]:
+    lines = ["## Upgrade costs and store caps (untested prompts)", "",
+             "A Level Up tab's coin cost against FACILITY_UPGRADE_COSTS (with structure.json `upgradeCosts`), and a plot's held/cap line "
+             "against OUTPUT_CAPS (with `outputCaps`). Both prompts were written without a real frame, so read the screen yourself before "
+             "pasting a fragment; these are not counted above and never reach the site.", ""]
+    if new_verdicts:
+        lines += table(["Facility", "Check", "Verdict", "Detail", "Frame", "Seen"],
+                       [[v["obs"].get("facility"), v["check"], v["status"], v["detail"], v["obs"].get("frame"), day(v["obs"].get("t"))] for v in new_verdicts]) + [""]
+        for v in (v for v in new_verdicts if v.get("fragment")):
+            lines += [f"- Proposed fragment for data/overrides/structure.json ({v['obs'].get('facility')}, {v['check']}; nothing is applied for you):", "",
+                      "```json", json.dumps(v["fragment"], indent=2), "```", ""]
+    else:
+        lines += ["Nothing yet.", ""]
+    seen = [f for f in new_facts if f.get("fact") in NOT_JUDGED]
+    ticks = sum(1 for f in new_facts if f.get("fact") == "tick")
+    screens = sorted({str(f.get("screen")) for f in new_facts if f.get("fact") == "screen"})
+    lines += ["## Seen, not judged yet", "",
+              "Aux panels (Crackle Generator, Storage Unit), Manage tabs, E-mode switches and the Food tab, read with prompts that have no "
+              "checked frames yet. Kept for the game questions below; nothing here is compared with the data.", ""]
+    lines += table(["Fact", "Facility", "Level", "Read", "Frame", "Seen"],
+                   [[f["fact"], f.get("facility") or "", f.get("level"), describe(f), f.get("frame"), day(f.get("t"))] for f in seen]) if seen else ["Nothing yet."]
+    lines += ["", f"- Recipe-box readings kept over time (tick facts): {ticks}.",
+              f"- Screens read at least once (RV, modules, roster): {', '.join(screens) if screens else 'none yet'}.", ""]
+    return lines
+
+
+def render_questions(questions: list[dict]) -> list[str]:
+    """The game-question checklist: id, status, screen, question (text from scripts/game_questions.json
+    only, never a value read off the screen)."""
+    counts = question_counts(questions)
+    lines = ["## Game questions", "",
+             f"{counts['answered']} of {counts['total']} answered, {counts['evidence']} with evidence waiting for you, {counts['open']} open. "
+             "Evidence means a screen was captured but its prompt is untested or the answer needs your eye; set `settled_by_doc` in "
+             "scripts/game_questions.json once you log the answer.", ""]
+    return lines + table(["Id", "Status", "Screen", "Minutes", "Question"],
+                         [[q["id"], q["status"], q.get("screen", ""), q.get("minutes", ""), q.get("question", "")] for q in questions])
+
+
+def question_counts(questions: list[dict]) -> dict[str, int]:
+    """{total, answered, evidence, open}: four whole numbers, all verification.json carries about the questions."""
+    return {"total": len(questions), **{s: sum(1 for q in questions if q.get("status") == s) for s in ("answered", "evidence", "open")}}
+
+
+def game_questions_for(root: Path, observations: Path, verdicts: list[dict] | None = None) -> list[dict]:
+    """Each question of scripts/game_questions.json with its status, from every fact in the log."""
+    import game_questions  # here, not at the top: game_questions is optional for the plain check
+    files, unlocks = load_facilities(root)
+    if verdicts is None:
+        own, seasonal = load_recipes(root, files)
+        own_rows, seasonal_rows = load_item_rows(root, files)
+        verdicts = judge(load_observations(observations), apply_structure_overrides(root, unlocks), files, own, seasonal,
+                         own_rows, seasonal_rows, load_emode_times(root))
+    facts = load_observations(observations) + load_new_facts(observations)
+    unverified = confirmed_unverified(verdicts, load_unverified(root))
+    return game_questions.evaluate(game_questions.load_questions(), facts, categories=load_categories(root), unverified=unverified)
+
+
+def run(root: Path, observations: Path, out_md: Path, out_json: Path, web_json: Path | None = None, now=None,
+        question_status: dict | None = None) -> dict:
+    """Compare, write the report and the JSON summary (and the web copy). Returns the summary.
+    `question_status`, when given, is filled with {question id: status} (it never reaches a file)."""
     files, unlocks = load_facilities(root)
     unlocks = apply_structure_overrides(root, unlocks)
     own, seasonal = load_recipes(root, files)
@@ -541,17 +768,30 @@ def run(root: Path, observations: Path, out_md: Path, out_json: Path, web_json: 
     except ValueError:
         report = out_md.name
     cards = [v for v in verdicts if v["obs"]["fact"] == "card"]
+    new_facts = load_new_facts(observations)
+    new_verdicts = judge_new(new_facts, load_upgrade_costs(root, files), load_output_caps(root, files))
+    try:
+        questions = game_questions_for(root, observations, verdicts)
+    except Exception as e:  # noqa: BLE001  (a broken questions file must not stop the data check)
+        print(f"game questions skipped: {e}")
+        questions = None
+    if question_status is not None:
+        question_status.clear()
+        question_status.update({q["id"]: q["status"] for q in questions or []})
     summary = {"format": REPORT_FORMAT, "version": 1, "updatedAt": updated, "observations": len(verdicts),
                "agree": sum(1 for v in verdicts if v["status"] == "agree"),
                "disagree": sum(1 for v in verdicts if v["status"] == "disagree"),
+               "unclear": sum(1 for v in verdicts if v["status"] == "unclear"),
                "unknown": sum(1 for v in verdicts if v["status"] == "unknown"),
                "cards": {"seen": len(cards), **{s: sum(1 for v in cards if v["status"] == s) for s in ("agree", "disagree", "unknown")},
                          "unverified_confirmed": [u["name"] for u in confirmed_unverified(verdicts, unverified) if u["confirmed"]],
                          "unverified_total": len(unverified)},
                "rows": summary_rows(verdicts),
                "report": report}
+    if questions is not None:
+        summary["questions"] = question_counts(questions)  # counts only: no id, text or value
     out_md.parent.mkdir(parents=True, exist_ok=True)
-    out_md.write_text(render(verdicts, updated, unlocks, unverified), encoding="utf-8")
+    out_md.write_text(render(verdicts, updated, unlocks, unverified, new_verdicts, new_facts, questions), encoding="utf-8")
     text = json.dumps(summary)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(text, encoding="utf-8")
@@ -568,12 +808,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-md", type=Path, help="default: <root>/screenshots/verification.md")
     parser.add_argument("--out-json", type=Path, help="default: <root>/screenshots/verification.json")
     parser.add_argument("--web-dir", type=Path, help="also copy the JSON summary here as verification.json")
+    parser.add_argument("--questions", action="store_true", help="print the game-question checklist and exit (writes nothing)")
     args = parser.parse_args(argv)
     shots = args.root / "screenshots"
+    if args.questions:
+        return print_questions(args.root, args.observations or shots / "observations.jsonl")
     summary = run(args.root, args.observations or shots / "observations.jsonl", args.out_md or shots / "verification.md",
                   args.out_json or shots / "verification.json", args.web_dir / "verification.json" if args.web_dir else None)
-    print(f"{summary['observations']} observations: {summary['agree']} agree, {summary['disagree']} disagree, "
+    print(f"{summary['observations']} observations: {summary['agree']} agree, {summary['disagree']} disagree, {summary['unclear']} unclear, "
           f"{summary['unknown']} unknown. Report: {args.out_md or shots / 'verification.md'}")
+    if "questions" in summary:
+        q = summary["questions"]
+        print(f"Game questions: {q['answered']} of {q['total']} answered, {q['evidence']} with evidence waiting for you, {q['open']} open.")
+    return 0
+
+
+def print_questions(root: Path, observations: Path) -> int:
+    """The checklist on the terminal: one line per question (id, status, minutes, screen) and the
+    counts. Only text from scripts/game_questions.json is printed, never a value from the log."""
+    questions = game_questions_for(root, observations)
+    counts = question_counts(questions)
+    width = max((len(q["id"]) for q in questions), default=2)
+    for q in questions:
+        print(f"{q['id']:<{width}}  {q['status']:<8}  {str(q.get('minutes', '')):>3} min  {q.get('screen', '')}: {q.get('question', '')}")
+    print(f"\n{counts['answered']} of {counts['total']} answered, {counts['evidence']} with evidence waiting for you, {counts['open']} open.")
     return 0
 
 

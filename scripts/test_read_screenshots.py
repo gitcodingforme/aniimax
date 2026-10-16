@@ -73,7 +73,7 @@ class ReadScreenshotsTest(unittest.TestCase):
         self.assertEqual([s["kind"] for s in screens], ["rv", "stock", "unknown"])
         self.assertEqual(screens[0]["fields"], {"rv": 3, "coins": 10})
         self.assertIn("did not answer with JSON", screens[1]["error"])
-        self.assertEqual(asked[0][1], ["coins", "rv"])
+        self.assertEqual(asked[0][1], ["coins", "next_rv_cost", "rv", "title"], "the RV prompt also asks for the title and the next level's cost")
         self.assertEqual(asked[1][1], ["items"])
 
     def test_score_counts_fields_and_tolerates_name_spelling(self):
@@ -266,6 +266,136 @@ class ReadScreenshotsTest(unittest.TestCase):
         fields, _ = rs.read_spec(spec, fake_ask, lambda crop: "img", image=plain)
         self.assertEqual(fields["item"], "Rose")
         self.assertEqual(len(asked), 2, "the card question and the one about a second card")
+
+
+class SideQuestionsTest(unittest.TestCase):
+    """Milestone 10: the side questions for screens no frame has shown, their gates and fixed rules."""
+
+    ROOT = Path(__file__).resolve().parent.parent
+
+    def test_known_names_give_each_facilitys_category_and_the_aux_facilities(self):
+        names = rs.known_names(self.ROOT)
+        self.assertEqual(names["categories"]["Farmland"], "Materials")
+        self.assertEqual(names["categories"]["Chimney Kiln"], "Materials Processing")
+        self.assertEqual(names["categories"]["Starfall Hammock"], "Aniimo Materials")
+        self.assertEqual(set(names["categories"]), set(names["facilities"]), "every facility has its category")
+        self.assertEqual(names["aux"], ["Crackle Generator", "Storage Unit"])
+
+    def test_every_spec_states_tested_and_the_default_is_untested(self):
+        for kind, spec in rs.SCREEN_KINDS.items():
+            self.assertIn(spec.get("tested"), (True, False), f"{kind} states tested explicitly")
+        self.assertFalse(rs.is_tested("no_such_kind"), "one default: untested")
+        self.assertTrue(rs.is_tested("facility") and rs.is_tested("facility_detail"))
+
+    def test_every_spec_written_without_a_frame_is_marked_untested(self):
+        for kind in ("level_up", "pairs", "manage", "store", "emode", "food", "rv", "modules", "aniimo"):
+            self.assertIs(rs.SCREEN_KINDS[kind].get("tested"), False, kind)
+        for kind in ("facility_detail", "item_card", "stock", "home"):
+            self.assertIs(rs.SCREEN_KINDS[kind].get("tested"), True, kind)
+        self.assertIn("'Food'", rs.SCREEN_KINDS["facility_detail"]["prompt"], "Food is in the tab list")
+        self.assertEqual(rs.screen_kind(Path("level_up-20990101-000000.png")), "level_up")
+        self.assertEqual(rs.screen_kind(Path("food-20990101-000000.png")), "food")
+
+    def ask_on(self, panel, names):
+        """read_spec on a facility_detail answer; returns (fields, the side kinds asked)."""
+        asked = []
+        detail = rs.SCREEN_KINDS["facility_detail"]
+        side = {id(rs.SCREEN_KINDS[k]["schema"]): k for k in ("level_up", "pairs", "manage", "store", "emode", "food")}
+        answers = {"level_up": {"max_level": False, "next_level": 3, "coin_cost": "75 000", "rv_required": 14, "material_1_name": None,
+                                "material_1_amount": None, "material_2_name": None, "material_2_amount": None},
+                   "pairs": {"label_1": "Power Capacity", "value_1": "450/600 W", "label_2": None, "value_2": None, "label_3": "Supply rate",
+                             "value_3": "100%", "label_4": None, "value_4": None, "supply_mode": None},
+                   "manage": {"slots_total": 1, "slots_empty": 0, "first_name": "Sparky", "first_ability": "Fire", "emode_on": False},
+                   "store": {"label": None, "held": 3, "cap": 5}, "emode": {"switch_visible": False, "emode_on": None, "power_draw": None},
+                   "food": {"total_food_energy": "9 370", "working_aniimo": 2}}
+
+        def fake_ask(prompt, schema, image_b64):
+            if id(schema) in side:
+                asked.append(side[id(schema)])
+                return dict(answers[side[id(schema)]])
+            if schema is detail["follow_up"]["schema"]:
+                return {"facility_level": None, "rv_level": None}
+            if schema is detail["schema"]:
+                return dict(panel)
+            return {k: None for k in schema["properties"]}
+        fields, errors = rs.read_spec(detail, fake_ask, lambda crop: "img", names)
+        self.assertEqual(errors, {})
+        return fields, asked
+
+    def test_only_if_routes_each_side_question_to_its_tab_and_facility(self):
+        names = rs.known_names(self.ROOT)
+        panel = {"facility": "Chimney Kiln", "level": 2, "tab": "Formula", "recipe_status": "not set", "recipe": None, "recipe_time": None,
+                 "recipes_per_level": [], "coins": "182 204"}
+        cases = [
+            ({}, []),                                                           # a processor's Formula tab: nothing extra
+            ({"tab": "Level Up"}, ["level_up"]),
+            ({"tab": "Manage"}, ["manage", "emode"]),                           # a processor's Manage tab: workers and E-mode
+            ({"tab": "Food"}, ["food"]),
+            ({"facility": "Farmland"}, ["store"]),                              # a grower's Formula tab: its store
+            ({"facility": "Farmland", "tab": "Manage"}, ["manage"]),            # no E-mode on a plot
+            ({"facility": "Well", "tab": "Manage"}, ["manage", "emode"]),       # the Well and the Mine have E-mode rows
+            ({"facility": "Crackle Generator", "tab": "Details"}, ["pairs"]),   # an aux panel
+            ({"facility": "Crackle Generator", "tab": "Level Up"}, ["level_up"]),
+            ({"tab": None}, []),
+        ]
+        for change, want in cases:
+            fields, asked = self.ask_on({**panel, **change}, names)
+            self.assertEqual(asked, want, change)
+            for field in ("level_up", "pairs", "manage", "store", "emode", "food"):
+                self.assertEqual(field in fields, field in want, f"{change}: a side question not asked leaves no field")
+        fields, _ = self.ask_on({**panel, "tab": "Level Up"}, names)
+        self.assertEqual(fields["level_up"]["coin_cost"], "75 000")
+        fields, _ = self.ask_on({**panel, "facility": "Crackle Generator", "tab": "Details"}, names)
+        self.assertEqual({k: fields["pairs"][k] for k in ("capacity", "in_use", "supply_rate")}, {"capacity": 600, "in_use": 450, "supply_rate": 100})
+        fields, _ = self.ask_on({**panel, "facility": "Well", "tab": "Manage"}, names)
+        self.assertEqual(fields["emode"], {"switch_visible": False, "emode_on": None, "power_draw": None}, "'no switch' is an answer, kept")
+
+    def test_the_fixed_rules(self):
+        up = {"max_level": False, "next_level": 2, "coin_cost": "182 204", "rv_required": 10}
+        out = rs.rule_level_up(up, {"coins": "182 204", "level": 2})
+        self.assertIsNone(out["coin_cost"], "a cost equal to the Home Coins balance is cleared")
+        self.assertIsNone(out["next_level"], "next_level must exceed the panel's level")
+        out = rs.rule_level_up({**up, "coin_cost": "16 300", "next_level": 3}, {"coins": "182 204", "level": 2})
+        self.assertEqual((out["coin_cost"], out["next_level"]), ("16 300", 3))
+        self.assertEqual(rs.rule_level_up(up, None)["coin_cost"], "182 204", "nothing to compare with on its own")
+        rv = rs.rule_rv({"rv": 12, "coins": "320 000", "title": "Homeland", "next_rv_cost": "320 000"})
+        self.assertIsNone(rv["coins"], "on the RV screen a balance equal to the next RV cost is the cost read twice")
+        self.assertEqual(rs.rule_rv({"rv": 12, "coins": "5 000", "next_rv_cost": "320 000"})["coins"], "5 000")
+        self.assertEqual(rs.rule_rv({"rv": 3, "coins": 10}), {"rv": 3, "coins": 10}, "an answer without the new fields is unchanged")
+        pairs = rs.rule_pairs({"label_1": "Power Capacity", "value_1": "600 W", "label_2": "Power in use", "value_2": "450 W",
+                               "label_3": "Supply Rate", "value_3": "120%", "label_4": "Level", "value_4": "2", "supply_mode": None})
+        self.assertEqual((pairs["capacity"], pairs["in_use"], pairs["supply_rate"]), (600, 450, 120))
+        self.assertEqual((pairs["label_4"], pairs["value_4"]), ("Level", "2"), "the raw pairs are kept")
+        mode = rs.rule_pairs({**{f"label_{i}": None for i in range(1, 5)}, **{f"value_{i}": None for i in range(1, 5)}, "supply_mode": "100%"})
+        self.assertEqual(mode["supply_rate"], 100, "the selected supply setting stands in for an unread rate")
+        self.assertEqual([rs.pair_role(x) for x in ("Supply rate", "Power used", "Max capacity", "Level")], ["supply_rate", "in_use", "capacity", None])
+        self.assertFalse(rs.key_present(rs.SCREEN_KINDS["level_up"], {"max_level": False, "next_level": None, "coin_cost": None, "rv_required": None}))
+        self.assertTrue(rs.key_present(rs.SCREEN_KINDS["level_up"], {"max_level": True, "next_level": None, "coin_cost": None, "rv_required": None}))
+
+    def test_the_skeleton_is_unchecked_and_only_checked_entries_are_scored(self):
+        screens = [{"file": f"facility-2099010{i}-000000.png", "kind": "facility", "seconds": 1.0,
+                    "fields": {"facility": "Chimney Kiln", "level": 2, "level_up": {"coin_cost": "75 000", "next_level": 3}}} for i in range(1, 7)]
+        screens.append({"file": "facility-20990109-000000.png", "kind": "facility", "fields": None, "error": "timeout"})
+        skeleton = rs.skeleton(screens)
+        self.assertEqual(len(skeleton), 6, "a failed frame has no entry")
+        self.assertTrue(all(entry["checked"] is False for entry in skeleton.values()))
+        self.assertEqual(rs.score(screens, skeleton), [], "nothing counts until it is checked")
+        expected = json.loads(json.dumps(skeleton))
+        for name in list(expected)[:5]:
+            expected[name]["checked"] = True
+        expected["facility-20990101-000000.png"]["level_up"]["coin_cost"] = "81 000"  # the owner's correction: the model was wrong here
+        rows = rs.score(screens, expected)
+        self.assertEqual(len(rows), 5)
+        self.assertNotIn("checked", rows[0]["wrong"])
+        gate = rs.gate_report(rows)
+        self.assertEqual((gate["level_up"]["frames"], gate["level_up"]["correct"], gate["level_up"]["total"]), (5, 9, 10))
+        self.assertTrue(gate["level_up"]["passes"], "9 of 10 values on 5 frames is 90%: the bar")
+        self.assertFalse(gate["level_up"]["tested"])
+        self.assertTrue(gate["facility_detail"]["passes"] and gate["facility_detail"]["tested"])
+        four = {k: v for k, v in list(expected.items())[:4]}
+        self.assertFalse(rs.gate_report(rs.score(screens, four))["level_up"]["passes"], "fewer than 5 frames never pass")
+        self.assertEqual(rs.score(screens, {"facility-20990101-000000.png": {"facility": "Chimney Kiln"}})[0]["correct"], 1,
+                         "a hand-written entry without the key counts as checked")
 
 
 if __name__ == "__main__":

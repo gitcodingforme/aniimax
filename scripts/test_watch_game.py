@@ -288,9 +288,11 @@ class PipelineTest(unittest.TestCase):
         return {"facility": facility, "level": level, "tab": "Formula", "recipe_status": status, "recipe": recipe,
                 "recipe_time": time_text, "recipes_per_level": [], "coins": "182 204"}
 
-    def _observations(self, d):
+    def _observations(self, d, ticks=False):
+        """The logged facts; the recipe-box `tick` facts (one per reading, over time) only when asked for."""
         path = Path(d) / "observations.jsonl"
-        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.is_file() else []
+        logged = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.is_file() else []
+        return logged if ticks else [o for o in logged if o["fact"] != "tick"]
 
     def test_a_facility_panel_logs_its_unlock_line_and_its_recipe(self):
         from datetime import datetime, timezone
@@ -305,7 +307,11 @@ class PipelineTest(unittest.TestCase):
                 {"t": stamp, "frame": "facility-20261015-104746.png", "facility": "Chimney Kiln", "level": 2,
                  "fact": "recipe", "recipe": "coarse_sifted_ore", "time": "2s"}])
             kept = json.loads((Path(d) / "observations.json").read_text(encoding="utf-8"))
-            self.assertEqual((kept["format"], kept["version"], len(kept["observations"])), ("aniimax-observations", 1, 2))
+            self.assertEqual((kept["format"], kept["version"], len(kept["observations"])), ("aniimax-observations", 1, 3), "the unlock, the recipe and its tick")
+            tick = self._observations(d, ticks=True)[2]
+            self.assertEqual({k: tick[k] for k in ("fact", "facility", "recipe", "time", "time_seconds", "v", "t")},
+                             {"fact": "tick", "facility": "Chimney Kiln", "recipe": "coarse_sifted_ore", "time": "2s", "time_seconds": 2, "v": 2, "t": stamp})
+            self.assertNotIn("untested", tick, "the recipe box is read with a tested prompt")
             for target in (Path(d) / "verification.json", Path(d) / "web" / "verification.json"):
                 summary = json.loads(target.read_text(encoding="utf-8"))
                 self.assertEqual((summary["observations"], summary["agree"], summary["disagree"]), (2, 2, 0))
@@ -341,7 +347,7 @@ class PipelineTest(unittest.TestCase):
             # a new session continues from the log, refreshes the report at startup, and does not repeat itself
             (Path(d) / "web" / "verification.json").unlink()
             w2 = self._facility_watcher(d, [(self._panel(time_text="3s"), note)])
-            self.assertEqual(len(w2.observations), 2)
+            self.assertEqual(len([o for o in w2.observations if o["fact"] != "tick"]), 2)
             self.assertTrue((Path(d) / "web" / "verification.json").exists(), "refreshed at startup")
             self._feed(w2, [(5, 5, 5)])
             self.assertEqual(len(self._observations(d)), 2)
@@ -368,6 +374,21 @@ class PipelineTest(unittest.TestCase):
             self.assertIn("did not answer", screen["follow_up_error"])
             self.assertEqual([o["fact"] for o in self._observations(d)], ["recipe"], "the recipe fact is still logged")
 
+    def test_an_unlock_is_logged_from_two_different_frames_so_it_can_be_judged(self):
+        with tempfile.TemporaryDirectory() as d:
+            note = {"facility_level": 3, "rv_level": 13}  # the table says RV 14: one off
+            w = self._facility_watcher(d, [(self._panel(status="not set", recipe=None, time_text=None), note)] * 4)
+            self._feed(w, [(30, 30, 30)], source="facility-20990101-000000.png")
+            summary = json.loads((Path(d) / "verification.json").read_text(encoding="utf-8"))
+            self.assertEqual((summary["unclear"], summary["disagree"]), (1, 0), "one frame: unclear")
+            self._feed(w, [(90, 90, 90)], source="facility-20990101-000000.png")   # the same frame again: nothing new
+            self._feed(w, [(150, 150, 150)], source="facility-20990101-000001.png")  # a second frame: logged again
+            self._feed(w, [(210, 210, 210)], source="facility-20990101-000002.png")  # a third: two frames are enough
+            logged = self._observations(d)
+            self.assertEqual([o["frame"] for o in logged], ["facility-20990101-000000.png", "facility-20990101-000001.png"])
+            summary = json.loads((Path(d) / "verification.json").read_text(encoding="utf-8"))
+            self.assertEqual((summary["unclear"], summary["disagree"]), (0, 2), "two frames: a disagreement")
+
     def test_a_panel_without_a_recipe_still_logs_its_unlock_line(self):
         with tempfile.TemporaryDirectory() as d:
             w = self._facility_watcher(d, [(self._panel(status="not set", recipe=None, time_text=None), {"facility_level": 3, "rv_level": 14})])
@@ -375,19 +396,25 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual([o["fact"] for o in self._observations(d)], ["unlock"])
 
     def _card_watcher(self, d, reads, clock=None):
-        """A Watcher whose model answers each frame from the next of `reads`: {kind, fields, note, card, behind};
-        the card and second-card questions are answered from `card` and `behind` (all-null when absent)."""
+        """A Watcher whose model answers each frame from the next of `reads`: {kind, fields, note, card, behind, side};
+        the card and second-card questions are answered from `card` and `behind` (all-null when absent), and a
+        side question of kind K (level_up, pairs, manage, store, emode, food, stock) from side[K]."""
         queue = list(reads)
         state = {"current": None}
         detail = wg.rs.SCREEN_KINDS["facility_detail"]
         card = wg.rs.SCREEN_KINDS["item_card"]
         nothing = {"item": None, "facility": None, "facility_level": None, "time": None, "workload": None, "environment": None}
+        asked_side = self.asked_side = []
 
         def fake_ask(prompt, schema, image_b64):
             if schema is wg.CLASSIFY_SCHEMA:
                 state["current"] = queue.pop(0)
                 return {"kind": state["current"]["kind"]}
             r = state["current"]
+            for name, answer in (r.get("side") or {}).items():
+                if schema is wg.rs.SCREEN_KINDS[name]["schema"]:
+                    asked_side.append(name)
+                    return dict(answer)
             if schema is detail["follow_up"]["schema"]:
                 return r.get("note") or {"facility_level": None, "rv_level": None}
             if schema is card["schema"]:
@@ -525,6 +552,157 @@ class PipelineTest(unittest.TestCase):
         finally:
             verify_data.run = original
 
+    # --- Milestone 10: the facts the game questions need -------------------------------------------------
+
+    def _generator(self, tab="Details", **extra):
+        return {"facility": "Crackle Generator", "level": 2, "tab": tab, "recipe_status": "power", "recipe": None, "recipe_time": None,
+                "recipes_per_level": [], "coins": "182 204", **extra}
+
+    def test_a_generator_details_tab_logs_a_panel_fact_instead_of_a_skip(self):
+        with tempfile.TemporaryDirectory() as d:
+            pairs = {"label_1": "Power Capacity", "value_1": "600 W", "label_2": "Power in use", "value_2": "450 W",
+                     "label_3": "Supply Rate", "value_3": "120%", "label_4": None, "value_4": None, "supply_mode": "120%"}
+            w = self._card_watcher(d, [{"kind": "facility", "fields": self._generator(), "side": {"pairs": pairs}}])
+            self._feed(w, [(30, 30, 30)], source="facility-20990101-000000.png")
+            logged = self._observations(d)
+            self.assertEqual([o["fact"] for o in logged], ["panel"])
+            panel = logged[0]
+            self.assertEqual({k: panel[k] for k in ("facility", "level", "tab", "capacity", "in_use", "supply_rate", "supply_mode", "v", "untested")},
+                             {"facility": "Crackle Generator", "level": 2, "tab": "Details", "capacity": 600, "in_use": 450, "supply_rate": 120,
+                              "supply_mode": "120%", "v": 2, "untested": True})
+            self.assertEqual(panel["pairs"], [["Power Capacity", "600 W"], ["Power in use", "450 W"], ["Supply Rate", "120%"]], "the raw pairs are kept")
+            self.assertFalse(any("nothing logged" in n for n in w.observation_notes), "no longer skipped")
+            summary = json.loads((Path(d) / "verification.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["observations"], 0, "a panel fact is never judged")
+            self.assertIn("## Seen, not judged yet", (Path(d) / "verification.md").read_text(encoding="utf-8"))
+
+    def test_a_level_up_tab_logs_level_up_and_unlock_and_a_cost_equal_to_the_balance_is_cleared(self):
+        with tempfile.TemporaryDirectory() as d:
+            up = {"max_level": False, "next_level": 3, "coin_cost": "182 204", "rv_required": 14,
+                  "material_1_name": "Wood Block", "material_1_amount": 20, "material_2_name": None, "material_2_amount": None}
+            w = self._card_watcher(d, [
+                {"kind": "facility", "fields": self._panel(status="none", recipe=None, time_text=None) | {"tab": "Level Up"}, "side": {"level_up": up}},
+                {"kind": "facility", "fields": self._panel(status="none", recipe=None, time_text=None) | {"tab": "Level Up"}, "side": {"level_up": {**up, "coin_cost": "75 000"}}},
+            ])
+            self._feed(w, [(30, 30, 30), (120, 120, 120)], source="facility-20990101-000000.png")
+            self.assertEqual(self.asked_side, ["level_up", "level_up"], "only the Level Up question rides along on that tab")
+            logged = self._observations(d)
+            self.assertEqual([o["fact"] for o in logged], ["level_up", "unlock", "level_up"], "the same unlock is logged once")
+            first, unlock = logged[0], logged[1]
+            self.assertIsNone(first["coin_cost"], "a cost equal to the Home Coins balance is the balance: cleared")
+            self.assertEqual((first["next_level"], first["rv_required"], first["materials"], first["untested"]), (3, 14, [["Wood Block", 20]], True))
+            self.assertEqual({k: unlock[k] for k in ("facility", "facility_level", "rv_level", "source", "v", "untested")},
+                             {"facility": "Chimney Kiln", "facility_level": 3, "rv_level": 14, "source": "level_up", "v": 2, "untested": True})
+            self.assertEqual(logged[2]["coin_cost"], "75 000")
+            summary = json.loads((Path(d) / "verification.json").read_text(encoding="utf-8"))
+            self.assertEqual((summary["observations"], summary["agree"]), (1, 1), "the unlock is judged (and agrees); the Level Up facts are not counted")
+            report = (Path(d) / "verification.md").read_text(encoding="utf-8")
+            self.assertIn("| Chimney Kiln | upgrade cost | agree | Lv.3 costs 75000 (table says 75000) |", report)
+            self.assertIn("read from the Level Up tab, an untested prompt", report)
+
+    def test_side_questions_are_asked_only_on_their_tab(self):
+        with tempfile.TemporaryDirectory() as d:
+            store = {"label": "Storage", "held": 35, "cap": 35}
+            emode = {"switch_visible": True, "emode_on": True, "power_draw": 45}
+            manage = {"slots_total": 1, "slots_empty": 1, "first_name": "Sparky", "first_ability": "electric", "emode_on": True}
+            sides = {"store": store, "emode": emode, "manage": manage, "level_up": {"next_level": 9}, "pairs": {"label_1": "x"}, "food": {"total_food_energy": "1"}}
+            w = self._card_watcher(d, [
+                {"kind": "facility", "fields": self._panel(), "side": sides},                                                   # processor, Formula
+                {"kind": "facility", "fields": self._panel(facility="Farmland", recipe="Wheat", time_text="3m 10s", level=1), "side": sides},  # grower, Formula
+                {"kind": "facility", "fields": self._panel(status="none", recipe=None, time_text=None) | {"tab": "Manage"}, "side": sides},    # processor, Manage
+            ])
+            self._feed(w, [(30, 30, 30), (120, 120, 120), (200, 200, 200)], source="facility-20990101-000000.png")
+            self.assertEqual(self.asked_side, ["store", "manage", "emode"])
+            logged = self._observations(d)
+            cap = next(o for o in logged if o["fact"] == "cap")
+            self.assertEqual((cap["facility"], cap["level"], cap["held"], cap["cap"], cap["untested"]), ("Farmland", 1, 35, 35, True))
+            managed = next(o for o in logged if o["fact"] == "manage")
+            self.assertEqual((managed["first_ability"], managed["named"], managed["emode_on"]), ("Electric", True, True))
+            self.assertNotIn("Sparky", json.dumps(self._observations(d, ticks=True)), "an Aniimo's name never reaches the log")
+            self.assertEqual(next(o for o in logged if o["fact"] == "emode")["power_draw"], 45)
+            ticks = [o for o in self._observations(d, ticks=True) if o["fact"] == "tick"]
+            self.assertEqual([(o["facility"], o["time_seconds"]) for o in ticks], [("Chimney Kiln", 2), ("Farmland", 190)])
+
+    def test_a_food_fact_carries_the_frames_time(self):
+        from datetime import datetime, timezone
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [{"kind": "food", "fields": {"total_food_energy": "12 400", "working_aniimo": 3}},
+                                       {"kind": "food", "fields": {"total_food_energy": None, "working_aniimo": None}}])
+            import contextlib
+            import io
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self._feed(w, [(30, 30, 30)], source="food-20990101-000000.png")
+                self._feed(w, [(90, 90, 90)], source="food-20990101-010000.png")
+            self.assertIn("game question W1: open -> evidence", out.getvalue(), "a status change gets a line")
+            self.assertEqual(w.question_status["W1"], "evidence")
+            logged = self._observations(d)
+            self.assertEqual(len(logged), 1, "a Food tab with no number read logs nothing")
+            stamp = datetime(2099, 1, 1, 0, 0, 0).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.assertEqual({k: logged[0][k] for k in ("t", "frame", "facility", "fact", "total_food_energy", "energy", "working_aniimo", "v", "untested")},
+                             {"t": stamp, "frame": "food-20990101-000000.png", "facility": "", "fact": "food", "total_food_energy": "12 400",
+                              "energy": 12400, "working_aniimo": 3, "v": 2, "untested": True})
+            self.assertEqual(w.screens[-1]["kind"], "food")
+
+    def test_roster_rv_and_modules_screens_log_only_that_they_were_read(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [
+                {"kind": "aniimo", "fields": {"aniimo": [{"name": "Sparky", "abilities": [{"ability": "Electric", "level": 3}], "personalities": ["Calm"]}]}},
+                {"kind": "rv", "fields": {"rv": 12, "coins": "5 000", "title": None, "next_rv_cost": None}},
+                {"kind": "modules", "fields": {"ecological_module": None, "kitchen_module": None, "resource_detector": None, "crafting_module": None}},
+            ])
+            self._feed(w, [(30, 30, 30), (120, 120, 120), (200, 200, 200)])
+            logged = self._observations(d)
+            self.assertEqual([(o["fact"], o["screen"], o["read"]) for o in logged], [("screen", "aniimo", True), ("screen", "rv", True)],
+                             "a modules screen with nothing read is not logged")
+            text = (Path(d) / "observations.jsonl").read_text(encoding="utf-8")
+            for value in ("Sparky", "Calm", "Electric", "5 000"):
+                self.assertNotIn(value, text)
+
+    def test_an_aniimo_frame_with_a_card_header_becomes_stock_and_a_real_roster_stays_aniimo(self):
+        card_schema = wg.rs.SCREEN_KINDS["item_card"]["schema"]
+        rows = {"fake": [{"name": "Rose", "abilities": [], "personalities": []}],
+                "real": [{"name": "Sparky", "abilities": [{"ability": "Fire", "level": 2}], "personalities": []}]}
+        current = {"which": "fake"}
+
+        def fake_ask(prompt, schema, image_b64):
+            if schema is wg.CLASSIFY_SCHEMA:
+                return {"kind": "aniimo"}
+            if schema is wg.rs.SCREEN_KINDS["aniimo"]["schema"]:
+                return {"aniimo": rows[current["which"]]}
+            if schema is wg.rs.SCREEN_KINDS["stock"]["schema"]:
+                return {"items": [{"name": "Rose", "inventory": 0, "homeland": 520, "owned": None}]}
+            if schema is card_schema:
+                return dict(self.ROSE)
+            return {k: None for k in ("item", "facility", "facility_level", "time")}
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "web").mkdir()
+            w = wg.Watcher(ROOT, "http://fake", "m", Path(d) / "auto", Path(d) / "web", ask=fake_ask)
+            self._feed(w, [(30, 30, 30)], make=card_frame)
+            self.assertEqual(w.screens[-1]["kind"], "stock", "an item card read as a roster is read again as stock")
+            self.assertEqual(w.screens[-1]["fields"]["items"][0]["homeland"], 520)
+            self.assertEqual([o["fact"] for o in self._observations(d)], ["card"])
+            current["which"] = "real"
+            self._feed(w, [(120, 120, 120)], make=card_frame)
+            self.assertEqual(w.screens[-1]["kind"], "aniimo", "a roster with a known ability stays a roster, card header or not")
+            current["which"] = "fake"
+            self._feed(w, [(200, 200, 200)])  # no card header: the model's answer stands
+            self.assertEqual(w.screens[-1]["kind"], "aniimo")
+
+    def test_frames_named_by_observations_survive_the_limit(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "auto"
+            out.mkdir()
+            for name in ("facility-20000101-000000.png", "facility-20000101-000001.png", "facility-20000101-000002.png"):
+                frame((10, 10, 10)).save(out / name)
+            w = wg.Watcher(ROOT, "http://fake", "m", out, None, ask=lambda *a: {"kind": "other"}, keep=1)
+            w.observations = [{"t": "2000-01-01T00:00:00Z", "frame": "facility-20000101-000000.png", "facility": "Chimney Kiln", "fact": "card", "item": "x"},
+                              {"t": "2000-01-01T00:00:01Z", "frame": "facility-20000101-000001.png", "facility": "Chimney Kiln", "fact": "tick", "recipe": "x", "v": 2}]
+            saved = w.save_frame(frame((40, 40, 40)), {"kind": "facility", "fields": {}})
+            left = sorted(p.name for p in out.glob("facility-*.png"))
+            self.assertEqual(left, sorted(["facility-20000101-000000.png", saved.name]),
+                             "the frame a card names stays; one only a tick names goes, like the unnamed one")
+
     def test_encode_crops_before_shrinking(self):
         import base64
         import io
@@ -538,6 +716,160 @@ class PipelineTest(unittest.TestCase):
     def test_blank_frames_are_recognised(self):
         self.assertTrue(wg.is_blank(frame((0, 0, 0))))
         self.assertFalse(wg.is_blank(frame((0, 0, 0), "Farmland")))
+
+
+def make_root(tmp: Path) -> Path:
+    """A copy of the real facility config and data (overrides included: the E-mode table), so the
+    offline commands run on real names without touching the real screenshots folder."""
+    import shutil
+    root = tmp / "repo"
+    (root / "web").mkdir(parents=True)
+    shutil.copy(ROOT / "web" / "facility-config.js", root / "web" / "facility-config.js")
+    shutil.copytree(ROOT / "data", root / "data")
+    (root / "screenshots" / "auto").mkdir(parents=True)
+    return root
+
+
+def card_line(item, facility, time_text, frame, **extra):
+    import verify_data
+    return {"t": "2099-01-01T00:00:00Z", "frame": frame, "facility": facility, "fact": "card", "item": item, "facility_level": 3,
+            "time": time_text, "time_seconds": verify_data.parse_seconds(time_text), "workload": None, "environment": None, **extra}
+
+
+class PruneTest(unittest.TestCase):
+    """--prune-copied-times: rules R1, R1b and R2 on a made-up log (never the real one)."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = make_root(Path(self._tmp.name))
+        self.log = self.root / "screenshots" / "observations.jsonl"
+        lines = [
+            json.dumps(card_line("ginseng_water", "Bouncy Brew Keg", "54s", "stock-20990101-000000.png")),            # 1: R2 (E-mode says 108, frame gone)
+            json.dumps(card_line("wheatmeal", "Carousel Mill", "54s", "stock-20990101-000100.png")),                  # 2: a correct old time (54)
+            '{"t": "2099-01-01T00:00:00Z",   "frame": "facility-20990101-000200.png", "facility": "Chimney Kiln", "level": 2, "fact": "unlock", "facility_level": 3, "rv_level": 14}',
+            json.dumps(card_line("rose_concentrate", "Simmering Pot", "54s", "stock-20990101-000300.png")),           # 4: R1 (the card behind has the same time; its row says 108)
+            json.dumps(card_line("dried_ginseng", "Jukebox Dryer", "54s", "stock-20990101-000300.png", behind=True)),
+            json.dumps(card_line("ginseng_water", "Bouncy Brew Keg", "54s", "stock-20990101-000400.png", v=2)),        # 6: a new-format line: R2 never applies
+            json.dumps(card_line("wheatmeal", "Carousel Mill", "54s", "stock-20990101-000700.png", v=2)),              # 7: two items that really share 54s:
+            json.dumps(card_line("cotton_fabric", "Joy Wheel Loom", "54s", "stock-20990101-000700.png", v=2)),         # 8: R1 leaves both alone
+        ]
+        self.original = ("\r\n".join(lines[:3]) + "\n" + "\n".join(lines[3:]) + "\n").encode("utf-8")  # a CRLF stretch too
+        self.log.write_bytes(self.original)
+        (self.root / "screenshots" / "auto" / "stock-20990101-000400.png").write_bytes(b"not looked at")
+
+    def prune(self, *args):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = wg.main(["--root", str(self.root), "--no-web", "--prune-copied-times", *args])
+        return code, out.getvalue()
+
+    def test_the_dry_run_lists_r1_and_r2_and_writes_nothing(self):
+        code, out = self.prune()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.log.read_bytes(), self.original, "a dry run writes nothing")
+        self.assertEqual(list(self.log.parent.glob("*.bak-*")), [])
+        self.assertIn("line 1: ginseng_water (Bouncy Brew Keg), time 54s, rule R2", out)
+        self.assertIn("line 4: rose_concentrate (Simmering Pot), time 54s, rule R1", out)
+        self.assertNotIn("line 2:", out, "a correct old time is untouched")
+        self.assertNotIn("line 5:", out, "the card behind is never pruned")
+        self.assertNotIn("line 6:", out)
+        self.assertNotIn("line 7:", out, "a shared time that agrees with the item's own row is not a copy")
+        self.assertNotIn("line 8:", out)
+        self.assertIn("2 lines match (R1 1, R1b 0, R2 1).", out)
+        for line in out.splitlines():  # only the line number, item, facility, time read and rule; never another value of the log
+            self.assertRegex(line, r"^(line \d+: [a-z0-9_]+ \([A-Za-z ]+\), time [0-9hms ]+, rule (R1|R1b|R2)|\d+ lines? match .*|Dry run: .*)$")
+        self.assertNotIn("time 1m 48s", out)
+        for value in ("2099-01-01", "stock-2099", "rv_level", "14", "wheatmeal", "cotton_fabric"):
+            self.assertNotIn(value, out)
+        code, out = self.prune("--apply", "--dry-run")
+        self.assertEqual(self.log.read_bytes(), self.original, "--dry-run wins over --apply")
+
+    def test_apply_refuses_too_many_matches(self):
+        code, out = self.prune("--apply")
+        self.assertEqual(code, 1)
+        self.assertIn("Refused: 2 matches is more than --max 1", out)
+        self.assertEqual(self.log.read_bytes(), self.original)
+        self.assertEqual(list(self.log.parent.glob("*.bak-*")), [], "no backup either")
+
+    def test_apply_backs_up_clears_only_the_matches_and_a_second_run_finds_nothing(self):
+        code, out = self.prune("--apply", "--max", "2")
+        self.assertEqual(code, 0, out)
+        backups = list(self.log.parent.glob("observations.jsonl.bak-*"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_bytes(), self.original, "the backup is the log as it was")
+        before, after = self.original.split(b"\n"), self.log.read_bytes().split(b"\n")
+        self.assertEqual(len(before), len(after))
+        for i, (old, new) in enumerate(zip(before, after), start=1):
+            if i in (1, 4):
+                obj = json.loads(new.decode("utf-8"))
+                self.assertEqual((obj["time"], obj["time_seconds"]), (None, None))
+                self.assertEqual(obj["pruned"], "R2" if i == 1 else "R1")
+                self.assertEqual(obj["facility_level"], 3, "only the time goes")
+                self.assertTrue(new.endswith(b"\r") == old.endswith(b"\r"), "the line ending is kept")
+            else:
+                self.assertEqual(new, old, f"line {i} is byte-identical")
+        self.assertIn("Check again:", out)
+        self.assertTrue((self.root / "screenshots" / "verification.md").is_file(), "the check ran again")
+        code, out = self.prune()
+        self.assertIn("0 lines match", out, "a second run finds nothing")
+        code, out = self.prune("--apply", "--max", "2")
+        self.assertEqual(len(list(self.log.parent.glob("observations.jsonl.bak-*"))), 1, "nothing to apply: no second backup")
+
+    def test_apply_refuses_when_the_log_changed_while_it_was_checked(self):
+        original = wg.copied_time_matches
+
+        def meanwhile(*a, **k):
+            found = original(*a, **k)
+            with self.log.open("ab") as f:
+                f.write(b'{"fact": "recipe"}\n')  # the watcher appends a line meanwhile
+            return found
+        wg.copied_time_matches = meanwhile
+        try:
+            code, out = self.prune("--apply", "--max", "2")
+        finally:
+            wg.copied_time_matches = original
+        self.assertEqual(code, 1)
+        self.assertIn("the log changed while it was checked", out)
+        self.assertEqual(self.log.read_bytes(), self.original + b'{"fact": "recipe"}\n', "the appended line is kept, nothing pruned")
+        self.assertEqual(list(self.log.parent.glob("*.bak-*")), [])
+
+    def test_r1b_uses_the_card_behind_stored_in_the_reading(self):
+        self.log.write_text(json.dumps(card_line("ginseng_water", "Bouncy Brew Keg", "54s", "stock-20990101-000500.png", v=2)) + "\n"
+                            + json.dumps(card_line("rose", "Farmland", "40m 0s", "stock-20990101-000600.png", v=2)) + "\n", encoding="utf-8")
+        reading = {"format": "aniimax-screenshot-reading", "screens": [
+            {"file": "stock-20990101-000500.png", "kind": "stock", "fields": {"card": {"item": "Ginseng Water", "behind": {"item": "Dried Ginseng", "time": "54s"}}}},
+            {"file": "stock-20990101-000600.png", "kind": "stock", "fields": {"card": {"item": "Rose", "behind": {"item": "ose", "time": "40m 0s"}}}}]}
+        (self.root / "screenshots" / "reading.json").write_text(json.dumps(reading), encoding="utf-8")
+        code, out = self.prune()
+        self.assertIn("line 1: ginseng_water (Bouncy Brew Keg), time 54s, rule R1b", out)
+        self.assertIn("1 line match", out, "a card behind that is the front card repeated (a cut-off title) is no copy")
+
+
+class OfflineCommandsTest(unittest.TestCase):
+    def test_offline_commands_never_look_for_the_window_or_ollama(self):
+        def refuse(*a, **k):
+            raise AssertionError("an offline command looked for the game window or Ollama")
+        saved = (wg.list_windows, wg.pick_window, wg.ensure_server)
+        wg.list_windows = wg.pick_window = wg.ensure_server = refuse
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                root = make_root(Path(d))
+                import contextlib
+                import io
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    self.assertEqual(wg.main(["--root", str(root), "--questions"]), 0)
+                    self.assertEqual(wg.main(["--root", str(root), "--prune-copied-times"]), 0)
+                    self.assertEqual(wg.main(["--root", str(root), "--prune-copied-times", "--apply"]), 0)
+                text = out.getvalue()
+                self.assertIn("0 of 19 answered", text)
+                self.assertIn("nothing to prune", text)
+                self.assertFalse((root / "screenshots" / "verification.json").exists(), "--questions writes nothing")
+        finally:
+            wg.list_windows, wg.pick_window, wg.ensure_server = saved
 
 
 if __name__ == "__main__":
