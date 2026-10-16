@@ -1,0 +1,118 @@
+/* "What if" sandbox card (web/cards/what-if.js). Colours come from the variables in style.css's
+   :root and .light blocks, so both themes work. */
+
+#what-if-card .what-if-group h3 {
+    font-size: 0.9rem;
+    margin: 1rem 0 0.4rem;
+}
+
+#what-if-card .what-if-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.4rem 1.25rem;
+}
+
+#what-if-card .what-if-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#what-if-card .what-if-row label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+#what-if-card .what-if-row .what-if-name {
+    flex: 1 1 7rem;
+    color: var(--text);
+}
+
+#what-if-card .what-if-row > label:first-child:not(.what-if-name) {
+    flex: 1 1 7rem;
+    color: var(--text);
+}
+
+#what-if-card .what-if-row input[type="number"],
+#what-if-card .what-if-row select {
+    padding: 0.3rem 0.45rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+#what-if-card .what-if-row input[type="number"] {
+    width: 4.5rem;
+}
+
+#what-if-card .what-if-row input:focus,
+#what-if-card .what-if-row select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+#what-if-card .what-if-member-name {
+    margin: 0.25rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#what-if-card .what-if-warnings {
+    margin: 0.25rem 0 0.5rem;
+    padding-left: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--warning);
+}
+
+#what-if-card .what-if-warnings:empty {
+    display: none;
+}
+
+#what-if-card .what-if-fail {
+    color: var(--error);
+}
+
+#what-if-card .what-if-col h3 {
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+#what-if-card .what-if-stats {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+#what-if-card .what-if-stats dt {
+    color: var(--text-muted);
+}
+
+#what-if-card .what-if-stats dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+#what-if-card .what-if-table th.what-if-num,
+#what-if-card .what-if-table td.what-if-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+#what-if-card .what-if-stale {
+    opacity: 0.55;
+}
+
+#what-if-card #what-if-note:not(:empty) {
+    color: var(--warning);
+}
+
+@media (max-width: 600px) {
+    #what-if-card .what-if-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
