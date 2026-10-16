@@ -31,7 +31,9 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        # --locked keeps wasm-pack's own Cargo.lock, so a crate yanked from crates.io after
+        # that lock was made (zip 2.x on 2026-10-16) does not break the install.
+        run: cargo install wasm-pack --locked
 
       # My in-game verified values (data/overrides/) go on top of upstream's files before the build.
       - name: Apply overrides
