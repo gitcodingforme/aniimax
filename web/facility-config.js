@@ -331,16 +331,17 @@ export const MODULE_MAX_LEVELS = {
 // facility level (index = facility level - 1; `null` where unknown). Items for crops and
 // gatherers; a processor makes one item a batch, so its 20 is "20 batches". From wikily.gg's
 // facility pages (docs/research/web-data-check.md section 1, downloaded 2026-10-16): a fan
-// wiki, so INFERRED, not verified in game. The wiki lists the cap for each upgrade level only;
-// level 1 is filled in where every listed level shares one value (processors, Mine, Dewy
-// House, Nimbus Bed, Sandcastle) and left `null` where the cap grows with the level
-// (Farmland, Woodland, Well). The reminders fall back to batch check-ins for a `null`.
+// wiki, so INFERRED, not verified in game. The wiki's upgrade blocks give levels 2 and up;
+// the level 1 values come from its level 1 build block (Well 300, Mine 120) and, for Farmland
+// (5) and Woodland (8), from GameWith's "Item Count" table, aniimotools and metabot (second
+// pass of docs/research/game-facts.md, 2026-10-16). The reminders fall back to batch
+// check-ins for a `null`.
 // Overridable per facility from data/overrides/structure.json (`outputCaps`).
 export const OUTPUT_CAPS = {
-    Farmland: [null, 10, 15, 20, 25, 30, 35],
-    Woodland: [null, 12, 16, 20, 24, 28],
-    Mine: [200, 200, 200, 200, 200, 200],
-    Well: [null, 300, 340, 340, 340],
+    Farmland: [5, 10, 15, 20, 25, 30, 35],
+    Woodland: [8, 12, 16, 20, 24, 28],
+    Mine: [120, 200, 200, 200, 200, 200],
+    Well: [300, 300, 340, 340, 340],
     'Tidewhisper Sandcastle': [460, 460, 460],
     'Dewy House': [240, 240],
     'Nimbus Bed': [120, 120, 120],
