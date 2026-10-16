@@ -339,3 +339,147 @@ fn test_recipes_take_their_facility_ability() {
     }
     assert!(checked > 100, "only checked {checked} recipes");
 }
+
+// E-mode times (see `aniimax::emode`): `data/overrides/emode_times.csv`, and the
+// `emode_base_time` column a processor CSV may carry instead (upstream pull request 31).
+
+fn emode_table() -> Option<String> {
+    std::fs::read_to_string("data/overrides/emode_times.csv").ok()
+}
+
+// The table parses past its comment lines (which contain commas): 137 rows from wikily.
+#[test]
+fn test_emode_table_parses() {
+    let Some(table) = emode_table() else { return };
+    let times = aniimax::data::parse_emode_times(&table).expect("emode_times.csv parses");
+    assert_eq!(times.len(), 137, "emode_times.csv rows");
+    assert_eq!(times.get("Carousel Mill", "milled_rice"), Some(54.0));
+    assert!(times.entries().iter().all(|(_, _, s)| *s > 0.0));
+}
+
+// Every row names a real recipe at the facility it says, the season's included.
+#[test]
+fn test_emode_table_names_real_recipes() {
+    let (Some(items), Some(table)) = (load_items(), emode_table()) else { return };
+    let times = aniimax::data::parse_emode_times(&table).unwrap();
+    for (facility, item, _) in times.entries() {
+        assert!(
+            items.iter().any(|i| i.name == item && i.facility == facility),
+            "emode_times.csv lists {item} at {facility}, which isn't in the data"
+        );
+    }
+}
+
+// A processor CSV's own column wins over the table; a blank cell (or a CSV without the column)
+// falls back to the table.
+#[test]
+fn test_emode_column_wins_over_the_table() {
+    let table = "item, facility, emode_seconds, source, fetched_on\n\
+                 # a comment, with commas, in it\n\
+                 milled_rice, Carousel Mill, 54, x, 2026-10-16\n\
+                 wheatmeal, Carousel Mill, 108, x, 2026-10-16\n\
+                 bread, Crafting Table, 27, x, 2026-10-16\n\
+                 tofu, Carousel Mill, not known, x, 2026-10-16\n";
+    let mill = "name, raw_materials, required_amount, sell_value, workload, emode_base_time, facility_level\n\
+                milled_rice, rice, 2, 10, 54, 40, 1\n\
+                wheatmeal, wheat, 3, 10, 108, , 1\n";
+    let table_only = "name, raw_materials, required_amount, sell_value, workload, facility_level\nbread, wheat, 1, 5, 27, 1\n";
+    let times = aniimax::data::emode_times(table, &[("Carousel Mill", mill), ("Crafting Table", table_only)]).unwrap();
+    assert_eq!(times.get("Carousel Mill", "milled_rice"), Some(40.0), "the column wins");
+    assert_eq!(times.get("Carousel Mill", "wheatmeal"), Some(108.0), "a blank cell falls back");
+    assert_eq!(times.get("Crafting Table", "bread"), Some(27.0), "no column: the table");
+    assert_eq!(times.get("Carousel Mill", "tofu"), None, "a row without a number is skipped");
+    assert!(aniimax::data::emode_column(table_only).unwrap().is_empty());
+}
+
+/// Every processor's CSV and the facility it is, as the loaders name them.
+const PROCESSOR_CSVS: [(&str, &str); 14] = [
+    ("carousel_mill.csv", "Carousel Mill"),
+    ("jukebox_dryer.csv", "Jukebox Dryer"),
+    ("claw_game_cooker.csv", "Claw Game Cooker"),
+    ("crafting_table.csv", "Crafting Table"),
+    ("simmering_pot.csv", "Simmering Pot"),
+    ("phonolfactory_table.csv", "Phonolfactory Table"),
+    ("bouncy_brew_keg.csv", "Bouncy Brew Keg"),
+    ("blazing_stove.csv", "Blazing Stove"),
+    ("pickling_jar.csv", "Pickling Jar"),
+    ("joy_wheel_loom.csv", "Joy Wheel Loom"),
+    ("woodworking_bench.csv", "Woodworking Bench"),
+    ("chimney_kiln.csv", "Chimney Kiln"),
+    ("dance_pad_polisher.csv", "Dance Pad Polisher"),
+    ("aniipod_maker.csv", "Aniipod Maker"),
+];
+
+// Where a processor CSV has the column and the table has the same recipe at the same facility,
+// the two agree (a no-op until upstream pull request 31 lands; then it is the cross-check of the
+// two sources the E-mode design asks for).
+#[test]
+fn test_emode_sources_agree() {
+    let Some(table) = emode_table() else { return };
+    let listed = aniimax::data::parse_emode_times(&table).unwrap();
+    for (file, facility) in PROCESSOR_CSVS {
+        let text = std::fs::read_to_string(Path::new("data").join(file)).expect("processor CSV");
+        for (item, seconds) in aniimax::data::emode_column(&text).unwrap() {
+            if let Some(wanted) = listed.get(facility, &item) {
+                assert_eq!(seconds, wanted, "{item} at {facility}: {file} says {seconds}s, emode_times.csv {wanted}s");
+            }
+        }
+    }
+}
+
+/// The text of one key's value inside the web's `EMODE` block: `[...]` for a list, else up to the
+/// next comma or line end.
+fn js_value<'a>(block: &'a str, key: &str) -> Option<&'a str> {
+    let pattern = format!("{key}:");
+    // The key itself, not the end of a longer one (`facilities:` inside `emodeFacilities:`).
+    let at = block.match_indices(&pattern).map(|(i, _)| i).find(|&i| {
+        block[..i].chars().next_back().is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'))
+    })? + pattern.len();
+    let rest = block[at..].trim_start();
+    if rest.starts_with('[') {
+        rest.find(']').map(|end| &rest[1..end])
+    } else {
+        Some(rest.split([',', '\n', ' ', '/', '}']).next()?.trim())
+    }
+}
+
+fn js_strings(list: &str) -> Vec<String> {
+    list.split(',').map(|s| s.trim().trim_matches(|c| c == '\'' || c == '"').to_string()).filter(|s| !s.is_empty()).collect()
+}
+
+fn js_numbers(list: &str) -> Vec<f64> {
+    list.split(',').map(str::trim).filter(|s| !s.is_empty()).map(|s| s.parse().expect("a number")).collect()
+}
+
+// The web page's copy of the E-mode numbers (`EMODE` in web/facility-config.js) is the Rust one.
+// Until the page has its copy, this says so and checks nothing.
+#[test]
+fn test_emode_constants_match_the_web() {
+    use aniimax::emode::{BOOST_RATE, DOUBLE_DRAW, DRAW_PER_LEVEL, EMODE_FACILITIES, GENERATOR_CAPACITY};
+    let Ok(js) = std::fs::read_to_string("web/facility-config.js") else { return };
+    let Some(start) = js.find("export const EMODE") else {
+        eprintln!("web/facility-config.js has no EMODE yet; the E-mode constants aren't compared");
+        return;
+    };
+    let block = &js[start..];
+    let block = &block[..block.find("\n};").unwrap_or(block.len())];
+    let value = |key: &str| js_value(block, key).unwrap_or_else(|| panic!("EMODE has no {key}"));
+    let capacity: Vec<f64> = GENERATOR_CAPACITY.iter().map(|&w| w as f64).collect();
+    assert_eq!(js_numbers(value("generatorCapacity")), capacity, "generatorCapacity");
+    assert_eq!(value("drawPerLevel").parse::<f64>().ok(), Some(DRAW_PER_LEVEL), "drawPerLevel");
+    assert_eq!(value("boostRate").parse::<f64>().ok(), Some(BOOST_RATE), "boostRate");
+    let sorted = |mut names: Vec<String>| {
+        names.sort();
+        names
+    };
+    assert_eq!(
+        sorted(js_strings(value("doubleDraw"))),
+        sorted(DOUBLE_DRAW.iter().map(|s| s.to_string()).collect()),
+        "doubleDraw"
+    );
+    assert_eq!(
+        sorted(js_strings(value("facilities"))),
+        sorted(EMODE_FACILITIES.iter().map(|s| s.to_string()).collect()),
+        "facilities"
+    );
+}

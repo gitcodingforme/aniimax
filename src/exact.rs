@@ -15,6 +15,10 @@
 //!   runs one mode and one coverage mix (see [`crate::coverage::single_building_options`]).
 //! - Woodland and Mine byproducts (Wood Blocks, Mineral Sand) balance like any other item, so the
 //!   Woodworking Bench and Chimney Kiln can use them.
+//! - With generator power (see [`crate::emode`]), a recipe's E-mode copy runs only on electrified
+//!   units: a whole number per facility and owned tier level, taken from the facility's units, and
+//!   together drawing no more than the power budget. Without a generator none of this is in the
+//!   model.
 //! - During a season, its items also earn points when sold, which a priority or floor can name
 //!   as [`crate::models::SEASON_POINTS`]. Season seeds cost the season currency, which plans treat
 //!   as unlimited (see [`crate::models::SeasonTerms`]) unless the player sets a daily budget:
@@ -43,7 +47,8 @@ use crate::coverage::{
     facility_footprint, mode_temperature, single_building_options, temperature_mode, CoverageOption,
     building_size, pair_options_over_offsets, Offset, PairOption, PairSizes, Zone, ENVIRONMENT_GATED_FACILITIES,
 };
-use crate::models::{byproduct_item, FacilityCounts, ModuleLevels, ProductionItem};
+use crate::emode::POWER_TIE_BREAK;
+use crate::models::{byproduct_item, FacilityCounts, ModuleLevels, ProductionItem, ELECTRIC_SUFFIX};
 
 /// Whether plans may place two environment buildings to overlap, for the zone their temperatures
 /// make together. Confirmed in game: a plot reached by Scorching and Cool reads Warm and grows a
@@ -136,6 +141,13 @@ pub struct ExactPlan {
     /// When planning with the player's roster, `(building, member, share of its day)` for each
     /// environment building kind a member staffs (see [`crate::models::Crew`]).
     pub staffing: Vec<(String, usize, f64)>,
+    /// Units electrified for E-mode, as `(facility, tier level, units)` (see [`crate::emode`]);
+    /// empty without a generator.
+    pub electric: Vec<(String, u32, u32)>,
+    /// Every model variable's value, in [`write_lp`]'s `x0`, `x1`, ... order, so a native solve
+    /// can stand in for HiGHS in tests (see `crate::wasm::solve_native`).
+    #[doc(hidden)]
+    pub values: Vec<f64>,
 }
 
 /// What a plan optimizes.
@@ -236,6 +248,9 @@ enum VarKind<'a> {
     /// How much of a roster member's day goes to staffing environment buildings of one kind
     /// (see [`crate::models::Crew`]).
     Staff { building: String, member: usize },
+    /// How many of a facility's units at one owned tier level run in E-mode, each drawing `draw`
+    /// watts (see [`crate::emode`]).
+    Electric { facility: &'a str, level: u32, draw: f64 },
 }
 
 /// One linear constraint: `(variable, coefficient)` terms, comparison, right-hand side.
@@ -273,6 +288,7 @@ impl<'a> Model<'a> {
         self.priority.push(match &kind {
             VarKind::Environment { .. } | VarKind::EnvironmentPair { .. } => 0,
             VarKind::Units(recipe) if recipe.raw_materials.is_none() => 1,
+            VarKind::Electric { .. } => 1,
             _ => 2,
         });
         self.kinds.push(kind);
@@ -471,6 +487,64 @@ fn build_model<'a>(
         for level in levels {
             let terms: Vec<(usize, f64)> = entries.iter().filter(|(l, _)| *l >= level).map(|(_, v)| (*v, 1.0)).collect();
             model.constrain(terms, ComparisonOp::Le, facility_counts.capacity_at_level(facility, level) as f64);
+        }
+    }
+    // E-mode (see `crate::emode`): each unit of a facility runs either on an Aniimo or on power.
+    // Per owned tier level, a whole number of units is electrified; electric copies run only on
+    // those and the facility's other recipes only on the rest, each by level as above, and all the
+    // electrified units together draw no more than the generators give. Without a generator there
+    // is no `power`, and nothing here is added.
+    if let Some(power) = facility_counts.power() {
+        // Per facility: `(level, units)` of its recipes worked by an Aniimo, then of its E-mode copies.
+        type Pool = Vec<(u32, usize)>;
+        let mut pools: BTreeMap<&str, (Pool, Pool)> = BTreeMap::new();
+        for &(recipe, units) in &units_of {
+            let pool = pools.entry(recipe.facility.as_str()).or_default();
+            if recipe.name.ends_with(ELECTRIC_SUFFIX) {
+                pool.1.push((recipe.facility_level, units));
+            } else {
+                pool.0.push((recipe.facility_level, units));
+            }
+        }
+        let levels_of = |entries: &[(u32, usize)]| -> Vec<u32> {
+            let mut levels: Vec<u32> = entries.iter().map(|(l, _)| *l).collect();
+            levels.sort_unstable();
+            levels.dedup();
+            levels
+        };
+        let at_least = |entries: &[(u32, usize)], level: u32| -> Vec<(usize, f64)> {
+            entries.iter().filter(|(l, _)| *l >= level).map(|(_, v)| (*v, 1.0)).collect()
+        };
+        let mut drawn: Vec<(usize, f64)> = Vec::new();
+        for (&facility, (manual, electric)) in &pools {
+            let Some(lowest) = electric.iter().map(|(l, _)| *l).min() else { continue };
+            // A tier below every copy's level could only be electrified for nothing.
+            let mut owned: BTreeMap<u32, u32> = BTreeMap::new();
+            for (count, level) in facility_counts.tiers(facility) {
+                if count > 0 && level >= lowest {
+                    *owned.entry(level).or_default() += count;
+                }
+            }
+            let mut tiers: Vec<(u32, usize)> = Vec::new();
+            for (level, count) in owned {
+                let draw = crate::emode::draw(facility, level, power.draw_per_level);
+                let v = model.add(0.0, (0.0, count as f64), true, VarKind::Electric { facility, level, draw });
+                drawn.push((v, draw));
+                tiers.push((level, v));
+            }
+            for level in levels_of(electric) {
+                let mut terms = at_least(electric, level);
+                terms.extend(at_least(&tiers, level).into_iter().map(|(v, c)| (v, -c)));
+                model.constrain(terms, ComparisonOp::Le, 0.0);
+            }
+            for level in levels_of(manual) {
+                let mut terms = at_least(manual, level);
+                terms.extend(at_least(&tiers, level));
+                model.constrain(terms, ComparisonOp::Le, facility_counts.capacity_at_level(facility, level) as f64);
+            }
+        }
+        if !drawn.is_empty() {
+            model.constrain(drawn, ComparisonOp::Le, power.budget);
         }
     }
 
@@ -694,6 +768,13 @@ fn build_model<'a>(
         model.objective[v] -= BUILDING_TIE_BREAK * buildings;
         model.tiebreak.push((v, BUILDING_TIE_BREAK * buildings));
     }
+    // Of plans otherwise equal, the one electrifying the fewest watts (see `POWER_TIE_BREAK`).
+    for v in 0..model.kinds.len() {
+        if let VarKind::Electric { draw, .. } = model.kinds[v] {
+            model.objective[v] -= POWER_TIE_BREAK * draw;
+            model.tiebreak.push((v, POWER_TIE_BREAK * draw));
+        }
+    }
     model
 }
 
@@ -749,6 +830,23 @@ pub fn solve_exact(
     time_limit: Option<Duration>,
     start: Option<&crate::models::ProductionPlan>,
 ) -> Option<ExactPlan> {
+    solve_exact_within(items, currency, facility_counts, module_levels, goal, time_limit, None, start)
+}
+
+/// [`solve_exact`], also stopping once the search has solved `node_limit` relaxations, which
+/// unlike a time limit gives the same answer on any machine (for tests that record a plan).
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn solve_exact_within(
+    items: &[ProductionItem],
+    currency: &str,
+    facility_counts: &FacilityCounts,
+    module_levels: &ModuleLevels,
+    goal: Goal,
+    time_limit: Option<Duration>,
+    node_limit: Option<u32>,
+    start: Option<&crate::models::ProductionPlan>,
+) -> Option<ExactPlan> {
     let model = build_model(items, currency, facility_counts, module_levels, goal);
     let began = Instant::now();
     let out_of_time = || time_limit.is_some_and(|limit| began.elapsed() >= limit);
@@ -762,6 +860,7 @@ pub fn solve_exact(
             if model.integer[i] && !is_integral(v) {
                 let label = match kind {
                     VarKind::Units(r) => format!("units {} ({})", r.name, r.facility),
+                    VarKind::Electric { facility, level, .. } => format!("electric {facility} level {level}"),
                     VarKind::Environment { building, mode, option, .. } => format!("env {building} {mode} {:?}", option.counts),
                     VarKind::EnvironmentPair { buildings, modes, option, .. } => {
                         format!("env pair {}+{} {}+{} at {}", buildings.0, buildings.1, modes.0, modes.1, option.offset)
@@ -837,7 +936,7 @@ pub fn solve_exact(
             open.clear();
             break;
         }
-        if out_of_time() {
+        if out_of_time() || node_limit.is_some_and(|limit| nodes >= limit) {
             open.push(node);
             proven = false;
             break;
@@ -952,9 +1051,11 @@ fn plan_from(model: &Model, value: f64, upper_bound: f64, proven_optimal: bool, 
     let mut pairs: Vec<ExactPair> = Vec::new();
     let mut pace = None;
     let mut staffing = Vec::new();
+    let mut electric = Vec::new();
     for (kind, &v) in model.kinds.iter().zip(values) {
         match kind {
             VarKind::Pace => pace = Some(v),
+            VarKind::Electric { facility, level, .. } if v > 0.5 => electric.push((facility.to_string(), *level, v.round() as u32)),
             VarKind::Staff { building, member } if v > 1e-9 => staffing.push((building.clone(), *member, v)),
             VarKind::Rate(recipe) if v > 1e-9 => {
                 recipe_rates.insert(recipe.name.clone(), v);
@@ -1006,6 +1107,7 @@ fn plan_from(model: &Model, value: f64, upper_bound: f64, proven_optimal: bool, 
     }
     // Units set to a recipe that doesn't run are just idle.
     units.retain(|name, _| recipe_rates.contains_key(name));
+    let electric = needed_electric(model, values, electric);
     let rate_per_second = model.earnings.iter().zip(values).map(|(c, v)| c * v).sum();
     ExactPlan {
         rate_per_second,
@@ -1020,7 +1122,74 @@ fn plan_from(model: &Model, value: f64, upper_bound: f64, proven_optimal: bool, 
         pairs,
         pace,
         staffing,
+        electric,
+        values: values.to_vec(),
     }
+}
+
+/// Of the `electric` units (`(facility, tier level, units)`) a solve set, only those its E-mode
+/// copies use. The power tie-break (see [`POWER_TIE_BREAK`]) is below what a solver's gap
+/// tolerance will chase, so an answer can leave units electrified with nothing to run; they would
+/// only take a unit from its Aniimo and show power drawn for nothing. Units come off the lowest
+/// tier first (a copy needing a higher level can't use a lower one), as long as every copy still
+/// fits: for each tier, the copies needing more than the tier below can have stay within the
+/// electrified units from that tier up.
+fn needed_electric(model: &Model, values: &[f64], electric: Vec<(String, u32, u32)>) -> Vec<(String, u32, u32)> {
+    if electric.is_empty() {
+        return electric;
+    }
+    let rates: HashMap<&str, f64> = model
+        .kinds
+        .iter()
+        .zip(values)
+        .filter_map(|(kind, &v)| match kind {
+            VarKind::Rate(recipe) => Some((recipe.name.as_str(), v)),
+            _ => None,
+        })
+        .collect();
+    // Units each running copy takes, by facility: its share of time if it takes turns, else its
+    // whole units.
+    let mut used: HashMap<&str, Vec<(u32, f64)>> = HashMap::new();
+    for (kind, &v) in model.kinds.iter().zip(values) {
+        let VarKind::Units(recipe) = kind else { continue };
+        let rate = rates.get(recipe.name.as_str()).copied().unwrap_or(0.0);
+        if !recipe.name.ends_with(ELECTRIC_SUFFIX) || rate <= 1e-9 {
+            continue;
+        }
+        let units = if takes_turns(recipe) { rate * recipe.production_time } else { v.round() };
+        used.entry(recipe.facility.as_str()).or_default().push((recipe.facility_level, units));
+    }
+    let mut kept = Vec::new();
+    let mut facilities: Vec<&str> = electric.iter().map(|(f, _, _)| f.as_str()).collect();
+    facilities.sort_unstable();
+    facilities.dedup();
+    for facility in facilities {
+        let mut tiers: Vec<(u32, u32)> = electric.iter().filter(|(f, _, _)| f == facility).map(|(_, l, u)| (*l, *u)).collect();
+        tiers.sort_unstable();
+        let copies = used.get(facility).map(Vec::as_slice).unwrap_or(&[]);
+        // Units the copies need from tier `i` up: those needing more than the tier below can give.
+        let needs: Vec<f64> = (0..tiers.len())
+            .map(|i| {
+                let above = if i == 0 { 0 } else { tiers[i - 1].0 };
+                let need: f64 = copies.iter().filter(|(l, _)| i == 0 || *l > above).map(|(_, u)| u).sum();
+                (need - INTEGRAL).ceil().max(0.0)
+            })
+            .collect();
+        let fits = |tiers: &[(u32, u32)]| {
+            (0..tiers.len()).all(|i| tiers[i..].iter().map(|(_, u)| *u as f64).sum::<f64>() >= needs[i])
+        };
+        for i in 0..tiers.len() {
+            while tiers[i].1 > 0 {
+                tiers[i].1 -= 1;
+                if !fits(&tiers) {
+                    tiers[i].1 += 1;
+                    break;
+                }
+            }
+        }
+        kept.extend(tiers.into_iter().filter(|(_, u)| *u > 0).map(|(l, u)| (facility.to_string(), l, u)));
+    }
+    kept
 }
 
 /// Re-checks an [`ExactPlan`] from scratch, independently of the solver: whole units, owned units
@@ -1041,6 +1210,9 @@ pub fn check_plan(
     let mut plots_needing: HashMap<(&str, &str), u32> = HashMap::new();
     // Units in use per facility and level; a recipe taking turns counts only its share of time.
     let mut units_at: HashMap<&str, Vec<(u32, f64)>> = HashMap::new();
+    // The same per facility, split into recipes worked by an Aniimo and E-mode copies.
+    type Pool = Vec<(u32, f64)>;
+    let mut pools: HashMap<&str, (Pool, Pool)> = HashMap::new();
     for (name, &rate) in &plan.recipe_rates {
         let recipe = all.get(name.as_str()).ok_or(format!("unknown recipe {name}"))?;
         if !facility_counts.can_produce(&recipe.facility, recipe.facility_level) {
@@ -1057,6 +1229,12 @@ pub fn check_plan(
         }
         let in_use = if takes_turns(recipe) { rate * recipe.production_time } else { units as f64 };
         units_at.entry(recipe.facility.as_str()).or_default().push((recipe.facility_level, in_use));
+        let pool = pools.entry(recipe.facility.as_str()).or_default();
+        if recipe.name.ends_with(ELECTRIC_SUFFIX) {
+            pool.1.push((recipe.facility_level, in_use));
+        } else {
+            pool.0.push((recipe.facility_level, in_use));
+        }
         if let Some(environment) = recipe.environment.as_deref() {
             *plots_needing.entry((recipe.facility.as_str(), environment)).or_default() += units;
         }
@@ -1113,6 +1291,43 @@ pub fn check_plan(
             let owned = facility_counts.capacity_at_level(facility, level);
             if needed > owned as f64 + TOLERANCE {
                 return Err(format!("{facility}: {needed} units at level {level}+ but {owned} owned"));
+            }
+        }
+    }
+    // E-mode: copies run only on electrified units, the facility's other recipes only on the
+    // rest, and the electrified units draw no more than the generators give.
+    if pools.values().any(|(_, electric)| !electric.is_empty()) || !plan.electric.is_empty() {
+        let power = facility_counts.power().ok_or("the plan runs E-mode but there is no generator power")?;
+        let mut electrified: HashMap<&str, Vec<(u32, f64)>> = HashMap::new();
+        let mut drawn = 0.0;
+        for (facility, level, units) in &plan.electric {
+            if !crate::emode::has_emode(facility) {
+                return Err(format!("{facility} has no E-mode"));
+            }
+            let owned: u32 = facility_counts.tiers(facility).iter().filter(|(_, l)| l == level).map(|(c, _)| c).sum();
+            if *units > owned {
+                return Err(format!("{units} {facility} at level {level} run in E-mode but {owned} are owned"));
+            }
+            drawn += crate::emode::draw(facility, *level, power.draw_per_level) * *units as f64;
+            electrified.entry(facility.as_str()).or_default().push((*level, *units as f64));
+        }
+        if drawn > power.budget * (1.0 + TOLERANCE) {
+            return Err(format!("E-mode draws {drawn} W of power but the generators give {} W", power.budget));
+        }
+        let at_least = |entries: &[(u32, f64)], level: u32| -> f64 { entries.iter().filter(|(l, _)| *l >= level).map(|(_, u)| u).sum() };
+        for (&facility, (manual, electric)) in &pools {
+            let on = electrified.get(facility).map(Vec::as_slice).unwrap_or(&[]);
+            for &(level, _) in electric.iter().chain(manual) {
+                let powered = at_least(on, level);
+                let need = at_least(electric, level);
+                if need > powered + TOLERANCE {
+                    return Err(format!("{facility}: {need} E-mode units at level {level}+ but {powered} run in E-mode"));
+                }
+                let worked = at_least(manual, level);
+                let owned = facility_counts.capacity_at_level(facility, level) as f64;
+                if worked + powered > owned + TOLERANCE {
+                    return Err(format!("{facility}: {worked} units with an Aniimo and {powered} in E-mode at level {level}+ but {owned} owned"));
+                }
             }
         }
     }
@@ -1512,22 +1727,38 @@ pub fn to_production_plan(
                 environment: None,
                 busy_units: None,
                 crew: None,
+                electric: false,
             });
             continue;
         }
-        // Recipes taking turns share units, so what's in use is their combined time.
-        let shared: Vec<&str> = rows.iter().filter(|(r, _, _)| takes_turns(r)).map(|(r, _, _)| r.name.as_str()).collect();
-        let shared_time: f64 = rows.iter().filter(|(r, _, _)| takes_turns(r)).map(|(r, _, rate)| rate * r.production_time).sum();
+        // Recipes taking turns share units, so what's in use is their combined time. E-mode copies
+        // take turns among themselves on the electrified units, apart from the rest.
+        let electric = |r: &ProductionItem| r.name.ends_with(ELECTRIC_SUFFIX);
+        let shared: Vec<&str> = rows.iter().filter(|(r, _, _)| takes_turns(r) && !electric(r)).map(|(r, _, _)| r.name.as_str()).collect();
+        let shared_electric: Vec<&str> =
+            rows.iter().filter(|(r, _, _)| takes_turns(r) && electric(r)).map(|(r, _, _)| r.name.as_str()).collect();
+        let shared_time = |on_power: bool| -> f64 {
+            rows.iter().filter(|(r, _, _)| takes_turns(r) && electric(r) == on_power).map(|(r, _, rate)| rate * r.production_time).sum()
+        };
         let used: u32 = rows.iter().filter(|(r, _, _)| !takes_turns(r)).map(|(_, u, _)| u).sum::<u32>()
-            + ((shared_time - 1e-6).ceil().max(0.0) as u32);
+            + ((shared_time(false) - 1e-6).ceil().max(0.0) as u32)
+            + ((shared_time(true) - 1e-6).ceil().max(0.0) as u32);
         let used = used.min(owned);
         for (recipe, units, rate) in rows {
             let mut reason = uses_of(recipe);
             if takes_turns(recipe) {
-                let others: Vec<&str> = shared.iter().copied().filter(|n| *n != recipe.name).collect();
+                // The copies by the name the page shows (the others as they always were).
+                let others: Vec<&str> = if electric(recipe) {
+                    shared_electric.iter().copied().filter(|n| *n != recipe.name).map(crate::models::base_item_name).collect()
+                } else {
+                    shared.iter().copied().filter(|n| *n != recipe.name).collect()
+                };
                 if !others.is_empty() {
                     reason = format!("{reason}; takes turns with {}", others.join(", "));
                 }
+            }
+            if electric(recipe) {
+                reason = format!("{reason}; E-mode, no Aniimo");
             }
             if recipe.name.ends_with(crate::models::UNCOVERED_SUFFIX) {
                 let base = all.get(crate::models::base_item_name(&recipe.name)).and_then(|i| i.environment.as_deref());
@@ -1548,6 +1779,7 @@ pub fn to_production_plan(
                 busy_units: (!grower || recipe.crew.is_some() || recipe.season.is_some_and(|s| s.currency_per_day.is_some()))
                     .then(|| (rate * recipe.production_time).min(units as f64)),
                 crew: recipe.crew,
+                electric: electric(recipe),
             });
         }
         if owned > used {
@@ -1562,6 +1794,7 @@ pub fn to_production_plan(
                 environment: None,
                 busy_units: None,
                 crew: None,
+                electric: false,
             });
         }
     }

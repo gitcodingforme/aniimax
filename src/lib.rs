@@ -70,6 +70,7 @@ pub mod coverage;
 pub mod data;
 pub mod locale;
 pub mod display;
+pub mod emode;
 pub mod exact;
 pub mod models;
 pub mod optimizer;

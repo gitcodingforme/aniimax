@@ -233,14 +233,28 @@ pub fn no_personality_efficiency(level: u32, required: u32) -> f64 {
 /// [`add_uncovered_variants`]).
 pub const UNCOVERED_SUFFIX: &str = "__uncovered";
 
+/// Marks a recipe's E-mode copy, run on generator power with no Aniimo, e.g.
+/// `milled_rice__electric` (see `crate::emode::electric_variants`).
+pub const ELECTRIC_SUFFIX: &str = "__electric";
+
 /// The recipe or crop behind an item name: the name without a roster copy's `__by<member>` (see
-/// [`crew_variants`]) or an uncovered variant's suffix.
+/// [`crew_variants`]), an uncovered variant's suffix or an E-mode copy's.
+///
+/// ```
+/// use aniimax::models::base_item_name;
+///
+/// assert_eq!(base_item_name("milled_rice__by2"), "milled_rice");
+/// assert_eq!(base_item_name("rose__uncovered"), "rose");
+/// assert_eq!(base_item_name("milled_rice__electric"), "milled_rice");
+/// assert_eq!(base_item_name("milled_rice"), "milled_rice");
+/// ```
 pub fn base_item_name(name: &str) -> &str {
     let name = match name.rsplit_once(CREW_SUFFIX) {
         Some((base, member)) if !member.is_empty() && member.bytes().all(|b| b.is_ascii_digit()) => base,
         _ => name,
     };
-    name.strip_suffix(UNCOVERED_SUFFIX).unwrap_or(name)
+    let name = name.strip_suffix(UNCOVERED_SUFFIX).unwrap_or(name);
+    name.strip_suffix(ELECTRIC_SUFFIX).unwrap_or(name)
 }
 
 /// Marks a recipe worked by one Aniimo on the player's roster, e.g. `milled_rice__by2` for the
@@ -433,7 +447,8 @@ pub fn apply_watering(items: &mut [ProductionItem]) {
         .map(|item| (item.name.clone(), item.production_time))
         .collect();
     for item in items.iter_mut() {
-        if item.workload.is_some() || item.production_time <= 0.0 {
+        // An E-mode copy has no workload either, but it's processed, not grown.
+        if item.workload.is_some() || item.production_time <= 0.0 || item.name.ends_with(ELECTRIC_SUFFIX) {
             continue;
         }
         let at_full_speed = full_speed.get(base_item_name(&item.name)).copied().unwrap_or(item.production_time);
@@ -760,6 +775,52 @@ impl GrowerSteps {
     }
 }
 
+/// Each processor recipe's E-mode base time in seconds, keyed by facility and recipe like
+/// [`GrowerSteps`] (see `crate::emode`): the time a batch takes on generator power at 100% supply,
+/// whatever Aniimo the homeland has. Fan data, INFERRED (see `data/overrides/emode_times.csv`).
+///
+/// ```
+/// use aniimax::models::EmodeTimes;
+///
+/// let mut times = EmodeTimes::default();
+/// times.insert("Carousel Mill", "milled_rice", 54.0);
+/// assert_eq!(times.get("Carousel Mill", "milled_rice"), Some(54.0));
+/// assert_eq!(times.get("Jukebox Dryer", "milled_rice"), None);
+/// ```
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct EmodeTimes {
+    by_recipe: std::collections::HashMap<(String, String), f64>,
+}
+
+impl EmodeTimes {
+    /// Sets `item`'s time at `facility`, replacing any it had.
+    pub fn insert(&mut self, facility: &str, item: &str, seconds: f64) -> &mut Self {
+        self.by_recipe.insert((facility.to_string(), item.to_string()), seconds);
+        self
+    }
+
+    /// `item`'s E-mode base time at `facility`, if known.
+    pub fn get(&self, facility: &str, item: &str) -> Option<f64> {
+        self.by_recipe.get(&(facility.to_string(), item.to_string())).copied()
+    }
+
+    pub fn len(&self) -> usize {
+        self.by_recipe.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.by_recipe.is_empty()
+    }
+
+    /// Every `(facility, item, seconds)`, sorted by facility and item.
+    pub fn entries(&self) -> Vec<(String, String, f64)> {
+        let mut rows: Vec<(String, String, f64)> =
+            self.by_recipe.iter().map(|((facility, item), &s)| (facility.clone(), item.clone(), s)).collect();
+        rows.sort_by(|a, b| (&a.0, &a.1).cmp(&(&b.0, &b.1)));
+        rows
+    }
+}
+
 /// Efficiency metrics for an item when consumed for energy.
 #[derive(Debug, Clone)]
 pub struct EnergyItemEfficiency {
@@ -894,6 +955,9 @@ pub struct PlanStep {
     pub busy_units: Option<f64>,
     /// When planning with the player's roster, which member works this row (see [`Crew`]).
     pub crew: Option<usize>,
+    /// Whether this row's units run in E-mode, on generator power with no Aniimo (see
+    /// `crate::emode`).
+    pub electric: bool,
 }
 
 /// How many times a Farmland/Woodland plot needs to be (re-)planted with a fresh seed over the
@@ -1178,6 +1242,22 @@ pub struct FacilityCounts {
     default_tier: (u32, u32),
     /// The Aniimo the player has, when planning with them (see [`Crew`]).
     crew: Option<Crew>,
+    /// The generators' power, when some recipes may run in E-mode (see [`Power`]).
+    power: Option<Power>,
+}
+
+/// What the homeland's Crackle Generators give E-mode (see `crate::emode`): set on
+/// [`FacilityCounts`] only when there's a budget and some recipe can use it, so without a
+/// generator the plan is exactly what it was before E-mode.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Power {
+    /// Watts the electrified units may draw in all (see `crate::emode::budget`).
+    pub budget: f64,
+    /// How much faster than its E-mode base time a batch runs: 1, or `crate::emode::BOOST_RATE`
+    /// at 120% supply.
+    pub rate: f64,
+    /// Watts an electrified unit draws per level of its facility (see `crate::emode::draw`).
+    pub draw_per_level: f64,
 }
 
 impl Default for FacilityCounts {
@@ -1186,11 +1266,23 @@ impl Default for FacilityCounts {
             facilities: std::collections::HashMap::new(),
             default_tier: (1, 1),
             crew: None,
+            power: None,
         }
     }
 }
 
 impl FacilityCounts {
+    /// Lets recipes with an E-mode copy run on `power` (see [`Power`]).
+    pub fn set_power(&mut self, power: Power) -> &mut Self {
+        self.power = Some(power);
+        self
+    }
+
+    /// The generators' power, if some recipes may run in E-mode.
+    pub fn power(&self) -> Option<&Power> {
+        self.power.as_ref()
+    }
+
     /// Plans with the Aniimo in `crew` (see [`Crew`]), with items from [`crew_variants`].
     pub fn set_crew(&mut self, crew: Crew) -> &mut Self {
         self.crew = Some(crew);
@@ -1236,6 +1328,7 @@ impl FacilityCounts {
             facilities: std::collections::HashMap::new(),
             default_tier: (0, 1),
             crew: None,
+            power: None,
         };
         for (name, count, level) in pairs {
             fc.set(name, *count, *level);
@@ -1250,6 +1343,7 @@ impl FacilityCounts {
             facilities: std::collections::HashMap::new(),
             default_tier: (1, 99),
             crew: None,
+            power: None,
         }
     }
 

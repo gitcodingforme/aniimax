@@ -10,8 +10,8 @@ use std::fs::File;
 use std::path::Path;
 
 use crate::models::{
-    AniimoRequirements, FarmlandRow, GrowerStep, GrowerSteps, MineralRow, ProcessingRowNoEnergy, ProcessingRowWithEnergy,
-    ProductionItem, WoodlandRow,
+    AniimoRequirements, EmodeTimes, FarmlandRow, GrowerStep, GrowerSteps, MineralRow, ProcessingRowNoEnergy,
+    ProcessingRowWithEnergy, ProductionItem, WoodlandRow,
 };
 
 /// One row of `aniimo_requirements.csv`.
@@ -92,6 +92,84 @@ pub fn parse_unverified(csv_text: &str) -> Result<Vec<(String, String)>, Box<dyn
 /// Loads `unverified.csv` from the data directory; see [`parse_unverified`].
 pub fn load_unverified(data_dir: &Path) -> Result<Vec<(String, String)>, Box<dyn Error>> {
     parse_unverified(&std::fs::read_to_string(data_dir.join("unverified.csv"))?)
+}
+
+/// One row of `overrides/emode_times.csv`.
+#[derive(Debug, serde::Deserialize)]
+struct EmodeTimeRow {
+    item: String,
+    facility: String,
+    /// Kept as text so a row without a number is skipped rather than failing the file.
+    emode_seconds: String,
+}
+
+/// The column a processor CSV may carry with each recipe's E-mode base time in seconds (upstream
+/// pull request 31 adds it).
+pub const EMODE_COLUMN: &str = "emode_base_time";
+
+/// A usable E-mode time: a positive number of seconds.
+fn emode_seconds(text: &str) -> Option<f64> {
+    text.trim().parse::<f64>().ok().filter(|s| s.is_finite() && *s > 0.0)
+}
+
+/// Parses `overrides/emode_times.csv` (columns `item, facility, emode_seconds, source,
+/// fetched_on`; lines starting `#` are comments, and they contain commas). A row whose seconds
+/// aren't a positive number is skipped. Fan data, INFERRED; see [`crate::emode`].
+pub fn parse_emode_times(csv_text: &str) -> Result<EmodeTimes, Box<dyn Error>> {
+    let mut times = EmodeTimes::default();
+    let mut rdr = ReaderBuilder::new().trim(csv::Trim::All).comment(Some(b'#')).from_reader(csv_text.as_bytes());
+    for row in rdr.deserialize::<EmodeTimeRow>() {
+        let row = row?;
+        if let Some(seconds) = emode_seconds(&row.emode_seconds) {
+            times.insert(&row.facility, &row.item, seconds);
+        }
+    }
+    Ok(times)
+}
+
+/// The E-mode times a processor CSV carries in its own [`EMODE_COLUMN`], as `(recipe, seconds)`;
+/// empty when it has no such column. A blank or non-numeric cell is left out, so the table fills
+/// it (see [`emode_times`]).
+pub fn emode_column(csv_text: &str) -> Result<Vec<(String, f64)>, Box<dyn Error>> {
+    let mut rdr = ReaderBuilder::new().trim(csv::Trim::All).from_reader(csv_text.as_bytes());
+    let headers = rdr.headers()?.clone();
+    let (Some(name), Some(column)) =
+        (headers.iter().position(|h| h == "name"), headers.iter().position(|h| h == EMODE_COLUMN))
+    else {
+        return Ok(Vec::new());
+    };
+    let mut rows = Vec::new();
+    for record in rdr.records() {
+        let record = record?;
+        if let (Some(item), Some(seconds)) = (record.get(name), record.get(column).and_then(emode_seconds)) {
+            rows.push((item.to_string(), seconds));
+        }
+    }
+    Ok(rows)
+}
+
+/// Every processor recipe's E-mode time: from its own CSV's [`EMODE_COLUMN`] where it has one,
+/// otherwise from the table (`overrides/emode_times.csv`, see [`parse_emode_times`]).
+/// `processors` is each processor's `(facility, CSV text)`.
+pub fn emode_times(table_csv: &str, processors: &[(&str, &str)]) -> Result<EmodeTimes, Box<dyn Error>> {
+    let mut times = parse_emode_times(table_csv)?;
+    for (facility, csv_text) in processors {
+        for (item, seconds) in emode_column(csv_text)? {
+            times.insert(facility, &item, seconds);
+        }
+    }
+    Ok(times)
+}
+
+/// Loads the E-mode times from the data directory; see [`emode_times`].
+pub fn load_emode_times(data_dir: &Path) -> Result<EmodeTimes, Box<dyn Error>> {
+    let table = std::fs::read_to_string(data_dir.join("overrides").join("emode_times.csv"))?;
+    let mut processors: Vec<(&str, String)> = Vec::new();
+    for (file, facility) in PROCESSOR_FILES_WITH_ENERGY.iter().chain(PROCESSOR_FILES.iter()) {
+        processors.push((facility, std::fs::read_to_string(data_dir.join(file))?));
+    }
+    let processors: Vec<(&str, &str)> = processors.iter().map(|(f, text)| (*f, text.as_str())).collect();
+    emode_times(&table, &processors)
 }
 
 /// One row of a season's CSV (e.g. `harvest_moon_festival.csv`).
@@ -560,6 +638,13 @@ const ANIIMO_MATERIAL_FILES: [(&str, &str); 5] = [
     ("nimbus_bed.csv", "Nimbus Bed"),
     ("starfall_hammock.csv", "Starfall Hammock"),
     ("floral_windmill.csv", "Floral Windmill"),
+];
+
+/// Processors whose CSVs use the energy layout (see [`load_processing_with_energy`]).
+const PROCESSOR_FILES_WITH_ENERGY: [(&str, &str); 3] = [
+    ("carousel_mill.csv", "Carousel Mill"),
+    ("jukebox_dryer.csv", "Jukebox Dryer"),
+    ("claw_game_cooker.csv", "Claw Game Cooker"),
 ];
 
 /// Processors whose CSVs use the no-energy layout (see [`load_processing_no_energy`]).

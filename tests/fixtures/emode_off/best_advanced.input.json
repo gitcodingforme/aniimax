@@ -1,0 +1,195 @@
+{
+  "currency": "coins",
+  "priorities": [],
+  "prioritize_byproducts": false,
+  "level_up": null,
+  "exclude": [
+    "potato_chips"
+  ],
+  "season": false,
+  "season_currency_per_day": null,
+  "facilities": {
+    "Farmland": [
+      {
+        "count": 16,
+        "level": 5
+      },
+      {
+        "count": 6,
+        "level": 4
+      }
+    ],
+    "Woodland": [
+      {
+        "count": 11,
+        "level": 3
+      }
+    ],
+    "Mine": [
+      {
+        "count": 5,
+        "level": 3
+      }
+    ],
+    "Well": [
+      {
+        "count": 2,
+        "level": 2
+      }
+    ],
+    "Tidewhisper Sandcastle": [
+      {
+        "count": 1,
+        "level": 2
+      }
+    ],
+    "Dewy House": [
+      {
+        "count": 1,
+        "level": 1
+      }
+    ],
+    "Nimbus Bed": [
+      {
+        "count": 1,
+        "level": 1
+      }
+    ],
+    "Starfall Hammock": [
+      {
+        "count": 0,
+        "level": 1
+      }
+    ],
+    "Floral Windmill": [
+      {
+        "count": 0,
+        "level": 1
+      }
+    ],
+    "Heat Furnace": [
+      {
+        "count": 0,
+        "level": 1
+      }
+    ],
+    "Cooling Unit": [
+      {
+        "count": 0,
+        "level": 1
+      }
+    ],
+    "Sunlamp": [
+      {
+        "count": 0,
+        "level": 1
+      }
+    ],
+    "Carousel Mill": [
+      {
+        "count": 2,
+        "level": 3
+      }
+    ],
+    "Crafting Table": [
+      {
+        "count": 2,
+        "level": 4
+      }
+    ],
+    "Claw Game Cooker": [
+      {
+        "count": 1,
+        "level": 4
+      }
+    ],
+    "Jukebox Dryer": [
+      {
+        "count": 1,
+        "level": 4
+      }
+    ],
+    "Simmering Pot": [
+      {
+        "count": 1,
+        "level": 3
+      }
+    ],
+    "Phonolfactory Table": [
+      {
+        "count": 1,
+        "level": 3
+      }
+    ],
+    "Bouncy Brew Keg": [
+      {
+        "count": 1,
+        "level": 2
+      }
+    ],
+    "Blazing Stove": [
+      {
+        "count": 1,
+        "level": 2
+      }
+    ],
+    "Pickling Jar": [
+      {
+        "count": 1,
+        "level": 2
+      }
+    ],
+    "Joy Wheel Loom": [
+      {
+        "count": 1,
+        "level": 2
+      }
+    ],
+    "Dance Pad Polisher": [
+      {
+        "count": 1,
+        "level": 3
+      }
+    ],
+    "Aniipod Maker": [
+      {
+        "count": 1,
+        "level": 3
+      }
+    ],
+    "Woodworking Bench": [
+      {
+        "count": 2,
+        "level": 2
+      }
+    ],
+    "Chimney Kiln": [
+      {
+        "count": 2,
+        "level": 2
+      }
+    ]
+  },
+  "modules": {
+    "ecological_module": 3,
+    "kitchen_module": 4,
+    "resource_detector": 2,
+    "crafting_module": 3
+  },
+  "aniimo": "best",
+  "aniimo_levels": {
+    "Earth": 4,
+    "Water": 3,
+    "Leisure": 3,
+    "Wind": 4,
+    "Artisanship": 4,
+    "Fire": 4,
+    "Grass": 4,
+    "Ice": 4,
+    "Dark": 3,
+    "Light": 4,
+    "Hauling": 4,
+    "Perfumery": 3,
+    "Lightning": 4
+  }
+}

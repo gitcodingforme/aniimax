@@ -755,6 +755,65 @@ pub struct JsPlanInput {
     /// seeds; `None` for no limit.
     #[serde(default)]
     pub season_currency_per_day: Option<f64>,
+    /// The homeland's Crackle Generators, for E-mode (see [`crate::emode`]). Left out, `null`, no
+    /// generators or a count of 0 all mean no E-mode, and the plan is exactly what it was before.
+    #[serde(default)]
+    pub emode: Option<JsEmode>,
+}
+
+/// E-mode's input: `{"generators": [{"level": 1, "count": 1}], "supply": "100" or "120",
+/// "draw_per_level": 15}`. `supply` defaults to "100"; `draw_per_level` to
+/// [`crate::emode::DRAW_PER_LEVEL`] and must be above 0. All the numbers behind it are fan data,
+/// INFERRED (see [`crate::emode`]).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct JsEmode {
+    #[serde(default)]
+    pub generators: Vec<JsGenerator>,
+    /// `"100"` or `"120"` (a number is taken too).
+    #[serde(default)]
+    pub supply: Option<serde_json::Value>,
+    #[serde(default)]
+    pub draw_per_level: Option<f64>,
+}
+
+/// Some Crackle Generators at one level (1 to 5; see [`crate::emode::GENERATOR_CAPACITY`]).
+#[derive(Debug, Clone, Deserialize)]
+pub struct JsGenerator {
+    #[serde(default = "default_level")]
+    pub level: u32,
+    #[serde(default)]
+    pub count: u32,
+}
+
+impl JsEmode {
+    /// The power these generators give E-mode, `None` if none (no generator, or a count of 0), or
+    /// what's wrong with the input.
+    fn power(&self) -> Result<Option<crate::models::Power>, String> {
+        let per_level = self.draw_per_level.unwrap_or(crate::emode::DRAW_PER_LEVEL);
+        if !(per_level.is_finite() && per_level > 0.0) {
+            return Err(format!("E-mode draw per level must be above 0, not {per_level}"));
+        }
+        let boosted = match &self.supply {
+            None | Some(serde_json::Value::Null) => false,
+            Some(value) => match (value.as_str(), value.as_f64()) {
+                (Some("100"), _) | (_, Some(100.0)) => false,
+                (Some("120"), _) | (_, Some(120.0)) => true,
+                _ => return Err(format!("E-mode supply must be \"100\" or \"120\", not {value}")),
+            },
+        };
+        let mut capacity: u32 = 0;
+        for generator in self.generators.iter().filter(|g| g.count > 0) {
+            let watts = crate::emode::generator_capacity(generator.level)
+                .ok_or(format!("a Crackle Generator's level is 1 to 5, not {}", generator.level))?;
+            capacity = capacity.saturating_add(watts.saturating_mul(generator.count));
+        }
+        let budget = crate::emode::budget(capacity, boosted);
+        Ok((budget > 0.0).then_some(crate::models::Power {
+            budget,
+            rate: if boosted { crate::emode::BOOST_RATE } else { 1.0 },
+            draw_per_level: per_level,
+        }))
+    }
 }
 
 /// The player's Aniimo, and what the page knows of the facilities they work (see
@@ -847,6 +906,10 @@ pub struct JsPlanStep {
     /// roster sent in [`JsPlanInput::roster`]).
     #[serde(default)]
     pub crew: Option<usize>,
+    /// Whether this row's units run in E-mode, on generator power with no Aniimo (see
+    /// [`crate::emode`]). Left out of the JSON when false, so a plan without E-mode reads as before.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub electric: bool,
 }
 
 /// Aniimo work a plan row creates for one ability: how many Aniimo of that ability and level it
@@ -866,6 +929,36 @@ pub struct JsAniimoTask {
 /// Recipes not yet checked in game, embedded in the web build; see `data/unverified.csv`.
 fn embedded_unverified() -> Vec<(String, String)> {
     crate::data::parse_unverified(include_str!("../data/unverified.csv")).expect("embedded unverified.csv is valid")
+}
+
+/// Every processor's CSV as the web build embeds it, `(facility, text)`, for the E-mode times a
+/// CSV may carry in its own column (see [`crate::data::emode_times`]).
+const EMBEDDED_PROCESSOR_CSVS: [(&str, &str); 14] = [
+    ("Carousel Mill", include_str!("../data/carousel_mill.csv")),
+    ("Jukebox Dryer", include_str!("../data/jukebox_dryer.csv")),
+    ("Claw Game Cooker", include_str!("../data/claw_game_cooker.csv")),
+    ("Crafting Table", include_str!("../data/crafting_table.csv")),
+    ("Simmering Pot", include_str!("../data/simmering_pot.csv")),
+    ("Phonolfactory Table", include_str!("../data/phonolfactory_table.csv")),
+    ("Bouncy Brew Keg", include_str!("../data/bouncy_brew_keg.csv")),
+    ("Blazing Stove", include_str!("../data/blazing_stove.csv")),
+    ("Pickling Jar", include_str!("../data/pickling_jar.csv")),
+    ("Joy Wheel Loom", include_str!("../data/joy_wheel_loom.csv")),
+    ("Woodworking Bench", include_str!("../data/woodworking_bench.csv")),
+    ("Chimney Kiln", include_str!("../data/chimney_kiln.csv")),
+    ("Dance Pad Polisher", include_str!("../data/dance_pad_polisher.csv")),
+    ("Aniipod Maker", include_str!("../data/aniipod_maker.csv")),
+];
+
+/// The E-mode times embedded in the web build: each processor CSV's own column where it has one,
+/// otherwise `data/overrides/emode_times.csv` (fan data, INFERRED; see [`crate::emode`]). Parsed
+/// once, since every stage of a solve prepares its input again.
+fn embedded_emode_times() -> &'static crate::models::EmodeTimes {
+    static TIMES: std::sync::OnceLock<crate::models::EmodeTimes> = std::sync::OnceLock::new();
+    TIMES.get_or_init(|| {
+        crate::data::emode_times(include_str!("../data/overrides/emode_times.csv"), &EMBEDDED_PROCESSOR_CSVS)
+            .expect("embedded emode_times.csv is valid")
+    })
 }
 
 /// A recipe a plan relies on that hasn't been checked in game yet.
@@ -1008,6 +1101,7 @@ impl From<crate::models::PlanStep> for JsPlanStep {
             busy_units: s.busy_units,
             aniimo_tasks: Vec::new(),
             crew: s.crew,
+            electric: s.electric,
         }
     }
 }
@@ -1025,6 +1119,7 @@ impl From<JsPlanStep> for crate::models::PlanStep {
             environment: s.environment,
             busy_units: s.busy_units,
             crew: s.crew,
+            electric: s.electric,
         }
     }
 }
@@ -1219,6 +1314,55 @@ pub struct JsProductionPlan {
     /// building kind a member staffs.
     #[serde(default)]
     pub staffing: Vec<(String, usize, f64)>,
+    /// Set by the exact planner when the input has generator power for E-mode (see
+    /// [`crate::emode`]); left out of the JSON otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power: Option<JsPower>,
+}
+
+/// What a plan does with the generators' power.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsPower {
+    /// Watts the electrified units draw.
+    pub used: f64,
+    /// Watts they may draw: the generators' capacity, or capacity ÷ 1.2 rounded down at 120%.
+    pub budget: f64,
+    /// The supply setting in percent: 100 or 120.
+    pub supply: u32,
+    /// The units the plan runs in E-mode.
+    pub units: Vec<JsPowerUnits>,
+}
+
+/// Some units of one facility tier running in E-mode.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsPowerUnits {
+    pub facility: String,
+    /// The tier's facility level.
+    pub level: u32,
+    /// How many of its units run in E-mode.
+    pub count: u32,
+    /// Watts each one draws.
+    pub draw: f64,
+}
+
+/// [`JsPower`] for `exact` with `power`.
+fn power_report(exact: &crate::exact::ExactPlan, power: &crate::models::Power) -> JsPower {
+    let units: Vec<JsPowerUnits> = exact
+        .electric
+        .iter()
+        .map(|(facility, level, count)| JsPowerUnits {
+            facility: facility.clone(),
+            level: *level,
+            count: *count,
+            draw: crate::emode::draw(facility, *level, power.draw_per_level),
+        })
+        .collect();
+    JsPower {
+        used: units.iter().map(|u| u.draw * u.count as f64).sum(),
+        budget: power.budget,
+        supply: if power.rate > 1.0 { 120 } else { 100 },
+        units,
+    }
 }
 
 /// What a plan makes of one priority.
@@ -1281,6 +1425,7 @@ fn empty_production_plan(success: bool, error: Option<String>) -> JsProductionPl
         priorities: vec![],
         season_points: None,
         staffing: Vec::new(),
+        power: None,
     }
 }
 
@@ -1330,8 +1475,11 @@ pub fn find_plan(input_json: &str, on_progress: Option<js_sys::Function>) -> Str
     });
     let report_ref: Option<&dyn Fn(u32)> = report.as_deref();
 
+    // The backup planner knows nothing of power, so it plans without the E-mode copies.
+    let items: Vec<ProductionItem> =
+        prepared.items.iter().filter(|item| !item.name.ends_with(crate::models::ELECTRIC_SUFFIX)).cloned().collect();
     match find_production_plan_with_progress(
-        &prepared.items,
+        &items,
         &prepared.input.currency,
         &prepared.facility_counts,
         &prepared.module_levels,
@@ -1463,6 +1611,55 @@ pub fn exact_problem(input_json: &str, stage_json: &str) -> String {
     lp_json(&lp)
 }
 
+/// Solves [`exact_problem`]'s model natively, with the crate's own branch and bound and no time
+/// limit, and answers in the shape [`exact_plan`] takes: `{"values", "proven", "bound",
+/// "objective"}` (`objective` without the tie-break, as the worker reports it). Tests only: the
+/// page solves with HiGHS. `None` if there's no plan.
+#[doc(hidden)]
+#[cfg(not(target_arch = "wasm32"))]
+pub fn solve_native(input_json: &str, stage_json: &str) -> Option<String> {
+    let stage: JsStage = serde_json::from_str(stage_json).unwrap_or_default();
+    let prepared = PreparedInput::from_json(input_json).ok()?;
+    native_answer(&prepared, stage.goal(&prepared.input))
+}
+
+/// [`solve_native`] for [`exact_level_up_problem`]'s model: the soonest level-up.
+#[doc(hidden)]
+#[cfg(not(target_arch = "wasm32"))]
+pub fn solve_native_level_up(input_json: &str) -> Option<String> {
+    let prepared = PreparedInput::from_json(input_json).ok()?;
+    let level_up = prepared.input.level_up.clone()?;
+    native_answer(&prepared, crate::exact::Goal::LevelUp(&level_up))
+}
+
+/// How many relaxations a native solve may take: a limit on work rather than time, so the answer
+/// is the same on every machine (the crate's own search is far slower than HiGHS on big models).
+#[cfg(not(target_arch = "wasm32"))]
+const NATIVE_NODE_LIMIT: u32 = 60;
+
+#[cfg(not(target_arch = "wasm32"))]
+fn native_answer(prepared: &PreparedInput, goal: crate::exact::Goal) -> Option<String> {
+    let plan = crate::exact::solve_exact_within(
+        &prepared.items,
+        &prepared.input.currency,
+        &prepared.facility_counts,
+        &prepared.module_levels,
+        goal,
+        None,
+        Some(NATIVE_NODE_LIMIT),
+        None,
+    )?;
+    Some(
+        serde_json::json!({
+            "values": plan.values,
+            "proven": plan.proven_optimal,
+            "bound": plan.upper_bound,
+            "objective": plan.objective,
+        })
+        .to_string(),
+    )
+}
+
 /// `{"lp", "variables", "tiebreak"}` for a model (see [`crate::exact::LpProblem`]).
 fn lp_json(problem: &crate::exact::LpProblem) -> String {
     serde_json::json!({ "lp": problem.lp, "variables": problem.variables, "tiebreak": problem.tiebreak }).to_string()
@@ -1524,6 +1721,7 @@ pub fn exact_plan(input_json: &str, stage_json: &str, solution_json: &str) -> St
     let mut js = prepared.to_js(plan, Some(proof));
     js.level_up = report;
     js.staffing = exact.staffing.clone();
+    js.power = prepared.power.as_ref().map(|power| power_report(&exact, power));
     if prepared.input.season {
         js.season_points = Some(crate::exact::target_rate(&exact, &prepared.items, crate::models::SEASON_POINTS));
     }
@@ -1606,14 +1804,21 @@ struct PreparedInput {
     crew: Option<crate::models::Crew>,
     requirements: crate::models::AniimoRequirements,
     grower_steps: crate::models::GrowerSteps,
+    /// The generators' power for E-mode, when the input has any (see [`JsEmode`]). The model only
+    /// gets it (on `facility_counts`) when some recipe has an E-mode copy worth running.
+    power: Option<crate::models::Power>,
 }
 
 impl PreparedInput {
     /// Parses `input_json`; on failure, the error result to return instead.
     fn from_json(input_json: &str) -> Result<Self, String> {
-        let input: JsPlanInput = serde_json::from_str(input_json).map_err(|e| {
-            serde_json::to_string(&empty_production_plan(false, Some(format!("Invalid input: {}", e)))).unwrap_or_default()
-        })?;
+        let invalid =
+            |e: String| serde_json::to_string(&empty_production_plan(false, Some(format!("Invalid input: {}", e)))).unwrap_or_default();
+        let input: JsPlanInput = serde_json::from_str(input_json).map_err(|e| invalid(e.to_string()))?;
+        let power = match &input.emode {
+            Some(emode) => emode.power().map_err(invalid)?,
+            None => None,
+        };
         let facility_counts = input.facility_counts();
         let module_levels = ModuleLevels {
             ecological_module: input.modules.ecological_module,
@@ -1630,6 +1835,12 @@ impl PreparedInput {
             items.extend(season);
         }
         items.retain(|item| !input.exclude.iter().any(|name| name == crate::models::base_item_name(&item.name)));
+        // E-mode copies come from the recipes as loaded (a roster setup below takes each recipe's
+        // own level out of reach), and join after the setup, so no Aniimo retimes them.
+        let copies = match &power {
+            Some(power) => crate::emode::electric_variants(&items, embedded_emode_times(), power, &facility_counts, &input.exclude),
+            None => Vec::new(),
+        };
         let setup = input
             .aniimo
             .as_deref()
@@ -1649,7 +1860,12 @@ impl PreparedInput {
             (None, Some(setup)) => requirements.apply(setup, &mut items),
             (None, None) => workers_from(&input.workers).apply(&requirements, &mut items),
         }
-        Ok(PreparedInput { input, facility_counts, module_levels, items, setup, crew, requirements, grower_steps })
+        let copies = crate::emode::keep_useful(copies, &items, crew.is_some());
+        if let (Some(power), false) = (&power, copies.is_empty()) {
+            items.extend(copies);
+            facility_counts.set_power(*power);
+        }
+        Ok(PreparedInput { input, facility_counts, module_levels, items, setup, crew, requirements, grower_steps, power })
     }
 
     /// The result the web page shows for `plan`, with each row's Aniimo; `proof` is the exact
@@ -1674,6 +1890,10 @@ impl PreparedInput {
             .coin_items
             .into_iter()
             .map(|step| {
+                // An E-mode row runs on power: no Aniimo works it.
+                if step.electric {
+                    return JsPlanStep { aniimo: None, aniimo_tasks: Vec::new(), ..step.into() };
+                }
                 // With the player's roster, the row names the member working it.
                 let from_crew = match (&self.crew, step.crew, &step.item_name) {
                     (Some(crew), Some(member), Some(item)) => crew.members.get(member).and_then(|aniimo| {
@@ -1733,6 +1953,7 @@ impl PreparedInput {
             priorities: vec![],
             season_points,
             staffing: Vec::new(),
+            power: None,
         }
     }
 }
@@ -1996,6 +2217,19 @@ mod tests {
         for item in get_embedded_items().iter().filter(|i| i.workload.is_some()) {
             assert!(reqs.get(&item.name).is_some(), "{} has no embedded Aniimo requirement", item.name);
         }
+    }
+
+    // The web build's E-mode times are the data directory's: the same table and the same
+    // processor files.
+    #[test]
+    fn embedded_emode_times_match_the_data_directory() {
+        let data_dir = std::path::Path::new("data");
+        if !data_dir.exists() {
+            return;
+        }
+        let from_files = crate::data::load_emode_times(data_dir).expect("E-mode times load");
+        assert_eq!(super::embedded_emode_times().entries(), from_files.entries());
+        assert!(!from_files.is_empty());
     }
 
     // The web build embeds its own copy of every CSV. A facility added to `load_all_data` but not

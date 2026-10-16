@@ -4170,6 +4170,7 @@ pub fn find_production_plan_with_progress(
                         environment: None,
                         busy_units: None,
                         crew: None,
+                        electric: false,
                     }];
                 }
 
@@ -4192,6 +4193,7 @@ pub fn find_production_plan_with_progress(
                         environment: item.and_then(|item| item.environment.clone()),
                         busy_units: None,
                         crew: None,
+                        electric: false,
                     });
                 }
                 if idle > 0 {
@@ -4206,6 +4208,7 @@ pub fn find_production_plan_with_progress(
                         environment: None,
                         busy_units: None,
                         crew: None,
+                        electric: false,
                     });
                 }
                 return steps;
@@ -4239,6 +4242,7 @@ pub fn find_production_plan_with_progress(
                     environment: None,
                     busy_units: None,
                     crew: None,
+                    electric: false,
                 }];
             }
 
@@ -4259,6 +4263,7 @@ pub fn find_production_plan_with_progress(
                     environment: None,
                     busy_units: Some(units_needed.min(count as f64)),
                     crew: None,
+                    electric: false,
                 });
             }
             if remaining > 0 {
@@ -4273,6 +4278,7 @@ pub fn find_production_plan_with_progress(
                     environment: None,
                     busy_units: None,
                     crew: None,
+                    electric: false,
                 });
             }
             steps
