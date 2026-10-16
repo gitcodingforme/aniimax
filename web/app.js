@@ -7,28 +7,34 @@ import {
     FACILITIES, FACILITY_CATEGORIES, FACILITY_CATEGORY_BY_NAME, FACILITY_FOOTPRINTS, HOMELAND_PLOTS, HOMELAND_PLOT_SIZE,
     MAX_HOME_LEVEL, ANIIMO_MAX, MODULE_MAX_LEVELS, OUTPUT_CAPS, simpleSetup,
     LEVEL_UP_COSTS, LEVEL_UP_CHAINS, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, PERSONALITY_PAIRS, personalityLetter, opposedPersonality,
-} from './facility-config.js?v=fork-caps-1';
+    FACILITY_UPGRADE_COSTS, upgradeCost,
+} from './facility-config.js?v=fork-m9-1';
 import { allocateTurnFacilities, redistributeTurnFacilityRows } from './turn-jobs.js';
-import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js';
-import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-caps-1';
-import { applyStructureOverrides } from './overrides.js?v=fork-caps-1';
+import { createShareUrl, readShareHash, urlWithoutShare } from './share-config.js?v=fork-m9-1';
+import { buildProfile, parseProfile, profileFilename, summarizeProfile } from './profile.js?v=fork-m9-1';
+import { applyStructureOverrides } from './overrides.js?v=fork-m9-1';
 import {
     bannerText, clearCache as clearUpstreamCache, fetchUpstreamChanges, newerUpstreamChanges,
     readCache as readUpstreamCache, writeCache as writeUpstreamCache,
-} from './upstream-check.js?v=fork-caps-1';
+} from './upstream-check.js?v=fork-m9-1';
 import {
     addSnapshots, coinChartSvg, coinSeries, diffSetups, formatSeconds, historyFile, historyFilename, makeSnapshot, paceRows, parseHistoryFile,
     predictedCoinLine, predictionFrom, rvChartSvg, rvSeries, setupHash,
-} from './history.js?v=fork-caps-1';
+} from './history.js?v=fork-m9-1';
 import {
     DEFAULT_ASSUMPTIONS, SETTINGS_KEY, TIMERS_KEY, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, formatCountdown,
     icsCalendar, isValidTopic, ntfyRequests, outputCap, planRows as reminderRows, sendNtfy, suggestTopic, upcoming,
-} from './reminders.js?v=fork-caps-1';
-import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-caps-1';
+} from './reminders.js?v=fork-m9-1';
+import { applyChanges, parseReading, proposeChanges, verificationSummary } from './screenshot-import.js?v=fork-m9-1';
 import {
     CHECKLIST_KEY, checklistHash, checklistRows, doneCount, readState as readChecklistState, tickAll as tickAllChecklist,
     toggle as toggleChecklist, untickAll as untickAllChecklist, writeState as writeChecklistState,
-} from './checklist.js?v=fork-caps-1';
+} from './checklist.js?v=fork-m9-1';
+// Feature cards (web/cards/, see panels.js): the bus they listen on, their side solver, and the
+// loader that mounts them.
+import { publish, on, last } from './bus.js?v=fork-m9-1';
+import { createSolver } from './solve.js?v=fork-m9-1';
+import { mountCards, addStylesheet } from './panels.js?v=fork-m9-1';
 
 let wasmReady = false;
 
@@ -185,6 +191,21 @@ function ensurePlanFor(setup) {
     solver.postMessage({ id: 1, type: 'find_plan', payload: JSON.stringify({ ...lastPlanInput, ...aniimoInput(setup) }) });
 }
 
+// What the feature cards get on the 'plan' topic (see panels.js): the plan on screen, the input
+// it was solved from (as ensurePlanFor sends it), its Aniimo setup and tab, what it was asked
+// for, and the fingerprint of the inputs it was solved on. A copy, so no card can change ours.
+function planSnapshot(setup, plan) {
+    return structuredClone({
+        plan,
+        input: { ...lastPlanInput, ...aniimoInput(setup) },
+        setup,
+        tab: selectedSetupTab(),
+        context: planContext,
+        setupHash: lastPlanSetupHash,
+        solvedAt: Date.now(),
+    });
+}
+
 function stopSetupSolve() {
     setupSolve?.worker.terminate();
     setupSolve = null;
@@ -206,11 +227,18 @@ function showSelectedPlan() {
     document.getElementById('checklist-card').classList.toggle('stale', !plan);
     if (!plan) {
         pending.style.display = 'block';
+        publish('plan', null);
         return;
     }
     pending.style.display = 'none';
     lastPlan = plan;
     displayPlan(plan);
+    try {
+        publish('plan', plan.success ? planSnapshot(setup, plan) : null);
+    } catch (error) {
+        console.warn('Could not pass the plan to the feature cards:', error);
+        publish('plan', null);
+    }
     if (plan.success) {
         runTimeToGoal();
         rankImprovementsFor(setup);
@@ -766,20 +794,27 @@ function readHistory() {
     }
 }
 
+// Returns whether the list was stored; the feature cards get it on the 'history' topic.
 function writeHistory(list) {
     try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
     } catch (e) {
         console.warn('Could not save history to localStorage:', e);
         showHistoryStatus('Could not save: this browser refused to store the history (storage full or disabled).');
+        return false;
     }
+    publish('history', list);
+    return true;
 }
 
 function showHistoryStatus(message) {
     document.getElementById('history-status').textContent = message;
 }
 
-function snapshotNow() {
+// Saves a snapshot and returns it, or null if it could not be saved. `note`, when it is a string,
+// is the snapshot's note (a feature card's); otherwise (the Save snapshot button passes its click
+// event) the note comes from the profile details.
+function snapshotNow(note) {
     try {
         const setup = currentConfig();
         const meta = readProfileMeta();
@@ -789,15 +824,19 @@ function snapshotNow() {
             actual: { rv: Number(setup['home-level']), coins: meta.coins },
             predicted: current ? predictionFrom(lastPlan, planContext) : null,
             site: siteStamp(),
-            note: meta.note,
+            note: typeof note === 'string' ? note : meta.note,
         });
-        writeHistory(addSnapshots(readHistory(), snapshot));
+        const saved = writeHistory(addSnapshots(readHistory(), snapshot));
         renderHistory();
+        // writeHistory has already said why it could not save.
+        if (!saved) return null;
         const why = current ? '' : (lastPlan ? ' Inputs changed since the last solve, so it holds no prediction; solve again first to record one.' : ' No plan yet, so it holds no prediction.');
         showHistoryStatus(`Snapshot saved ${formatProfileTime(snapshot.id)}.${why}`);
+        return snapshot;
     } catch (error) {
         showHistoryStatus(`Could not save a snapshot: ${error.message}.`);
         console.warn('Could not save snapshot:', error);
+        return null;
     }
 }
 
@@ -1179,6 +1218,7 @@ function writeTimers(timers) {
     } catch (e) {
         console.warn('Could not save reminders:', e);
     }
+    publish('timers', timers || null);
 }
 
 function showReminderStatus(message) {
@@ -1551,7 +1591,7 @@ async function loadStructureOverrides() {
     try {
         const response = await fetch(new URL('./structure-overrides.json', import.meta.url), { cache: 'no-cache' });
         if (!response.ok) return;
-        const { applied, problems } = applyStructureOverrides(await response.json(), { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, OUTPUT_CAPS });
+        const { applied, problems } = applyStructureOverrides(await response.json(), { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, OUTPUT_CAPS, FACILITY_UPGRADE_COSTS });
         if (applied.length > 0) console.log(`Structure overrides applied: ${applied.join(', ')}`);
         problems.forEach(problem => console.warn(`Structure override ignored: ${problem}`));
     } catch (error) {
@@ -4940,6 +4980,7 @@ async function runFindPlan() {
         }
         console.error('Plan calculation error:', error);
         lastPlan = null;
+        publish('plan', null);
         showError(`Plan calculation failed: ${error.message}`);
     } finally {
         if (runId !== planRunId) return;
@@ -5220,6 +5261,49 @@ window.closeFacilitiesOnBackdrop = function(event) {
     }
 }
 
+// --- Feature cards ------------------------------------------------------------------------
+// What every card's mount(el, ctx) gets; the full contract is in panels.js. The getters hand out
+// copies, so a card can't change the page's own state. `config` holds the page's own constants,
+// with the structure overrides already applied (a card's own import of facility-config.js would
+// be a second copy without them).
+function featureContext() {
+    const copy = value => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
+    let allItems = null;
+    return {
+        config: {
+            FACILITIES, FACILITY_CATEGORIES, OUTPUT_CAPS, LEVEL_UP_COSTS, LEVEL_UP_CHAINS, MODULE_MAX_LEVELS, MAX_HOME_LEVEL,
+            ANIIMO_MAX, SPECIAL_RECIPES, SEASON, ANIIPOD_TIERS, FACILITY_UPGRADE_COSTS, upgradeCost, simpleSetup,
+            abilities: ABILITIES.map(a => a.name),
+            modules: Object.keys(MODULE_MAX_LEVELS),
+            moduleNames: { ...MODULE_NAMES },
+        },
+        on,
+        last,
+        getSetup: () => copy(currentConfig()),
+        getRoster: () => copy(roster),
+        getRecipes: () => copy(recipeIndex),
+        getHistory: () => readHistory(),
+        getCoinSeries: () => copy(coinSeriesPoints),
+        getTimers: () => readTimers(),
+        getReminderSettings: () => readReminderSettings(),
+        isSimple: () => isSimpleMode(),
+        homeLevel: () => selectedHomeLevel(),
+        // Asked of the page's worker once; a failed ask (e.g. cancelled by a newer Calculate) is
+        // asked again next time.
+        items: () => {
+            allItems ||= callWorker('get_all_items').then(JSON.parse).catch(error => {
+                allItems = null;
+                throw error;
+            });
+            return allItems.then(copy);
+        },
+        saveSnapshot: note => snapshotNow(typeof note === 'string' ? note : undefined),
+        solver: createSolver({ workerUrl: WORKER_URL }),
+        format: { number: formatNumber, duration: formatDuration, item: prettyItem, escape: escapeText, perHour },
+        addStylesheet,
+    };
+}
+
 // Event listeners
 async function initApp() {
     await loadStructureOverrides();
@@ -5319,6 +5403,13 @@ async function initApp() {
             }
         });
     });
+
+    // The feature cards get every topic on replay: what is stored now, and no plan until a solve.
+    // They mount after the Enter-key wiring above, so their own inputs never start a solve.
+    publish('history', readHistory());
+    publish('timers', readTimers());
+    if (last('plan') === undefined) publish('plan', null);
+    mountCards(featureContext());
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initApp);

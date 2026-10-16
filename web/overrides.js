@@ -8,8 +8,9 @@ const nonNegativeInts = list => Array.isArray(list) && list.length > 0 && list.e
 const capsList = list => Array.isArray(list) && list.length > 0 && list.every(n => n === null || (Number.isInteger(n) && n >= 0));
 
 // Mutates the given constants in place. Returns what was applied and what was ignored, as text.
-// `OUTPUT_CAPS` is optional so older callers (and tests) keep working without it.
-export function applyStructureOverrides(overrides, { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, OUTPUT_CAPS = null }) {
+// `OUTPUT_CAPS` and `FACILITY_UPGRADE_COSTS` are optional so older callers (and tests) keep
+// working without them.
+export function applyStructureOverrides(overrides, { FACILITIES, LEVEL_UP_COSTS, MODULE_MAX_LEVELS, OUTPUT_CAPS = null, FACILITY_UPGRADE_COSTS = null }) {
     const applied = [];
     const problems = [];
     if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
@@ -86,6 +87,25 @@ export function applyStructureOverrides(overrides, { FACILITIES, LEVEL_UP_COSTS,
             applied.push(`${module} max levels`);
         } else {
             problems.push(`${module} must be a list of whole numbers, one per RV level`);
+        }
+    }
+
+    // Upgrade costs: `{ Facility: { level: coins } }`, the Home Coins to reach that facility level
+    // from the one below. Merged level by level, so one corrected step keeps the others.
+    for (const [name, levels] of Object.entries(overrides.upgradeCosts || {})) {
+        if (!FACILITY_UPGRADE_COSTS) {
+            problems.push(`${name} upgradeCosts: this page has no upgrade-cost table to override`);
+        } else if (!FACILITIES.some(f => f.name === name)) {
+            problems.push(`unknown facility "${name}" in upgradeCosts`);
+        } else if (!levels || typeof levels !== 'object' || Array.isArray(levels) || Object.keys(levels).length === 0
+            || !Object.entries(levels).every(([level, coins]) => /^\d+$/.test(level) && Number(level) >= 2 && Number.isInteger(coins) && coins > 0)) {
+            problems.push(`${name} upgradeCosts must map facility level (2 and up) to a whole number of Home Coins`);
+        } else {
+            FACILITY_UPGRADE_COSTS[name] = {
+                ...(FACILITY_UPGRADE_COSTS[name] || {}),
+                ...Object.fromEntries(Object.entries(levels).map(([level, coins]) => [Number(level), coins])),
+            };
+            applied.push(`${name} upgrade costs`);
         }
     }
 

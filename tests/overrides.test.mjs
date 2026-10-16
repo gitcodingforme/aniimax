@@ -61,3 +61,27 @@ test('test_structure_overrides_patch_output_caps', () => {
     const bare = constants();
     assert.deepEqual(applyStructureOverrides({ facilities: { Farmland: { outputCaps: [5] } } }, bare).problems, ['Farmland outputCaps: this page has no output-cap table to override']);
 });
+
+test('test_structure_overrides_patch_upgrade_costs_level_by_level', () => {
+    const c = { ...constants(), FACILITY_UPGRADE_COSTS: { Farmland: { 2: 60, 3: 700 } } };
+    const { applied, problems } = applyStructureOverrides({
+        upgradeCosts: {
+            Farmland: { 3: 750, 4: 6200 },
+            Well: { 2: 20000 },
+            Castle: { 2: 1 },
+            Farmland2: 5,
+        },
+    }, c);
+    assert.deepEqual(applied, ['Farmland upgrade costs', 'Well upgrade costs']);
+    assert.deepEqual(problems, ['unknown facility "Castle" in upgradeCosts', 'unknown facility "Farmland2" in upgradeCosts']);
+    // Level 2 keeps its cost; 3 is corrected and 4 added.
+    assert.deepEqual(c.FACILITY_UPGRADE_COSTS, { Farmland: { 2: 60, 3: 750, 4: 6200 }, Well: { 2: 20000 } });
+    // Bad entries change nothing and say why.
+    const bad = applyStructureOverrides({ upgradeCosts: { Farmland: { 1: 5 }, Well: { 2: -3 } } }, c);
+    assert.deepEqual(bad.applied, []);
+    assert.equal(bad.problems.length, 2, bad.problems.join('; '));
+    assert.deepEqual(c.FACILITY_UPGRADE_COSTS.Farmland, { 2: 60, 3: 750, 4: 6200 });
+    // Without a cost table the patch is reported, not applied.
+    assert.deepEqual(applyStructureOverrides({ upgradeCosts: { Farmland: { 2: 1 } } }, constants()).problems,
+        ['Farmland upgradeCosts: this page has no upgrade-cost table to override']);
+});

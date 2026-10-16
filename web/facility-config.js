@@ -335,16 +335,18 @@ export const MODULE_MAX_LEVELS = {
 // the level 1 values come from its level 1 build block (Well 300, Mine 120) and, for Farmland
 // (5) and Woodland (8), from GameWith's "Item Count" table, aniimotools and metabot (second
 // pass of docs/research/game-facts.md, 2026-10-16). The reminders fall back to batch
-// check-ins for a `null`.
+// check-ins for a `null`. Level 1 of Dewy House (80), Nimbus Bed (80) and Tidewhisper
+// Sandcastle (200) come from wikily's level 1 build blocks (scripts/web_check.py, offline run
+// 2026-10-15); the earlier values had copied level 2 into level 1.
 // Overridable per facility from data/overrides/structure.json (`outputCaps`).
 export const OUTPUT_CAPS = {
     Farmland: [5, 10, 15, 20, 25, 30, 35],
     Woodland: [8, 12, 16, 20, 24, 28],
     Mine: [120, 200, 200, 200, 200, 200],
     Well: [300, 300, 340, 340, 340],
-    'Tidewhisper Sandcastle': [460, 460, 460],
-    'Dewy House': [240, 240],
-    'Nimbus Bed': [120, 120, 120],
+    'Tidewhisper Sandcastle': [200, 460, 460],
+    'Dewy House': [80, 240],
+    'Nimbus Bed': [80, 120, 120],
     'Carousel Mill': [20, 20, 20, 20, 20, 20],
     'Crafting Table': [20, 20, 20, 20, 20, 20, 20, 20],
     'Claw Game Cooker': [20, 20, 20, 20, 20, 20, 20],
@@ -360,6 +362,51 @@ export const OUTPUT_CAPS = {
     'Woodworking Bench': [20, 20, 20, 20],
     'Chimney Kiln': [20, 20, 20, 20],
 };
+
+// Home Coin cost to raise one facility from the level below. Source: wikily.gg, read 2026-10-16
+// (docs/research/web-data-check.md §1). INFERRED, not verified in game. Building a new facility
+// has no listed cost.
+// `FACILITY_UPGRADE_COSTS[facility][n]` is the cost of going from level n - 1 to level n.
+// Overridable per facility and level from data/overrides/structure.json (`upgradeCosts`).
+export const FACILITY_UPGRADE_COSTS = {
+    Farmland: { 2: 60, 3: 700, 4: 6200, 5: 23500, 6: 107000, 7: 480000 },
+    Woodland: { 2: 400, 3: 8200, 4: 49000, 5: 199000, 6: 910000 },
+    Mine: { 2: 4200, 3: 31000, 4: 143000, 5: 340000, 6: 910000 },
+    Well: { 2: 20000, 3: 98000, 4: 240000, 5: 720000 },
+    'Tidewhisper Sandcastle': { 2: 9800, 3: 81000 },
+    'Dewy House': { 2: 269000 },
+    'Nimbus Bed': { 2: 81000, 3: 320000 },
+    'Carousel Mill': { 2: 1800, 3: 16000, 4: 81000, 5: 320000, 6: 910000 },
+    'Crafting Table': { 2: 1800, 3: 8200, 4: 31000, 5: 143000, 6: 340000, 7: 910000, 8: 1450000 },
+    'Claw Game Cooker': { 2: 1800, 3: 8200, 4: 31000, 5: 143000, 6: 480000, 7: 960000 },
+    'Jukebox Dryer': { 2: 1800, 3: 8200, 4: 36000, 5: 143000, 6: 300000, 7: 910000 },
+    'Simmering Pot': { 2: 12300, 3: 16000, 4: 72000, 5: 230000, 6: 910000 },
+    'Phonolfactory Table': { 2: 12300, 3: 27000, 4: 149000, 5: 400000, 6: 720000 },
+    'Bouncy Brew Keg': { 2: 14000, 3: 61000, 4: 270000, 5: 720000 },
+    'Blazing Stove': { 2: 16300, 3: 61000, 4: 240000, 5: 680000 },
+    'Pickling Jar': { 2: 16300, 3: 61000, 4: 240000, 5: 720000 },
+    'Joy Wheel Loom': { 2: 16300, 3: 85000, 4: 360000 },
+    'Dance Pad Polisher': { 2: 2900, 3: 12000 },
+    'Aniipod Maker': { 2: 4200, 3: 24000 },
+    'Woodworking Bench': { 2: 16300, 3: 75000, 4: 340000 },
+    'Chimney Kiln': { 2: 16300, 3: 75000, 4: 340000 },
+};
+
+// Home Coins to raise one `facility` from level `from` to level `to`: the sum of each step's
+// cost. Null when `to` is not above `from` or any step's cost is unknown (level 1 included).
+export function upgradeCost(facility, from, to) {
+    const steps = FACILITY_UPGRADE_COSTS[facility];
+    const start = Number(from);
+    const end = Number(to);
+    if (!steps || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) return null;
+    let total = 0;
+    for (let level = start + 1; level <= end; level++) {
+        const cost = Object.hasOwn(steps, level) ? steps[level] : null;
+        if (!Number.isInteger(cost)) return null;
+        total += cost;
+    }
+    return total;
+}
 
 // The value for RV level `homeLevel` in a per-RV list, keeping the last value past its end.
 function atHomeLevel(list, homeLevel) {
