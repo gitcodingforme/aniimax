@@ -10,6 +10,9 @@ recipes page), pulls the numbers out of them and compares them with the data as 
   recipe   workload or grow time, first facility   data/<facility>.csv (and harvest_moon_festival.csv)
            level, E-mode seconds                   data/overrides/emode_times.csv
            ingredients and amounts (aniimotools)   raw_materials / required_amount
+           yield per batch (aniimotools)           the `yield` column, where the facility's CSV has one
+           E-mode seconds (aniimotools, rounded    data/overrides/emode_times.csv; a difference under
+           to minutes on the page)                 60 s counts as agreement
   upgrade_cost  Home Coin per facility level       FACILITY_UPGRADE_COSTS when facility-config.js has it,
                                                    otherwise only read and counted
 
@@ -19,7 +22,7 @@ are not the game: a difference means "look in game", never "the data is wrong".
 
 Usage (from the repository root):
   python scripts/web_check.py [--root R] [--report FILE.md] [--json FILE] [--offline DIR]
-                              [--pages FILE] [--write-sources FILE] [--no-cache]
+                              [--pages FILE] [--write-sources FILE] [--no-cache] [--coverage]
 
 --offline DIR reads <DIR>/<fixture>.html, <DIR>/<slug>.html or <DIR>/<site>-<slug>.html (slug = the
 URL's last path part, site = its host's first label, e.g. wikily-well.html) and never uses the network.
@@ -30,6 +33,9 @@ Exit codes: 0 every page read and no differences; 1 differences; 2 nothing could
 no differences but some page could not be fetched or parsed (so a rate-limited week never reads as clean);
 3 crash or a bad command line. The report ends with a fingerprint of the differences and of the could-not-fetch
 and could-not-parse lists, which the workflow compares to decide whether to edit the issue. --write-sources rows use the names of data/sources/web_sources.csv (needs_rv, output_cap, RV, wikily.gg).
+The report always ends with a Coverage section: data recipes that no page read in this run mentions (a page that
+could not be read leaves its recipes there too). --coverage also prints that section when --report is used.
+No page read so far lists sell prices, so none are compared.
 Only our own names and numbers reach the report; a name seen only on a fan site is reduced to
 letters, digits and " :'-", cut to 60 characters, with @ written as (at). Standard library only.
 """
@@ -63,6 +69,7 @@ PAGES_FILE = Path("data") / "sources" / "pages.csv"
 ALIASES_FILE = Path("data") / "sources" / "aliases.csv"
 SOURCES_HEADER = ["kind", "facility", "key", "column", "value", "source", "url", "checked_on"]
 SAFE = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 :'-")
+EMODE_ROUNDING = 60  # aniimotools shows E-mode times rounded to minutes: a smaller difference is agreement
 SECTION_LIMIT = 150  # lines per report section; the fingerprint always covers every difference
 
 
@@ -545,6 +552,7 @@ class Check:
         self.agree: Counter = Counter()
         self.info: Counter = Counter()
         self.facts: list[list[str]] = []
+        self.mentioned: set[tuple[str, str]] = set()  # (facility, CSV name) of every data recipe some page lists
         self.pages = self.pages_ok = 0
 
     def mark_lines(self) -> list[str]:
@@ -607,6 +615,7 @@ def compare_wikily(check: Check, facility: str, url: str, page: dict, fork: dict
             check.only.append(f"{facility}: {sanitize(r['name'])} ({value} {'workload' if column == 'workload' else 's'}, level {r['facility_level']})")
             continue
         seen.add(key)
+        check.mentioned.add((facility, key))
         if r["method"] is not None:
             ours = parse_number(row.get(column, ""))
             if ours is None:
@@ -649,6 +658,7 @@ def compare_tools(check: Check, url: str, page: dict, fork: dict, aliases) -> No
         if row is None:
             check.only.append(f"{facility}: {sanitize(r['name'])} (aniimotools)")
             continue
+        check.mentioned.add((facility, key))
         if r["workload"] is not None:
             check.fact("recipe", facility, key, "workload", r["workload"], "aniimotools.dev", url)
             if row.get("workload"):
@@ -661,15 +671,52 @@ def compare_tools(check: Check, url: str, page: dict, fork: dict, aliases) -> No
             ours = dict(zip(row["raw_materials"].split(";"), (parse_number(a) for a in row.get("required_amount", "").split(";"))))
             show = lambda d: " + ".join(f"{k} {v}" for k, v in sorted(d.items()))  # noqa: E731  (CSV names or slugs)
             check.same("aniimotools ingredient lists", ours, theirs, f"{facility} {key}: ingredients {show(ours)} in the data, {show(theirs)} on aniimotools")
+        if r["yield"] is not None:
+            check.fact("recipe", facility, key, "yield", r["yield"], "aniimotools.dev", url)
+            ours = parse_number(row.get("yield", ""))
+            if ours is not None:  # processors without a yield column make one item per batch; nothing to compare
+                check.same("aniimotools yields", ours, r["yield"], f"{facility} {key}: yield {ours} in the data, {r['yield']} on aniimotools")
+        if r["emode_seconds"] is not None:
+            check.fact("recipe", facility, key, "emode_seconds", r["emode_seconds"], "aniimotools.dev", url)
+            ours = fork["emode"].get((facility, key))
+            if ours is None:
+                check.info["E-mode times on aniimotools with no row in emode_times.csv"] += 1
+            elif abs(ours - r["emode_seconds"]) < EMODE_ROUNDING:
+                check.agree["aniimotools E-mode times"] += 1
+            else:
+                check.diffs.append(f"{facility} {key}: E-mode {ours} s in emode_times.csv, {r['emode_seconds']} s on aniimotools "
+                                   f"(fan data, INFERRED; the page rounds to minutes, so under {EMODE_ROUNDING} s counts as agreeing)")
 
 
 # --- report --------------------------------------------------------------------------------------
+
+def coverage(check: Check, fork: dict) -> tuple[int, int, list[str]]:
+    """(recipes with no web source, all recipes, one line per facility) for the data recipes no page mentioned."""
+    lines, missing, total = [], 0, 0
+    for facility in sorted(set(fork["own"]) | set(fork["seasonal"])):
+        names = set(fork["own"].get(facility, {})) | set(fork["seasonal"].get(facility, {}))
+        gap = sorted(n for n in names if (facility, n) not in check.mentioned)
+        total += len(names)
+        missing += len(gap)
+        if gap:
+            lines.append(f"{sanitize(facility)} ({len(gap)} of {len(names)}): " + ", ".join(sanitize(n.replace("_", " ")) for n in gap))
+    return missing, total, lines
+
+
+def coverage_section(check: Check, fork: dict) -> list[str]:
+    missing, total, lines = coverage(check, fork)
+    unread = len(check.fetch_fail) + len(check.parse_fail)
+    head = f"{missing} of {total} data recipes are listed by no page read in this run (fan data, INFERRED; they have no web cross-check)."
+    if unread:
+        head += f" {unread} page problems this run, so some of these may only be unread pages."
+    return ["## Coverage", "", head, ""] + ([f"- {line}" for line in lines] or ["None."]) + [""]
+
 
 def fingerprint(lines) -> str:
     return hashlib.sha256("\n".join(sorted(set(lines))).encode("utf-8")).hexdigest()
 
 
-def render(check: Check) -> str:
+def render(check: Check, fork: dict | None = None) -> str:
     def section(title, lines):
         body = [f"- {line}" for line in sorted(set(lines))[:SECTION_LIMIT]] or ["None."]
         if len(set(lines)) > SECTION_LIMIT:
@@ -682,6 +729,8 @@ def render(check: Check) -> str:
     out += section("Differences", check.diffs) + section("Could not fetch", check.fetch_fail)
     out += section("Could not parse", check.parse_fail) + section("Only on the wiki", check.only)
     out += section("Agree counts", [f"{k}: {v} agree" for k, v in check.agree.items()] + [f"{k}: {v}" for k, v in check.info.items()])
+    if fork is not None:
+        out += coverage_section(check, fork)
     return "\n".join(out) + f"<!-- web-check:{fingerprint(check.mark_lines())} -->\n"
 
 
@@ -720,7 +769,7 @@ def run(args) -> int:
             compare_tools(check, url, data, fork, aliases)
     compare_rv_costs(check, rv_costs, fork)
 
-    report = render(check)
+    report = render(check, fork)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(report, encoding="utf-8")
@@ -728,7 +777,7 @@ def run(args) -> int:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps({"format": "aniimax-web-check", "checked_on": check.today, "fingerprint": fingerprint(check.mark_lines()),
                                          "differences": sorted(set(check.diffs)), "could_not_fetch": check.fetch_fail, "could_not_parse": check.parse_fail,
-                                         "only_on_wiki": sorted(set(check.only)), "agree": dict(check.agree), "info": dict(check.info),
+                                         "only_on_wiki": sorted(set(check.only)), "coverage": coverage(check, fork)[2], "agree": dict(check.agree), "info": dict(check.info),
                                          "facts": [dict(zip(SOURCES_HEADER, f)) for f in check.facts]}, indent=1), encoding="utf-8")
     if args.write_sources:
         args.write_sources.parent.mkdir(parents=True, exist_ok=True)
@@ -736,6 +785,8 @@ def run(args) -> int:
         args.write_sources.write_text("\n".join(lines) + "\n", encoding="utf-8")
     if not args.report:
         print(report)
+    elif args.coverage:
+        print(chr(10).join(coverage_section(check, fork)))
     print(f"{len(set(check.diffs))} differences, {sum(check.agree.values())} agreeing values, {check.pages_ok} of {check.pages} pages read.")
     if check.pages_ok == 0:
         return 2
@@ -753,6 +804,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pages", type=Path, help="pages list (default data/sources/pages.csv)")
     parser.add_argument("--write-sources", type=Path, help="write every value read, one row each, to this CSV")
     parser.add_argument("--no-cache", action="store_true", help="neither read nor write the page cache")
+    parser.add_argument("--coverage", action="store_true", help="also print the Coverage section (data recipes no page lists) when --report is used")
     parser.add_argument("--today", help=argparse.SUPPRESS)
     try:
         args = parser.parse_args(argv)

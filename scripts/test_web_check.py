@@ -183,7 +183,10 @@ class ParserTest(unittest.TestCase):
         wheat = rows[("Farmland", "Wheat")]
         self.assertEqual((wheat["yield"], wheat["seconds"], wheat["workload"]), (5, 240, None))
         self.assertTrue(rows[("Farmland", "Quick Formula: Wheat")]["quick"])
-        self.assertEqual(len(rows), 5)
+        self.assertEqual(len(rows), 6)
+        refined = rows[("Chimney Kiln", "Refined Ore")]  # its E-mode time is shown rounded to minutes
+        self.assertEqual((refined["workload"], refined["emode_seconds"], refined["yield"]), (41, 120, None))
+        self.assertEqual(rows[("Farmland", "Quick Formula: Wheat")]["yield"], 42)
 
     def test_changed_shape_is_reported_not_raised(self):
         page = fixture("wikily-changed-shape")
@@ -193,7 +196,7 @@ class ParserTest(unittest.TestCase):
                 self.assertEqual(data, {}, (parse.__name__, str(html)[:40]))
                 self.assertTrue(problems and problems[0].startswith(wc.SHAPE), problems)
         data, problems = wc.parse_aniimotools(fixture("aniimotools-recipes").replace("<td>T2</td>", "<td>?</td>"))
-        self.assertIn("could not parse: Chimney Kiln lists 4 rows, 2 read", problems)
+        self.assertIn("could not parse: Chimney Kiln lists 6 rows, 4 read", problems)
 
     def test_names_map_through_the_aliases_file(self):
         aliases = wc.load_aliases(REPO / "data" / "sources" / "aliases.csv")
@@ -218,8 +221,8 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(code, 0, report)
         self.assertIn("## Differences\n\nNone.", report)
         self.assertEqual(result["agree"], {"unlock RV levels": 5, "output caps": 5, "facility upgrade costs": 3, "recipe workloads and grow times": 7,
-                                           "recipe facility levels": 7, "E-mode times": 3, "aniimotools workloads": 2,
-                                           "aniimotools ingredient lists": 2, "RV level-up costs": 3})
+                                           "recipe facility levels": 7, "E-mode times": 3, "aniimotools workloads": 3,
+                                           "aniimotools ingredient lists": 3, "RV level-up costs": 3, "aniimotools yields": 2, "aniimotools E-mode times": 3})
         self.assertIn("- Farmland: Star Fruit (at)here xy (800 s, level 1)", report)
         self.assertNotIn("@", report)
         self.assertEqual(result["info"]["aniimotools rows at stations the data does not have"], 1)
@@ -230,12 +233,84 @@ class CompareTest(unittest.TestCase):
         code, report, result, _ = root.run()
         self.assertEqual(code, 1)
         expected = ["Chimney Kiln level 2: output cap 25 in the data, 20 on wikily",
+                    "Chimney Kiln refined_ore: workload 45 in the data, 41 on aniimotools",
                     "Chimney Kiln refined_ore: workload 45 in the data, 41 on wikily"]
         self.assertEqual(result["differences"], expected)
         for line in expected:
             self.assertIn(f"- {line}\n", report)
         self.assertTrue(report.rstrip().endswith(f"<!-- web-check:{wc.fingerprint(expected)} -->"))
         self.assertEqual(result["fingerprint"], wc.fingerprint(expected))
+
+    def test_aniimotools_yields_agree_and_differ(self):
+        code, report, result, _ = Root(self).run()
+        self.assertEqual((code, result["agree"]["aniimotools yields"]), (0, 2))  # wheat 5 and quick_wheat 42; the kiln has no yield column
+        root = Root(self)
+        (root.root / "data" / "farmland.csv").write_text(FARMLAND.replace("quick_wheat, 0, 1, 1200, 42,", "quick_wheat, 0, 1, 1200, 40,"), encoding="utf-8")
+        code, report, result, _ = root.run("--write-sources", str(root.root / "s.csv"))
+        self.assertEqual((code, result["agree"]["aniimotools yields"]), (1, 1))
+        self.assertEqual(result["differences"], ["Farmland quick_wheat: yield 40 in the data, 42 on aniimotools"])
+        self.assertIn("recipe, Farmland, quick_wheat, yield, 42, aniimotools.dev, https://aniimotools.dev/systems/recipes/, 2026-10-20",
+                      (root.root / "s.csv").read_text(encoding="utf-8").splitlines())
+
+    def test_aniimotools_emode_times_within_a_minute_agree(self):
+        # The page shows refined_ore as 2 min (120 s); the data says 108 s: 12 s apart, so it agrees.
+        code, _, result, _ = Root(self).run()
+        self.assertEqual((code, result["agree"]["aniimotools E-mode times"], result["differences"]), (0, 3, []))
+        for ours, differs in ((60, True), (61, False), (179, False), (180, True), (400, True)):  # 120 s on the page; 60 s apart is a difference
+            root = Root(self)
+            (root.root / "data" / "overrides" / "emode_times.csv").write_text(EMODE.replace("refined_ore, Chimney Kiln, 108", f"refined_ore, Chimney Kiln, {ours}"), encoding="utf-8")
+            code, report, result, _ = root.run()
+            near = abs(ours - 120) < 60
+            self.assertEqual(near, not differs, ours)
+            lines = [d for d in result["differences"] if "on aniimotools" in d]
+            self.assertEqual(len(lines), 1 if differs else 0, (ours, lines))
+            if differs:
+                self.assertEqual(code, 1)
+                self.assertIn(f"Chimney Kiln refined_ore: E-mode {ours} s in emode_times.csv, 120 s on aniimotools (fan data, INFERRED; "
+                              "the page rounds to minutes, so under 60 s counts as agreeing)", lines)
+                self.assertIn("(fan data, INFERRED; the page rounds to minutes", report)
+
+    def test_aniimotools_emode_without_a_csv_row_is_only_counted(self):
+        root = Root(self)
+        (root.root / "data" / "overrides" / "emode_times.csv").write_text(EMODE.replace("refined_ore, Chimney Kiln, 108, test, 2026-10-01\n", ""), encoding="utf-8")
+        code, _, result, _ = root.run()
+        self.assertEqual((code, result["differences"]), (0, []))
+        self.assertEqual(result["info"]["E-mode times on aniimotools with no row in emode_times.csv"], 1)
+
+    def test_coverage_lists_recipes_no_page_mentions(self):
+        code, report, result, _ = Root(self).run()
+        self.assertEqual((code, result["coverage"]), (0, []))
+        self.assertIn("## Coverage\n\n0 of 7 data recipes are listed by no page read in this run", report)
+        self.assertLess(report.index("## Coverage"), report.index("<!-- web-check:"))
+        # A recipe in the data that neither wikily nor aniimotools lists, plus a hostile-looking name.
+        root = Root(self, kiln=KILN + "mystery_ore, refined_ore, 8, 0, none, 50, 3,\nbad@name [x](y), refined_ore, 8, 0, none, 50, 3,\n")
+        code, report, result, _ = root.run()
+        self.assertEqual(code, 0)  # coverage never changes the exit code or the fingerprint
+        self.assertEqual(result["coverage"], ["Chimney Kiln (2 of 5): bad(at)name xy, mystery ore"])
+        self.assertIn("- Chimney Kiln (2 of 5): bad(at)name xy, mystery ore", report)
+        self.assertIn("2 of 9 data recipes are listed by no page read in this run", report)
+        self.assertEqual(result["fingerprint"], wc.fingerprint([]))
+        # Only one source needed: a recipe on aniimotools but not on wikily is covered.
+        only_tools = PAGES.splitlines()[:2] + [PAGES.splitlines()[-1]]
+        code, report, result, _ = Root(self, pages="\n".join(only_tools) + "\n").run()
+        self.assertEqual(result["coverage"], ["Farmland (2 of 4): grape, potato"])
+        # Neither source: with no pages read, everything is uncovered and the report says why.
+        with tempfile.TemporaryDirectory() as empty:
+            code, report, result, _ = Root(self).run(offline=empty)
+        self.assertEqual(code, 2)
+        self.assertIn("7 of 7 data recipes", report)
+        self.assertIn("page problems this run", report)
+
+    def test_coverage_flag_prints_the_section_next_to_a_report_file(self):
+        root = Root(self, kiln=KILN + "mystery_ore, refined_ore, 8, 0, none, 50, 3,\n")
+        out = io.StringIO()
+        args = ["--root", str(root.root), "--pages", str(root.root / "pages.csv"), "--report", str(root.root / "r.md"),
+                "--offline", str(FIXTURES), "--today", "2026-10-20", "--coverage"]
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(wc.main(args), 0)
+        self.assertIn("## Coverage", out.getvalue())
+        self.assertIn("- Chimney Kiln (1 of 4): mystery ore", out.getvalue())
+        self.assertNotIn("## Differences", out.getvalue())
 
     def test_fingerprint_ignores_order_and_repeats(self):
         lines = ["b difference", "a difference", "c"]
