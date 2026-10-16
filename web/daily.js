@@ -5,11 +5,24 @@
 import { DEFAULT_ASSUMPTIONS, buildEvents, effectiveCycle, planRows, pretty } from './reminders.js?v=fork-m10-1';
 
 export const DAILY_KEY = 'aniimax-daily-v1';
-export const GROUPS = Object.freeze(['Collect', 'Water', 'Replant', 'Level']);
+export const GROUPS = Object.freeze(['Collect', 'Water', 'Replant', 'Food', 'Level']);
 const MARGIN_S = 3600;     // slack past midnight, so an event right at the end of the day is not cut off
 const ROW_EVENTS_CEILING = 3000;   // most events buildEvents may make for one row (it stops at its per-row limit, counted from setup)
 const MAX_ROW_ITEMS = 12;  // most collect lines one row gets in the list; a faster row is thinned evenly, not listed 48 times
 const LOOKAHEAD_MS = 12 * 3600 * 1000;   // the list reaches the later of the end of today and this far past now
+const MAX_REPLANT_ITEMS = 24;   // most replant lines one row gets in 24 hours; a faster crop is thinned evenly, counting from its first harvest
+
+// The line above the list when the running timers were set up from a different plan than the one
+// on screen now. Their times still count, but they may no longer match what is built.
+export const STALE_TIMERS_NOTE = 'These timers come from an older plan, not the one on screen now. Press "I just set everything up per the plan" in Reminders to start timers from the current plan.';
+
+// '' when the timers match the plan on screen (or there is nothing to compare), else STALE_TIMERS_NOTE.
+// `timers.planHash` is the setupHash the reminders were started from (app.js setUpPerPlan);
+// `planTopic` is the 'plan' topic's value, whose `setupHash` is the plan on screen.
+export function staleTimersNote(timers, planTopic) {
+    const started = timers?.planHash, current = planTopic?.setupHash;
+    return typeof started === 'string' && started && typeof current === 'string' && current && started !== current ? STALE_TIMERS_NOTE : '';
+}
 
 const ms = value => (value instanceof Date ? value.getTime() : typeof value === 'number' ? value : Date.parse(value));
 const pad = n => String(n).padStart(2, '0');
@@ -57,6 +70,11 @@ function dayBounds(nowMs) {
 // an item is overdue when its time has passed and it is not in there. `name` turns an item name into
 // text (the page's own item formatter; defaults to the reminders' one). Without timers it falls back
 // to one Collect line per producing plan row, which has no time.
+//
+// Food: when the reminder settings carry a positive `assumptions.foodEnergy`, the "refill the food bowl" reminder
+// (reminders.js) becomes one "Refill food" line, in its own Food group, if it falls in the list's window.
+// `timers.workers`, the working Aniimo counted when the timers were started (food.js), is passed on to it.
+// Replant: with re-sowing off, every harvest in the window gets a Replant line, not only the first.
 export function dailyItems({ timers = null, settings = null, plan = null, context = null, now = Date.now(), caps = null, ticked = [], name = pretty } = {}) {
     const nowMs = ms(now);
     const [dayStart, dayEnd] = dayBounds(nowMs);
@@ -85,7 +103,7 @@ export function dailyItems({ timers = null, settings = null, plan = null, contex
         const maxPerRow = Math.min(ROW_EVENTS_CEILING, Math.max(6, Math.ceil(((windowEnd - earliest) / 1000 + MARGIN_S) / fastest) + 2));
         const events = buildEvents(timers.rows, {
             startedAt: timers.startedAt, horizonSeconds: Math.max(0, (windowEnd - startedMs) / 1000) + MARGIN_S,
-            assumptions, levelUpSeconds, levelUpTarget: target, caps, maxPerRow,
+            assumptions, levelUpSeconds, levelUpTarget: target, caps, maxPerRow, workers: timers.workers, foodEnergy: timers.foodEnergy,
         });
         const ready = new Map();      // row key -> its first batch (the "done" event, made once per row)
         const harvests = new Map();   // row key -> store-full ("collect") and check-in events in the window
@@ -93,6 +111,9 @@ export function dailyItems({ timers = null, settings = null, plan = null, contex
             const at = Math.round(e.at), row = rows.get(e.key), approximate = !!e.approximate;
             if (e.kind === 'levelup') {
                 if (at <= nowMs) add(`levelup:${target ?? ''}`, 'Level', target ? `Level up to RV ${target} now` : 'Level up now', at);
+            } else if (e.kind === 'feed') {
+                // One reminder, from the food energy typed in at setup; it has no row. An estimate, so approximate.
+                if (at >= dayStart && at < windowEnd) add(`feed:${timers.startedAt}`, 'Food', 'Refill food', at, { approximate });   // the id follows the timers, not the time, which moves with the worker count
             } else if (!row || at < dayStart || at >= windowEnd) {
                 continue;
             } else if (e.kind === 'water') {
@@ -107,7 +128,27 @@ export function dailyItems({ timers = null, settings = null, plan = null, contex
         for (const [key, e] of ready) {
             const row = rows.get(key), crop = row.kind === 'crop';
             add(`ready:${key}:${e.at}`, 'Collect', crop ? `Ready to harvest: ${nice(row.item)} on ${row.facility}` : `Ready: first ${nice(row.item)} batch at ${row.facility}`, e.at, { approximate: e.approximate });
-            if (crop && !assumptions.plotsResow) add(`replant:${key}:${e.at}`, 'Replant', `Replant ${nice(row.item)} on ${row.facility}`, e.at);
+        }
+        // A crop that is not re-sown waits for the player: every harvest in the window is also a replant. The first
+        // is the plan's own first-batch time; later ones are one grow time apart if each replant was on time, so
+        // they are approximate. They are made here, not from the events, because with re-sowing off buildEvents
+        // makes no later harvest events (the plot sits idle until it is replanted).
+        if (!assumptions.plotsResow) {
+            for (const row of timers.rows) {
+                if (row.kind !== 'crop' || row.on === false || !(row.cycleSeconds > 0)) continue;
+                const start = row.startedAt ? ms(row.startedAt) : startedMs;
+                if (!Number.isFinite(start)) continue;
+                const interval = effectiveCycle(row) * 1000, first = start + interval;
+                // Harvests number n = 0, 1, 2 ... after the first; those from the start of today up to the window's end.
+                const from = Math.max(0, Math.ceil((dayStart - first) / interval));
+                // Thinned on the harvest's own number (every step-th harvest since setup), with a step that depends only on
+                // the crop, so a line keeps its id as the window moves through the day and its tick is not lost.
+                const step = Math.max(1, Math.ceil(86400000 / interval / MAX_REPLANT_ITEMS));
+                for (let n = Math.ceil(from / step) * step; first + n * interval < windowEnd; n += step) {
+                    const at = Math.round(first + n * interval);
+                    add(`replant:${row.key}:${at}`, 'Replant', n === 0 ? `Replant ${nice(row.item)} on ${row.facility}` : `Harvest, then replant ${nice(row.item)} on ${row.facility}`, at, { approximate: n > 0 });
+                }
+            }
         }
         // Store full: collect. Check-ins exist only for rows whose store size is not known.
         for (const [key, list] of harvests) {

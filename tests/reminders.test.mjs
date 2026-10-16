@@ -3,8 +3,9 @@ import test from 'node:test';
 
 import {
     DEFAULT_ASSUMPTIONS, NTFY_DAILY_LIMIT, WATERING_POINTS, batchesUntilFull, buildEvents, cancelNtfy, effectiveCycle, formatCountdown, icsCalendar,
-    isValidTopic, ntfyRequests, outputCap, planRows, rowLevel, sendNtfy, suggestTopic, upcoming, wateringFractions,
+    foodNote, isValidTopic, ntfyRequests, outputCap, planRows, rowLevel, sendNtfy, suggestTopic, upcoming, wateringFractions,
 } from '../web/reminders.js';
+import { FOOD_NOTE } from '../web/food.js';
 
 const plan = {
     success: true,
@@ -367,4 +368,114 @@ test('test_a_stream_several_rows_make_is_split_by_facility_same_facility_first',
     const split = twoPlaces('Elsewhere', 0.003);
     near(split[0].effectiveCycleSeconds, 1000);
     near(split[1].effectiveCycleSeconds, 1000);
+});
+
+// --- worker food: the "refill the food bowl" reminder ----------------------------------------------
+
+test('test_food_settings_default_to_fed_workers_and_no_energy', () => {
+    assert.equal(DEFAULT_ASSUMPTIONS.workersFed, true);
+    assert.equal(DEFAULT_ASSUMPTIONS.foodEnergy, null);
+    assert.equal(buildEvents(planRows(plan), { startedAt: T0 }).filter(e => e.kind === 'feed').length, 0, 'no energy given, no food event');
+});
+
+test('test_a_feed_event_comes_from_the_energy_and_the_working_aniimo', () => {
+    const rows = planRows(plan);   // 9 plots + 2 mines + 1 busy mill unit = 12 working Aniimo
+    const withFood = energy => buildEvents(rows, { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: energy } });
+    const feed = withFood(12000).filter(e => e.kind === 'feed');
+    assert.equal(feed.length, 1);
+    // 12 Aniimo eat 120 a minute: 12,000 lasts 100 minutes.
+    assert.equal(Math.round((feed[0].at - T0) / 60000), 100);
+    assert.equal(feed[0].key, 'food');
+    assert.equal(feed[0].title, 'Refill the food bowl');
+    assert.equal(feed[0].body, 'The bowl should be about empty (it lasts about 1h 40m from setup); estimate from fan data (10 food energy per minute per working Aniimo)');
+    assert.equal(feed[0].approximate, true);
+    // A number from a text box may arrive as text.
+    assert.equal(withFood('12000').filter(e => e.kind === 'feed').length, 1);
+    // Switching a row off means fewer workers eating: the bowl lasts longer.
+    const fewer = buildEvents(rows.map(r => (r.key === 'Farmland|rice' ? { ...r, on: false } : r)), { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 12000 } });
+    assert.equal(Math.round((fewer.find(e => e.kind === 'feed').at - T0) / 60000), 400, '3 workers: 12,000 / 30 a minute');
+    // The caller's own worker count wins (the roster caps it in My Aniimo mode).
+    const capped = buildEvents(rows, { startedAt: T0, workers: 6, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 12000 } });
+    assert.equal(Math.round((capped.find(e => e.kind === 'feed').at - T0) / 60000), 200);
+    const ignored = buildEvents(rows, { startedAt: T0, workers: 0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 12000 } });
+    assert.equal(Math.round((ignored.find(e => e.kind === 'feed').at - T0) / 60000), 100, 'no usable count: counted from the rows');
+});
+
+test('test_energy_and_workers_saved_with_the_timers_win_over_the_live_settings', () => {
+    const rows = planRows(plan);
+    const at = options => {
+        const feed = buildEvents(rows, { startedAt: T0, ...options }).filter(e => e.kind === 'feed');
+        return feed.length ? Math.round((feed[0].at - T0) / 60000) : null;
+    };
+    const live = energy => ({ assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: energy } });
+    // Energy typed at setup (12,000, 12 workers = 100 min) stays put when the settings box changes later.
+    assert.equal(at({ foodEnergy: 12000, ...live(24000) }), 100, 'the saved value wins');
+    assert.equal(at({ foodEnergy: 12000, ...live(null) }), 100, 'a box emptied later does not remove it');
+    assert.equal(at({ foodEnergy: '12000', ...live(24000) }), 100, 'text works here too');
+    assert.equal(at({ foodEnergy: 12000, workers: 6, ...live(24000) }), 200);
+    // Timers that carry none fall back to the settings.
+    assert.equal(at({ foodEnergy: null, ...live(24000) }), 200);
+    assert.equal(at({ ...live(24000) }), 200);
+    assert.equal(at({ foodEnergy: 0, ...live(24000) }), null, 'a saved 0 is a value, not "none"');
+    assert.equal(at({ foodEnergy: undefined, ...live(null) }), null);
+});
+
+test('test_no_feed_event_without_a_positive_energy_or_any_workers', () => {
+    const rows = planRows(plan);
+    for (const energy of [null, undefined, 0, -100, NaN, '', 'lots', false]) {
+        const events = buildEvents(rows, { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: energy } });
+        assert.equal(events.filter(e => e.kind === 'feed').length, 0, String(energy));
+    }
+    // Every row switched off: nobody eats, so there is nothing to time.
+    const idle = rows.map(r => ({ ...r, on: false }));
+    assert.equal(buildEvents(idle, { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 5000 } }).filter(e => e.kind === 'feed').length, 0);
+    // Assumptions saved before the food settings existed.
+    const { workersFed, foodEnergy, ...old } = DEFAULT_ASSUMPTIONS;
+    assert.equal(buildEvents(rows, { startedAt: T0, assumptions: old }).filter(e => e.kind === 'feed').length, 0);
+});
+
+test('test_the_feed_event_sits_in_time_order_and_leaves_the_other_events_alone', () => {
+    const rows = planRows(plan, { recipes, facilities });
+    const options = { startedAt: T0, caps, levelUpSeconds: 48780, levelUpTarget: 6 };
+    const without = buildEvents(rows, options);
+    const food = buildEvents(rows, { ...options, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 12000 } });
+    assert.deepEqual(food.filter(e => e.kind !== 'feed'), without, 'same texts, same times, same count');
+    assert.equal(food.length, without.length + 1);
+    assert.ok(food.every((e, i) => i === 0 || e.at >= food[i - 1].at), 'still sorted by time');
+    const feedAt = food.findIndex(e => e.kind === 'feed');
+    assert.ok(feedAt > 0 && feedAt < food.length - 1, 'between the others, not at an end');
+    // Like the level-up it is kept once even when it falls past the 24 hour horizon.
+    const long = buildEvents(rows, { ...options, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 600000 } });
+    const late = long.filter(e => e.kind === 'feed');
+    assert.equal(late.length, 1);
+    assert.ok(late[0].at > T0 + 86400 * 1000, 'past the horizon');
+    // The shared daily budget is not eaten into: a crowded plan keeps all its other events.
+    const busy = Array.from({ length: 12 }, (_, i) => ({ key: `r${i}`, facility: 'Mine', item: 'rock', kind: 'gatherer', cycleSeconds: 60, count: 1, leadSeconds: 60 }));
+    const crowded = buildEvents(busy, { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 1000 } });
+    assert.equal(crowded.length, buildEvents(busy, { startedAt: T0 }).length + 1);
+    assert.equal(crowded.filter(e => e.kind === 'feed').length, 1);
+});
+
+test('test_the_feed_event_reaches_the_phone_and_the_calendar', () => {
+    const events = buildEvents(planRows(plan), { startedAt: T0, assumptions: { ...DEFAULT_ASSUMPTIONS, foodEnergy: 12000 } });
+    const { requests } = ntfyRequests(events, 'aniimax-test', { now: T0 });
+    const feed = requests.find(r => r.headers['X-Title'] === 'Refill the food bowl');
+    assert.ok(feed, 'a scheduled push for the feed event');
+    assert.equal(feed.headers['X-Tags'], 'fork_and_knife');
+    assert.match(feed.body, /estimate from fan data/);
+    assert.match(icsCalendar(events, { now: T0 }), /SUMMARY:Refill the food bowl/);
+});
+
+test('test_the_food_note_appears_only_when_workers_are_not_kept_fed', () => {
+    assert.equal(foodNote({ assumptions: { ...DEFAULT_ASSUMPTIONS, workersFed: false } }), FOOD_NOTE);
+    assert.equal(foodNote({ assumptions: { workersFed: false } }), FOOD_NOTE);
+    assert.equal(foodNote({ workersFed: false }), FOOD_NOTE, 'the assumptions alone work too');
+    assert.equal(FOOD_NOTE, 'The plan assumes your workers stay fed; no food cost is subtracted');
+    assert.equal(foodNote({ assumptions: { ...DEFAULT_ASSUMPTIONS } }), '');
+    assert.equal(foodNote({ assumptions: { workersFed: true } }), '');
+    assert.equal(foodNote({ assumptions: {} }), '', 'settings saved before the switch existed');
+    assert.equal(foodNote({}), '');
+    assert.equal(foodNote(null), '');
+    assert.equal(foodNote(undefined), '');
+    assert.equal(foodNote('text'), '');
 });

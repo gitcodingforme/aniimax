@@ -5,6 +5,8 @@
 //
 // The app cannot see the game, so every event assumes the player did exactly what the plan says
 // at the moment they pressed the button. Game facts not yet verified are `assumptions` switches.
+import { FOOD_NOTE, feedEvent, foodHours, workingAniimo } from './food.js?v=fork-m10-1';
+
 export const SETTINGS_KEY = 'aniimax-reminders-v1';
 export const TIMERS_KEY = 'aniimax-timers-v1';
 export const NTFY_SERVER = 'https://ntfy.sh';
@@ -31,7 +33,17 @@ export const DEFAULT_ASSUMPTIONS = Object.freeze({
     wateringPrompts: true,         // crops ask for water twice as they grow (approximate moments)
     secondWatering: 'two-thirds',  // a key of WATERING_POINTS
     firstBatch: true,              // also say when the first batch is done, not only when to collect
+    workersFed: true,              // the workers are kept fed, so no food cost is in the plan (the note below says so when it is off)
+    foodEnergy: null,              // food energy in the bowl when the plan was set up; a positive number adds a "refill the food bowl" reminder
 });
+
+// One line for the Reminders card when the player says their workers are not kept fed: the plan
+// still assumes they are and subtracts no food cost. '' when `workersFed` is on. Takes the
+// reminder settings (`{ assumptions }`) or the assumptions themselves.
+export function foodNote(settings) {
+    const assumptions = settings && typeof settings === 'object' && settings.assumptions && typeof settings.assumptions === 'object' ? settings.assumptions : settings;
+    return assumptions && typeof assumptions === 'object' && assumptions.workersFed === false ? FOOD_NOTE : '';
+}
 
 export function wateringFractions(assumptions = DEFAULT_ASSUMPTIONS) {
     return WATERING_POINTS[assumptions?.secondWatering] || WATERING_FRACTIONS;
@@ -207,9 +219,18 @@ export function batchesUntilFull(cap, yieldPerBatch) {
 // own event, and crops their watering prompts. A row with no known cap falls back to the old
 // "check in every K cycles", so each row stays under `maxPerRow`, which by default shares
 // DEFAULT_DAILY_BUDGET between the rows that are on (at least 1 each).
+//
+// Two single events come after the rows, outside the per-row limit and kept even past the horizon:
+// the level-up, and (when the food energy is a positive number) one "refill the food bowl" at setup
+// plus the hours that much food lasts for the working Aniimo (food.js). Two options, both meant to be
+// saved with the timers at setup so a later change to the settings cannot move a running reminder:
+// `foodEnergy`, the food energy in the bowl when the timers started, and `workers`, the number of
+// working Aniimo (food.js's workingAniimo, with the roster). Without `foodEnergy` (null or
+// undefined) it is read from `assumptions.foodEnergy`; without `workers` the Aniimo are counted from
+// `rows`.
 export function buildEvents(rows, {
     startedAt, horizonSeconds = DEFAULT_HORIZON_S, maxPerRow = null,
-    assumptions = DEFAULT_ASSUMPTIONS, levelUpSeconds = null, levelUpTarget = null, caps = null,
+    assumptions = DEFAULT_ASSUMPTIONS, levelUpSeconds = null, levelUpTarget = null, caps = null, workers = null, foodEnergy = null,
 } = {}) {
     const t0 = toMs(startedAt);
     if (!Number.isFinite(t0)) throw new Error('reminders need the time the plan was set up');
@@ -289,6 +310,14 @@ export function buildEvents(rows, {
             body: 'Everything the plan needed for the level-up should be in stock, if the plan was followed exactly.',
         });
     }
+    // The timers' own value wins; the live setting is only for timers that carry none. A number input's value may arrive as text.
+    const savedEnergy = foodEnergy ?? assumptions?.foodEnergy;
+    const energy = typeof savedEnergy === 'string' && savedEnergy.trim() ? Number(savedEnergy) : savedEnergy;
+    if (typeof energy === 'number' && energy > 0) {
+        const crew = Number.isFinite(workers) && workers > 0 ? workers : workingAniimo(rows);
+        const feed = feedEvent(t0, foodHours(energy, crew));
+        if (feed) events.push(feed);
+    }
     return events.sort((a, b) => a.at - b.at || a.key.localeCompare(b.key));
 }
 
@@ -362,7 +391,7 @@ export function suggestTopic(random = Math.random) {
     return `aniimax-${tail}`;
 }
 
-const NTFY_TAGS = { water: 'droplet', done: 'white_check_mark', collect: 'package', checkin: 'eyes', levelup: 'tada' };
+const NTFY_TAGS = { water: 'droplet', done: 'white_check_mark', collect: 'package', checkin: 'eyes', levelup: 'tada', feed: 'fork_and_knife' };
 
 // One scheduled publish per event that ntfy.sh can take: at least 10 s and at most 3 days ahead,
 // and under the daily cap. Everything else is counted in `skipped` so the page can say so.

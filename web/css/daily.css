@@ -35,3 +35,12 @@
     font-size: 0.75rem;
     white-space: nowrap;
 }
+
+/* Timers set up from a different plan than the one on screen: a plain warning line above the list. */
+#daily-card .daily-warning {
+    margin: 0.5rem 0;
+    padding: 0.4rem 0.6rem;
+    border-left: 3px solid var(--warning);
+    border-radius: 4px;
+    color: var(--warning);
+}

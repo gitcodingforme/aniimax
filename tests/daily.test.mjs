@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    DAILY_KEY, allDone, clock, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, tickAll, timeLabel, toggle, untickDay, writeState,
+    DAILY_KEY, GROUPS, STALE_TIMERS_NOTE, allDone, clock, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, staleTimersNote,
+    tickAll, timeLabel, toggle, untickDay, writeState,
 } from '../web/daily.js';
 import { planRows } from '../web/reminders.js';
+import { fakeContainer, fakeDocument, installGlobals, memoryStorage } from './helpers/fake-dom.mjs';
 
 // Local times throughout: the card works in the player's own day.
 const at = (h, m = 0, day = 15) => new Date(2026, 9, day, h, m).getTime();
@@ -99,8 +101,9 @@ test('test_replant_only_when_plots_do_not_resow', () => {
     const on = dailyItems({ timers: timersFor(plan), plan, context, now: at(9), caps });
     assert.equal(on.filter(i => i.group === 'Replant').length, 0);
     const off = dailyItems({ timers: timersFor(plan), settings: { assumptions: { plotsResow: false } }, plan, context, now: at(9), caps });
-    assert.deepEqual(lines(off, 'Replant'), ['10:00 Replant Rice on Farmland']);
-    assert.deepEqual(lines(off, 'Collect').filter(l => l.includes('Farmland')), ['10:00 Ready to harvest: Rice on Farmland'], 'a crop that is not re-sown is harvested once');
+    // Rice takes 2 hours and was set up at 08:00: it is ready at 10:00 and, replanted on time, every 2 hours after.
+    assert.deepEqual(lines(off, 'Replant').slice(0, 2), ['10:00 Replant Rice on Farmland', '12:00 Harvest, then replant Rice on Farmland']);
+    assert.deepEqual(lines(off, 'Collect').filter(l => l.includes('Farmland')), ['10:00 Ready to harvest: Rice on Farmland'], 'the first batch is "ready" once; later harvests are replant lines');
 });
 
 test('test_timers_older_than_today_still_fill_today', () => {
@@ -205,4 +208,214 @@ test('test_state_round_trips_and_bad_storage_never_throws', () => {
     }
     const messy = readState('{"version":1,"days":{"today":{"ticked":["a"]},"2026-10-15":{"ticked":["a",5,null],"doneAt":3},"2026-10-14":7}}');
     assert.deepEqual(messy.days, { '2026-10-15': { ticked: ['a'], doneAt: null } });
+});
+
+// --- a replant line for every harvest when plots are not re-sown --------------------------------
+
+const noResow = { assumptions: { plotsResow: false } };
+const replants = (items, from = 0) => items.filter(i => i.group === 'Replant').slice(from);
+
+test('test_every_harvest_in_the_list_gets_a_replant_line_when_plots_are_not_resown', () => {
+    const items = dailyItems({ timers: timersFor(plan), settings: noResow, plan, context, now: at(9), caps });
+    const list = replants(items);
+    assert.deepEqual(lines(items, 'Replant'), [
+        '10:00 Replant Rice on Farmland',
+        ...['12:00', '14:00', '16:00', '18:00', '20:00', '22:00'].map(t => `${t} Harvest, then replant Rice on Farmland`),
+    ]);
+    assert.deepEqual(list.map(i => i.approximate), [false, true, true, true, true, true, true], 'the first is the plan\'s own time, later ones assume each replant was on time');
+    assert.equal(new Set(items.map(i => i.id)).size, items.length, 'ids are unique');
+    assert.ok(list.every(i => i.id.startsWith('replant:Farmland|rice:')));
+    assert.equal(list[0].id, replants(dailyItems({ timers: timersFor(plan), settings: noResow, plan, context, now: at(9), caps }))[0].id, 'and stable');
+    // Only crops, and only plots that are on; gatherers and processors repeat by themselves.
+    assert.ok(list.every(i => i.title.includes('Rice')));
+    const off = timersFor(plan);
+    off.rows = off.rows.map(r => (r.key === 'Farmland|rice' ? { ...r, on: false } : r));
+    assert.equal(replants(dailyItems({ timers: off, settings: noResow, plan, context, now: at(9), caps })).length, 0);
+    // Re-sowing on: none, as before.
+    assert.equal(replants(dailyItems({ timers: timersFor(plan), plan, context, now: at(9), caps })).length, 0);
+});
+
+test('test_replant_lines_turn_overdue_and_clear_when_ticked', () => {
+    const now = at(15);
+    const items = dailyItems({ timers: timersFor(plan), settings: noResow, plan, context, now, caps });
+    const list = replants(items);
+    assert.equal(list.length, 9, 'from the start of today to 12 hours past now (03:00): the harvests already past and the ones ahead');
+    assert.equal(clock(list[0].at), '10:00');
+    assert.equal(clock(list.at(-1).at), '02:00');
+    assert.deepEqual(list.filter(i => i.overdue).map(i => clock(i.at)), ['10:00', '12:00', '14:00']);
+    const ticked = dailyItems({ timers: timersFor(plan), settings: noResow, plan, context, now, caps, ticked: [list[1].id] });
+    assert.deepEqual(replants(ticked).filter(i => i.overdue).map(i => clock(i.at)), ['10:00', '14:00']);
+});
+
+test('test_replant_lines_follow_old_late_and_first_batch_off_timers', () => {
+    // Set up 12 days ago: today's harvests still land on the 2 hour grid from the old start.
+    const old = dailyItems({ timers: timersFor(plan, at(8, 0, 3)), settings: noResow, plan, context, now: at(9), caps });
+    assert.deepEqual(lines(old, 'Replant').map(l => l.slice(0, 5)), ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']);
+    assert.ok(replants(old).every(i => i.title.startsWith('Harvest, then replant')), 'none of them is the first harvest');
+    // Late in the day the list reaches 12 hours past now, across midnight.
+    const night = dailyItems({ timers: timersFor(plan, at(23, 35)), settings: noResow, plan, context, now: at(23, 40), caps });
+    assert.deepEqual(lines(night, 'Replant').map(l => l.slice(0, 5)), ['01:35', '03:35', '05:35', '07:35', '09:35', '11:35']);
+    assert.equal(replants(night)[0].title, 'Replant Rice on Farmland', 'the first harvest since setup is the plain replant');
+    // Turning the first-batch reminder off does not hide the replants.
+    const quiet = dailyItems({ timers: timersFor(plan), settings: { assumptions: { plotsResow: false, firstBatch: false } }, plan, context, now: at(9), caps });
+    assert.equal(replants(quiet).length, 7);
+    // A row with its own start time counts from there.
+    const shifted = timersFor(plan);
+    shifted.rows = shifted.rows.map(r => (r.key === 'Farmland|rice' ? { ...r, startedAt: new Date(at(8, 30)).toISOString() } : r));
+    assert.equal(lines(dailyItems({ timers: shifted, settings: noResow, plan, context, now: at(9), caps }), 'Replant')[0], '10:30 Replant Rice on Farmland');
+});
+
+test('test_a_very_fast_crop_has_its_replants_thinned_evenly', () => {
+    const fast = { ...plan, coin_items: [{ ...plan.coin_items[0], cycle_time: 300 }], level_up: null };
+    const list = replants(dailyItems({ timers: timersFor(fast), settings: noResow, plan: fast, now: at(9), caps }));
+    assert.ok(list.length > 12 && list.length <= 24, `${list.length} lines`);
+    assert.equal(clock(list[0].at), '08:05', 'the first harvest is kept');
+    const gaps = list.slice(1).map((it, i) => it.at - list[i].at);
+    assert.ok(gaps.every(g => g === gaps[0]), 'evenly spaced');
+});
+
+// --- the food line ----------------------------------------------------------------------------
+
+const withFood = (energy, extra = {}) => ({ assumptions: { foodEnergy: energy, ...extra } });
+
+test('test_a_refill_food_line_appears_when_the_feed_reminder_falls_today', () => {
+    // 9 plots + 2 mines + 1 busy mill unit = 12 working Aniimo; 12,000 energy lasts 100 minutes from 08:00.
+    const items = dailyItems({ timers: timersFor(plan), settings: withFood(12000), plan, context, now: at(9), caps });
+    assert.deepEqual(lines(items, 'Food'), ['09:40 Refill food']);
+    const food = items.find(i => i.group === 'Food');
+    assert.equal(food.approximate, true, 'an estimate from fan data');
+    assert.equal(food.overdue, false);
+    assert.ok(food.id.startsWith('feed:'));
+    assert.deepEqual(groupItems(items).map(g => g.group), ['Collect', 'Water', 'Food', 'Level'], 'its own group, before Level');
+    assert.deepEqual([...GROUPS], ['Collect', 'Water', 'Replant', 'Food', 'Level']);
+    // With replants on the list too the order holds.
+    const both = dailyItems({ timers: timersFor(plan), settings: withFood(12000, { plotsResow: false }), plan, context, now: at(9), caps });
+    assert.deepEqual(groupItems(both).map(g => g.group), ['Collect', 'Water', 'Replant', 'Food', 'Level']);
+    // Overdue once it has passed, until ticked.
+    const later = dailyItems({ timers: timersFor(plan), settings: withFood(12000), plan, context, now: at(10), caps });
+    assert.equal(later.find(i => i.group === 'Food').overdue, true);
+    const ticked = dailyItems({ timers: timersFor(plan), settings: withFood(12000), plan, context, now: at(10), caps, ticked: [food.id] });
+    assert.equal(ticked.find(i => i.group === 'Food').overdue, false);
+    // The worker count saved with the timers (the roster caps it) is used.
+    const capped = dailyItems({ timers: { ...timersFor(plan), workers: 6 }, settings: withFood(12000), plan, context, now: at(9), caps });
+    assert.deepEqual(lines(capped, 'Food'), ['11:20 Refill food']);
+    assert.equal(new Set(items.map(i => i.id)).size, items.length);
+});
+
+test('test_no_food_line_without_energy_or_when_the_reminder_is_not_today', () => {
+    const none = group => dailyItems(group).filter(i => i.group === 'Food').length;
+    const base = { timers: timersFor(plan), plan, context, now: at(9), caps };
+    assert.equal(none({ ...base }), 0, 'no settings');
+    assert.equal(none({ ...base, settings: withFood(null) }), 0);
+    assert.equal(none({ ...base, settings: withFood(0) }), 0);
+    assert.equal(none({ ...base, settings: { assumptions: { workersFed: false } } }), 0, 'the switch alone adds no line');
+    assert.equal(none({ ...base, settings: withFood(600000) }), 0, 'a bowl that lasts 83 hours is not due today');
+    assert.equal(none({ ...base, timers: timersFor(plan, at(8, 0, 3)), settings: withFood(12000) }), 0, 'old timers: it was due days ago');
+    assert.equal(none({ ...base, timers: null, settings: withFood(12000) }), 0, 'no timers, no times');
+    // Tomorrow morning is on the list when it is late in the day: 23:35 + 100 minutes = 01:15.
+    const night = dailyItems({ timers: timersFor(plan, at(23, 35)), settings: withFood(12000), plan, context, now: at(23, 40), caps });
+    assert.deepEqual(lines(night, 'Food'), ['01:15 Refill food']);
+});
+
+// --- timers from an older plan ----------------------------------------------------------------
+
+test('test_timers_from_another_plan_get_a_warning', () => {
+    assert.match(STALE_TIMERS_NOTE, /^These timers come from an older plan/);
+    assert.equal(staleTimersNote({ planHash: 'a' }, { setupHash: 'b' }), STALE_TIMERS_NOTE);
+    assert.equal(staleTimersNote({ planHash: 'a' }, { setupHash: 'a' }), '', 'the same plan');
+    assert.equal(staleTimersNote(null, { setupHash: 'b' }), '', 'no timers');
+    assert.equal(staleTimersNote({ planHash: 'a' }, null), '', 'no plan on screen to compare with');
+    assert.equal(staleTimersNote({ planHash: 'a' }, undefined), '');
+    assert.equal(staleTimersNote({ planHash: null }, { setupHash: 'b' }), '', 'timers with no recorded plan');
+    assert.equal(staleTimersNote({ rows: [] }, { setupHash: 'b' }), '');
+    assert.equal(staleTimersNote({ planHash: 'a' }, { setupHash: '' }), '');
+    assert.equal(staleTimersNote({ planHash: 'a' }, { setupHash: 7 }), '');
+});
+
+// --- the card ---------------------------------------------------------------------------------
+
+const cardFormat = {
+    duration: seconds => `${Math.round(seconds / 60)}m`,
+    item: name => String(name).split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' '),
+    escape: text => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'),
+};
+
+async function mountDaily(t, { timers, topic = null, settings = { assumptions: {} } }) {
+    // The card sets an interval to turn lines overdue; the mock keeps it from holding the process.
+    t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'], now: at(9) });
+    t.after(installGlobals({ localStorage: memoryStorage(), document: fakeDocument() }));
+    const { mount } = await import('../web/cards/daily.js');
+    const el = fakeContainer('section');
+    const ctx = {
+        addStylesheet() {},
+        format: cardFormat,
+        last: name => (name === 'plan' ? topic : undefined),
+        getTimers: () => timers,
+        getReminderSettings: () => settings,
+        config: { OUTPUT_CAPS: caps },
+        on: (_name, fn) => fn(),   // the bus replays the last value at once
+        saveSnapshot: () => null,
+    };
+    await mount(el, ctx);
+    return el;
+}
+
+test('test_the_card_warns_when_the_timers_are_from_an_older_plan', async t => {
+    const stale = await mountDaily(t, { timers: timersFor(plan), topic: { plan, context, setupHash: 'newer' } });
+    const warning = stale.found.get('#daily-stale');
+    assert.match(warning.textContent, /^These timers come from an older plan/);
+    assert.equal(warning.hidden, false);
+});
+
+test('test_the_card_shows_no_warning_for_current_timers_and_draws_the_food_and_replant_lines', async t => {
+    const settings = { assumptions: { plotsResow: false, foodEnergy: 12000 } };
+    const el = await mountDaily(t, { timers: timersFor(plan), topic: { plan, context, setupHash: 'h' }, settings });
+    const warning = el.found.get('#daily-stale');
+    assert.equal(warning.textContent, '');
+    assert.equal(warning.hidden, true);
+    const html = el.found.get('#daily-groups').innerHTML;
+    assert.match(html, /<h3 class="daily-group">Food<\/h3>/);
+    assert.match(html, /Refill food/);
+    assert.match(html, /~[^<]*<\/span> <span class="daily-title">Refill food/, 'marked approximate');
+    assert.equal((html.match(/replant Rice on Farmland/g) || []).length, 6, 'the six later harvests');
+    assert.match(html, /Replant Rice on Farmland/);
+});
+
+test('test_the_card_has_no_warning_when_no_plan_is_on_screen', async t => {
+    const el = await mountDaily(t, { timers: timersFor(plan), topic: null });
+    assert.equal(el.found.get('#daily-stale').hidden, true, 'nothing to compare with');
+});
+
+// --- ticks must survive the list changing underneath them ---------------------------------------
+
+test('test_the_food_line_keeps_its_id_when_the_worker_count_changes', () => {
+    const timers = timersFor(plan);
+    const first = dailyItems({ timers, settings: withFood(12000), plan, context, now: at(9), caps }).find(i => i.group === 'Food');
+    assert.equal(first.id, `feed:${timers.startedAt}`);
+    // A row switched off means fewer workers, so a later time, but it is the same line and keeps its tick.
+    const fewer = { ...timers, rows: timers.rows.map(r => (r.key === 'Farmland|rice' ? { ...r, on: false } : r)) };
+    const moved = dailyItems({ timers: fewer, settings: withFood(12000), plan, context, now: at(9), caps }).find(i => i.group === 'Food');
+    assert.equal(moved.id, first.id);
+    assert.notEqual(moved.at, first.at);
+    assert.equal(clock(moved.at), '14:40', '3 workers: 400 minutes after 08:00');
+});
+
+test('test_the_energy_saved_with_the_timers_wins_over_the_live_setting', () => {
+    const saved = { ...timersFor(plan), foodEnergy: 12000 };
+    assert.deepEqual(lines(dailyItems({ timers: saved, settings: withFood(24000), plan, context, now: at(9), caps }), 'Food'), ['09:40 Refill food']);
+    assert.deepEqual(lines(dailyItems({ timers: saved, settings: withFood(null), plan, context, now: at(9), caps }), 'Food'), ['09:40 Refill food'], 'a box emptied later does not remove it');
+    assert.deepEqual(lines(dailyItems({ timers: saved, plan, context, now: at(9), caps }), 'Food'), ['09:40 Refill food'], 'and none is needed in the settings');
+    // Timers that carry none use the live setting.
+    assert.deepEqual(lines(dailyItems({ timers: timersFor(plan), settings: withFood(24000), plan, context, now: at(9), caps }), 'Food'), ['11:20 Refill food']);
+});
+
+test('test_replant_lines_keep_their_ids_as_the_window_moves', () => {
+    const fast = { ...plan, coin_items: [{ ...plan.coin_items[0], cycle_time: 300 }], level_up: null };
+    const idsAt = hour => replants(dailyItems({ timers: timersFor(fast), settings: noResow, plan: fast, now: at(hour), caps })).map(i => i.id);
+    const morning = idsAt(9), afternoon = idsAt(15);
+    assert.ok(afternoon.length > morning.length, 'after noon the window reaches into tomorrow');
+    assert.deepEqual(afternoon.slice(0, morning.length), morning, 'the lines that were there keep their ids, so their ticks stay');
+    // The thinning step depends on the crop alone: a harvest every hour for a 5 minute crop.
+    const list = replants(dailyItems({ timers: timersFor(fast), settings: noResow, plan: fast, now: at(15), caps }));
+    assert.ok(list.slice(1).every((it, i) => it.at - list[i].at === 3600 * 1000));
 });

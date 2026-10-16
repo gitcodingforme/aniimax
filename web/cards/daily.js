@@ -3,7 +3,7 @@
 // ../daily.js and tested in tests/daily.test.mjs; this file only draws it. See web/panels.js for the
 // card contract.
 import {
-    DAILY_KEY, allDone, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, tickAll, timeLabel, toggle, untickDay, writeState,
+    DAILY_KEY, allDone, dailyItems, dayKey, doneCount, groupItems, prune, readState, snapshotNote, staleTimersNote, tickAll, timeLabel, toggle, untickDay, writeState,
 } from '../daily.js?v=fork-m10-1';
 
 // The list is rebuilt this often so lines turn overdue by themselves while the page stays open.
@@ -21,10 +21,12 @@ export async function mount(el, ctx) {
             </div>
         </div>
         <p class="hint">Today's play session in one list. Unlike the Setup checklist above, which resets when the plan changes, these ticks start fresh every day.</p>
+        <p id="daily-stale" class="daily-warning" role="status" aria-live="polite" hidden></p>
         <p id="daily-note" class="hint" role="status" aria-live="polite"></p>
         <p id="daily-count" class="feature-status" role="status" aria-live="polite"></p>
         <div id="daily-groups"></div>
         <p id="daily-status" class="feature-status" role="status" aria-live="polite"></p>`;
+    const stale = el.querySelector('#daily-stale');
     const note = el.querySelector('#daily-note');
     const count = el.querySelector('#daily-count');
     const groupsEl = el.querySelector('#daily-groups');
@@ -71,6 +73,15 @@ export async function mount(el, ctx) {
             status.textContent = 'Could not build today\'s list from the reminders and the plan.';
         }
         current = { day, items };
+        // Timers started from another plan than the one on screen still run, but may not match what is built.
+        let warning = '';
+        try {
+            warning = staleTimersNote(timers, topic);
+        } catch (err) {
+            console.warn('The daily checklist could not compare the timers with the plan:', err);
+        }
+        stale.textContent = warning;
+        stale.hidden = !warning;
         const ids = items.map(i => i.id);
 
         let n = 0;
