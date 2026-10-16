@@ -27,6 +27,14 @@ def frame(colour, text=None):
     return image
 
 
+def card_frame(colour, header=(70, 120, 230)):
+    """A frame with an item card's coloured header in the card strip (half the size of the real window),
+    so the card gate lets the card question through."""
+    image = Image.new("RGB", (1720, 720), colour)
+    ImageDraw.Draw(image).rectangle((820, 90, 1340, 360), fill=header)
+    return image
+
+
 class WindowPickingTest(unittest.TestCase):
     def test_picks_the_game_not_a_browser_tab_or_terminal(self):
         windows = [
@@ -133,7 +141,7 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(w.screens[1]["fields"]["count"], 6)
             self.assertEqual(w.looked, 4, "each settled new picture was classified once")
             self.assertEqual(calls.count(wg.CLASSIFY_PROMPT[:60]), 4)
-            self.assertEqual(len(calls), 9, "four classifications, three readings (the map was not read) and a follow-up for each facility panel")
+            self.assertEqual(len(calls), 9, "four classifications, three readings (the map was not read) and a follow-up for each facility panel; no card header in these frames, so the card question is never asked")
             reading = json.loads((Path(d) / "reading.json").read_text(encoding="utf-8"))
             self.assertEqual(reading["format"], "aniimax-screenshot-reading")
             self.assertEqual(reading["setup"]["home-level"], "7")
@@ -200,10 +208,10 @@ class PipelineTest(unittest.TestCase):
         (Path(d) / "web").mkdir(exist_ok=True)
         return w
 
-    def _feed(self, w, shades, source="frame.png"):
+    def _feed(self, w, shades, source="frame.png", make=frame):
         for shade in shades:
-            w.last_fp = wg.fingerprint(frame(shade))
-            w.handle(frame(shade), source, save=False)
+            w.last_fp = wg.fingerprint(make(shade))
+            w.handle(make(shade), source, save=False)
 
     def test_coins_are_logged_when_they_change_and_written_for_the_site(self):
         with tempfile.TemporaryDirectory() as d:
@@ -365,6 +373,125 @@ class PipelineTest(unittest.TestCase):
             w = self._facility_watcher(d, [(self._panel(status="not set", recipe=None, time_text=None), {"facility_level": 3, "rv_level": 14})])
             self._feed(w, [(30, 30, 30)])
             self.assertEqual([o["fact"] for o in self._observations(d)], ["unlock"])
+
+    def _card_watcher(self, d, reads, clock=None):
+        """A Watcher whose model answers each frame from the next of `reads`: {kind, fields, note, card, behind};
+        the card and second-card questions are answered from `card` and `behind` (all-null when absent)."""
+        queue = list(reads)
+        state = {"current": None}
+        detail = wg.rs.SCREEN_KINDS["facility_detail"]
+        card = wg.rs.SCREEN_KINDS["item_card"]
+        nothing = {"item": None, "facility": None, "facility_level": None, "time": None, "workload": None, "environment": None}
+
+        def fake_ask(prompt, schema, image_b64):
+            if schema is wg.CLASSIFY_SCHEMA:
+                state["current"] = queue.pop(0)
+                return {"kind": state["current"]["kind"]}
+            r = state["current"]
+            if schema is detail["follow_up"]["schema"]:
+                return r.get("note") or {"facility_level": None, "rv_level": None}
+            if schema is card["schema"]:
+                return dict(r.get("card") or nothing)
+            if schema is card["follow_up"]["schema"]:
+                return dict(r.get("behind") or {k: None for k in ("item", "facility", "facility_level", "time")})
+            return r["fields"]
+        (Path(d) / "web").mkdir(exist_ok=True)
+        return wg.Watcher(ROOT, "http://fake", "m", Path(d) / "auto", Path(d) / "web", ask=fake_ask, now=clock)
+
+    ROSE = {"item": "Rose", "facility": "Farmland", "facility_level": 4, "time": "40m 0s", "workload": None, "environment": "Cool"}
+
+    def test_a_stock_frame_with_a_card_logs_a_card_fact_and_still_reads_the_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [{"kind": "stock", "fields": {"items": [{"name": "Rose", "inventory": 0, "homeland": 520, "owned": None}]},
+                                        "card": self.ROSE, "behind": {"item": "ose Concentrate", "facility": "Simmering Pot", "facility_level": 2, "time": "1m 48s"}}])
+            self._feed(w, [(30, 30, 30)], source="stock-20261015-105144.png", make=card_frame)
+            logged = self._observations(d)
+            self.assertEqual([(o["fact"], o["item"], o["facility"]) for o in logged], [("card", "rose", "Farmland"), ("card", "rose_concentrate", "Simmering Pot")])
+            self.assertEqual({k: logged[0][k] for k in ("facility_level", "time", "time_seconds", "workload", "environment")},
+                             {"facility_level": 4, "time": "40m 0s", "time_seconds": 2400, "workload": None, "environment": "Cool"})
+            self.assertNotIn("behind", logged[0])
+            self.assertTrue(logged[1]["behind"], "the half-hidden card is marked")
+            self.assertEqual(logged[1]["time_seconds"], 108)
+            summary = json.loads((Path(d) / "web" / "verification.json").read_text(encoding="utf-8"))
+            self.assertEqual((summary["cards"]["seen"], summary["cards"]["agree"]), (2, 2))
+            reading = json.loads((Path(d) / "reading.json").read_text(encoding="utf-8"))
+            self.assertEqual(reading["setup"]["levelUpStock"], {"rose": 520}, "the stock reading still works")
+            self.assertEqual(reading["screens"][0]["fields"]["card"]["item"], "Rose")
+            # the same card again adds nothing; a differing re-reading of it is a second fact (a conflict the report can show)
+            w2 = self._card_watcher(d, [{"kind": "stock", "fields": {"items": []}, "card": self.ROSE},
+                                        {"kind": "stock", "fields": {"items": []}, "card": {**self.ROSE, "facility_level": 5}}])
+            self._feed(w2, [(60, 60, 60), (120, 120, 120)], make=card_frame)
+            self.assertEqual(len(self._observations(d)), 3)
+
+    def test_a_facility_frame_with_a_card_yields_the_panel_facts_and_the_card(self):
+        with tempfile.TemporaryDirectory() as d:
+            porridge = {"item": "Plain Rice Porridge", "facility": "Simmering Pot", "facility_level": 1, "time": "1m 48s", "workload": None, "environment": None}
+            w = self._card_watcher(d, [{"kind": "facility", "fields": self._panel(facility="Simmering Pot", recipe="Rose Concentrate", time_text="20s", level=4),
+                                        "note": {"facility_level": 5, "rv_level": 15}, "card": porridge}])
+            self._feed(w, [(30, 30, 30)], source="facility-20261015-105135.png", make=card_frame)
+            logged = self._observations(d)
+            self.assertEqual([o["fact"] for o in logged], ["unlock", "recipe", "card"])
+            self.assertEqual((logged[2]["item"], logged[2]["facility"], logged[2]["facility_level"], logged[2]["time_seconds"]), ("plain_rice_porridge", "Simmering Pot", 1, 108))
+            summary = json.loads((Path(d) / "verification.json").read_text(encoding="utf-8"))
+            self.assertEqual((summary["observations"], summary["agree"], summary["cards"]["seen"]), (3, 3, 1))
+            self.assertEqual(w.screens[0]["kind"], "facility")
+            # an untrusted panel does not take the card down with it
+            w2 = self._card_watcher(d, [{"kind": "facility", "fields": self._panel(facility="Shell Factory"), "card": porridge}])
+            self._feed(w2, [(90, 90, 90)], source="facility-20261015-105136.png", make=card_frame)
+            self.assertEqual(len(self._observations(d)), 3, "the same card is not logged twice")
+            w3 = self._card_watcher(d, [{"kind": "facility", "fields": self._panel(facility="Shell Factory"), "card": self.ROSE}])
+            self._feed(w3, [(150, 150, 150)], source="facility-20261015-105137.png", make=card_frame)
+            self.assertEqual([o["fact"] for o in self._observations(d)], ["unlock", "recipe", "card", "card"])
+            self.assertTrue(any("Shell Factory" in n for n in w3.observation_notes))
+
+    def test_an_invented_or_copied_card_is_dropped_with_a_note(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [
+                {"kind": "stock", "fields": {"items": []}, "card": {**self.ROSE, "item": "Perfume of Dawn"}},                       # unknown item
+                {"kind": "stock", "fields": {"items": []}, "card": {**self.ROSE, "facility": "Moon Base"}},                         # unknown facility
+                {"kind": "stock", "fields": {"items": []}, "card": {"item": "Ginseng Water", "facility": "Bouncy Brew Keg", "facility_level": 3, "time": None, "workload": 162, "environment": None},
+                 "behind": {"item": "Dried Ginseng", "facility": "Bouncy Brew Keg", "facility_level": 3, "time": "54s"}},           # behind copies the front card
+            ])
+            self._feed(w, [(30, 30, 30), (120, 120, 120), (200, 200, 200)], make=card_frame)
+            logged = self._observations(d)
+            self.assertEqual([(o["item"], o["workload"]) for o in logged], [("ginseng_water", 162)])
+            notes = " ".join(w.observation_notes)
+            self.assertIn("Perfume of Dawn", notes)
+            self.assertIn("Moon Base", notes)
+            self.assertIn("repeats the front card", notes)
+            kept = json.loads((Path(d) / "observations.json").read_text(encoding="utf-8"))
+            self.assertTrue(any("Moon Base" in n for n in kept["notes"]), "skip notes reach the disk")
+
+    def test_card_facts_survive_a_restart_and_a_failed_card_question_keeps_the_rest(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [{"kind": "stock", "fields": {"items": []}, "card": self.ROSE}])
+            self._feed(w, [(30, 30, 30)], make=card_frame)
+            w2 = self._card_watcher(d, [])
+            self.assertEqual([o["fact"] for o in w2.observations], ["card"])
+            card_schema = wg.rs.SCREEN_KINDS["item_card"]["schema"]
+
+            def flaky_ask(prompt, schema, image_b64):
+                if schema is wg.CLASSIFY_SCHEMA:
+                    return {"kind": "facility"}
+                if schema is card_schema:
+                    raise ValueError("the model did not answer with JSON")
+                if schema is wg.rs.SCREEN_KINDS["facility_detail"]["follow_up"]["schema"]:
+                    return {"facility_level": 3, "rv_level": 14}
+                return self._panel()
+            w3 = wg.Watcher(ROOT, "http://fake", "m", Path(d) / "auto", Path(d) / "web", ask=flaky_ask)
+            self._feed(w3, [(90, 90, 90)], make=card_frame)
+            screen = w3.screens[-1]
+            self.assertNotIn("error", screen)
+            self.assertIsNone(screen["fields"]["card"])
+            self.assertIn("card: the model did not answer", screen["follow_up_error"])
+            self.assertEqual([o["fact"] for o in self._observations(d)], ["card", "unlock", "recipe"])
+
+    def test_without_a_card_header_the_card_question_is_never_asked(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = self._card_watcher(d, [{"kind": "facility", "fields": self._panel(), "card": self.ROSE}])
+            self._feed(w, [(30, 30, 30)], source="facility-20261015-105113.png")
+            self.assertEqual([o["fact"] for o in self._observations(d)], ["recipe"], "an invented card from a tile is never even asked for")
+            self.assertIsNone(w.screens[0]["fields"]["card"])
 
     def test_a_bug_in_the_verification_never_stops_the_watcher(self):
         import verify_data

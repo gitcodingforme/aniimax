@@ -22,6 +22,11 @@ def recipe(facility, name, time_text, frame="facility-20261015-100100.png", t="2
     return {"t": t, "frame": frame, "facility": facility, "level": 2, "fact": "recipe", "recipe": name, "time": time_text}
 
 
+def card(facility, item, level, time_text=None, seconds=None, workload=None, environment=None, frame="stock-20261015-105144.png", t="2026-10-15T15:51:44Z", **extra):
+    return {"t": t, "frame": frame, "facility": facility, "fact": "card", "item": item, "facility_level": level, "time": time_text,
+            "time_seconds": seconds if seconds is not None else vd.parse_seconds(time_text), "workload": workload, "environment": environment, **extra}
+
+
 def make_root(tmp: Path) -> Path:
     """A copy of the real facility config and data (so the checks run on real names), in a temp folder."""
     root = tmp / "repo"
@@ -72,7 +77,7 @@ class VerifyDataTest(unittest.TestCase):
         text = self.report()
         self.assertTrue(text.startswith("# Game data check\n"))
         self.assertEqual(len([l for l in text.splitlines()[:8] if l.startswith("- ")]), 5, "a 5-line summary comes first")
-        self.assertIn("Screens observed: 2 (7 facts)", text)
+        self.assertIn("Screens observed: 2 (7 facts: 7 from facility panels, 0 from item cards)", text)
         self.assertIn("Last observation: 2026-10-15T10:01:00Z", text)
         self.assertIn("screen: Lv.4 needs RV 19; table says RV 18", text)
         self.assertIn("carousel_mill.csv", text)
@@ -171,6 +176,81 @@ class VerifyDataTest(unittest.TestCase):
         unlocks = vd.apply_structure_overrides(ROOT, unlocks)
         for name, fl, rv in [("Chimney Kiln", 3, 14), ("Simmering Pot", 5, 15), ("Joy Wheel Loom", 3, 15), ("Blazing Stove", 3, 13), ("Pickling Jar", 3, 13)]:
             self.assertEqual(unlocks[name][fl], rv, name)
+
+    def test_parse_seconds_reads_the_games_time_format(self):
+        self.assertEqual(vd.parse_seconds("40m 0s"), 2400)
+        self.assertEqual(vd.parse_seconds("1m 48s"), 108)
+        self.assertEqual(vd.parse_seconds("54s"), 54)
+        self.assertEqual(vd.parse_seconds("1h 2m"), 3720)
+        self.assertEqual(vd.parse_seconds("Time 2m 42s"), 162)
+        self.assertIsNone(vd.parse_seconds("162"))
+        self.assertIsNone(vd.parse_seconds(None))
+
+    def test_item_cards_are_judged_column_by_column(self):
+        summary = run_with(self.root, [
+            card("Farmland", "rose", 4, "40m 0s", environment="Cool"),                                  # agree on level, time and environment
+            card("Simmering Pot", "rose_concentrate", 2, "1m 48s"),                                     # processor: level judged, time listed
+            card("Bouncy Brew Keg", "ginseng_water", 3, workload=162),                                  # a card that says Workload is judged
+            card("Blazing Stove", "moondew_radish_slices", 1, "2m 42s"),                                # a seasonal row
+            card("Farmland", "rose", 5, "41m 0s", environment="Warm", frame="x.png"),                   # disagree on three columns
+            card("Farmland", "wheatmeal", 1, "54s", frame="x.png"),                                     # disagree: a Carousel Mill recipe
+            card("Farmland", "moon_cheese", 1, "54s", frame="x.png"),                                   # unknown item
+            card("Not A Facility", "rose", 4, "40m 0s", frame="x.png"),                                 # unknown facility
+            card("Simmering Pot", "rose_concentrate", 2, "1m 48s", frame="y.png", behind=True),         # a half-hidden card
+        ])
+        self.assertEqual((summary["observations"], summary["agree"], summary["disagree"], summary["unknown"]), (9, 5, 2, 2))
+        self.assertEqual(summary["cards"], {"seen": 9, "agree": 5, "disagree": 2, "unknown": 2, "unverified_confirmed": [], "unverified_total": 3})
+        text = self.report()
+        self.assertIn("Screens observed: 3 (9 facts: 0 from facility panels, 9 from item cards)", text)
+        cards = text.split("## Item cards")[1].split("## Seen, not comparable")[0]
+        self.assertIn("| rose | Farmland | 4 | 40m 0s | Cool | agree | a row of farmland.csv: facility_level 4 (data: 4); production_time 2400 (data: 2400); environment Cool (data: Cool) |", cards)
+        self.assertIn("| rose_concentrate | Simmering Pot | 2 | 1m 48s |  | agree | a row of simmering_pot.csv: facility_level 2 (data: 2) |", cards)
+        self.assertIn("| ginseng_water | Bouncy Brew Keg | 3 | Workload 162 |  | agree | a row of bouncy_brew_keg.csv: facility_level 3 (data: 3); workload 162 (data: 162) |", cards)
+        self.assertIn("a row of harvest_moon_festival.csv: facility_level 1 (data: 1)", cards)
+        self.assertIn("the data has wheatmeal under carousel_mill.csv, not farmland.csv", cards)
+        self.assertIn("moon_cheese is not a row of farmland.csv", cards)
+        self.assertIn("| rose | Not A Facility | 4 | 40m 0s |  | unknown | facility not in the table |", cards)
+        self.assertIn("half-hidden card", cards)
+        fenced = cards.split("```csv")[1].split("```")[0].strip().splitlines()
+        self.assertEqual(fenced, ["file, match, column, value, upstream_value, verified_on, note",
+                                  "farmland.csv, rose, facility_level, 5, 4, 2026-10-15, seen on the item card in x.png",
+                                  "farmland.csv, rose, production_time, 2460, 2400, 2026-10-15, seen on the item card in x.png",
+                                  "farmland.csv, rose, environment, Warm, Cool, 2026-10-15, seen on the item card in x.png"])
+        self.assertIn("read the line yourself before pasting", cards)
+        self.assertFalse((self.root / "data" / "overrides" / "values.csv").exists(), "the report never writes the overrides")
+        self.assertIn("| scales | Floral Windmill | not seen on a card yet |", cards)
+
+    def test_a_deliberately_wrong_csv_cell_shows_up_with_the_right_override_row(self):
+        farm = self.root / "data" / "farmland.csv"
+        text = farm.read_text(encoding="utf-8")
+        self.assertIn("rose, 21, 39, 2400,", text)
+        farm.write_text(text.replace("rose, 21, 39, 2400,", "rose, 21, 39, 2460,"), encoding="utf-8")
+        summary = run_with(self.root, [card("Farmland", "rose", 4, "40m 0s", environment="Cool")])
+        self.assertEqual((summary["agree"], summary["disagree"]), (0, 1))
+        report = self.report()
+        self.assertIn("screen: production_time 2400; farmland.csv says 2460", report)
+        self.assertIn("farmland.csv, rose, production_time, 2400, 2460, 2026-10-15, seen on the item card in stock-20261015-105144.png", report)
+
+    def test_unverified_rows_are_confirmed_only_by_a_complete_front_card(self):
+        summary = run_with(self.root, [
+            card("Starfall Hammock", "star", 1, "45m 0s", environment="Cool"),                 # every column the data holds: confirmed
+            card("Floral Windmill", "scales", 1, "45m 0s"),                                      # environment not read: seen, not confirmed
+            card("Floral Windmill", "quick_scales", 1, "45m 0s", environment="Adequate", behind=True),  # half hidden: not confirmed
+        ])
+        self.assertEqual(summary["cards"]["unverified_confirmed"], ["star"])
+        rows = self.report().split("### Rows of data/unverified.csv")[1].split("## Seen, not comparable")[0]
+        self.assertIn("| star | Starfall Hammock | confirmed: a row of starfall_hammock.csv: facility_level 1 (data: 1); environment Cool (data: Cool) |", rows)
+        self.assertIn("| scales | Floral Windmill | seen, not confirmed (agree): a row of floral_windmill.csv: facility_level 1 (data: 1); environment not read (data: Adequate) |", rows)
+        self.assertIn("| quick_scales | Floral Windmill | seen, not confirmed (agree):", rows)
+
+    def test_card_lines_without_an_item_are_skipped_and_an_empty_log_says_no_card_yet(self):
+        path = self.root / "screenshots" / "observations.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [json.dumps({"facility": "Farmland", "fact": "card", "facility_level": 4}), json.dumps(card("Farmland", "rose", 4, "40m 0s")), ""]
+        path.write_text(chr(10).join(lines), encoding="utf-8")
+        self.assertEqual(len(vd.load_observations(path)), 1)
+        run_with(self.root, [unlock("Chimney Kiln", 3, 14)])
+        self.assertIn("No item card seen yet", self.report())
 
 
 if __name__ == "__main__":

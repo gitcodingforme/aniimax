@@ -11,6 +11,8 @@ Screens are told apart by the file name's prefix (see SCREEN_KINDS):
   modules-*.png    the upgrade modules screen (four module levels)
   aniimo-*.png     the Aniimo roster (name, abilities with levels, personalities)
   stock-*.png      storage / inventory (item amounts, mainly level-up materials)
+  item_card-*.png  an item's information card on its own (facility, level, time, environment), used to
+                   measure that reading; stock and facility frames read any open card as `card` too
 Anything else is described but not merged into the setup.
 
 Usage (from the repository root, with Ollama running):
@@ -59,6 +61,14 @@ def panel_crop(w: int, h: int) -> tuple:
     return (max(0, w - int(0.72 * h)), 0, w, h)
 
 
+def card_crop(w: int, h: int) -> tuple:
+    """An item's information card: a tall card left of the facility panel. On the saved 3440x1440
+    frames the cards sit between 0.50 and 0.79 of the width, so the crop runs from 1.30 to 0.45 window
+    heights left of the right edge (measured from the height, like panel_crop) and is sent at full
+    detail; it is about 1224x1440 there, under MAX_SIDE, so nothing is shrunk."""
+    return (max(0, w - int(1.30 * h)), 0, max(1, w - int(0.45 * h)), h)
+
+
 MODULES = ["ecological_module", "kitchen_module", "resource_detector", "crafting_module"]
 ABILITIES = ["Grass", "Fire", "Water", "Earth", "Wind", "Light", "Dark", "Ice", "Electric"]
 
@@ -85,6 +95,7 @@ SCREEN_KINDS = {
             "coins": {"type": ["string", "null"]},
         }, "required": ["facility", "level", "tab", "recipe_status", "recipe", "recipe_time", "recipes_per_level", "coins"]},
         "crop": panel_crop,  # the side panel and the coins, at full detail
+        "also": {"card": "item_card"},  # an item card can be open beside the panel; read under `card`
         # A second, smaller question for the same frame: asked together with the rest, the model
         # skipped the grey upgrade line every time (0 of 13 on real frames); asked alone it read it
         # every time. Its answer is merged into the fields under `upgrade_notes`.
@@ -113,6 +124,32 @@ SCREEN_KINDS = {
         "schema": {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {
             "name": {"type": "string"}, "inventory": {"type": ["integer", "null"]}, "homeland": {"type": ["integer", "null"]}, "owned": {"type": ["integer", "null"]}},
             "required": ["name", "inventory", "homeland", "owned"]}}}, "required": ["items"]},
+        "also": {"card": "item_card"},  # the same card's facility, level and time, read on a full-detail crop
+    },
+    # An item's information card (opened by clicking an item on the Home Management screen) states the
+    # facility and level that make it, its base time and, for a crop, its recommended environment: the
+    # production_time, facility_level and environment columns of data/*.csv, read straight off the screen.
+    # Read on its own for files named item_card-*.png (to measure it), and as `card` of a stock or
+    # facility frame. One card per answer (asked for a list, the 7b model answers an empty one); a second
+    # card half hidden behind the first is a follow-up question, merged under `behind`.
+    "item_card": {
+        "prompt": "This part of a screenshot from the game Aniimo may show an item information card: a tall card whose coloured top holds the item name as its title with 'Home materials' under it, then 'Inventory:' and 'Homeland:' counts, a 'Unit Price' line, then a facility line such as 'Farmland (Level 4)' or 'Simmering Pot (Level 1)' above ingredient icons, under the icons one line that reads either 'Time' with a clock and a duration or 'Workload' with a number, and sometimes a 'Recommended Environment' line. The white facility side panel at the right edge of the screen (headed 'Name (Level N)' with the tabs Formula, Manage, Level Up, a 'Season Recipe' bar and 'Level N Facility' headings) is NOT an item card: ignore it, and if no item card is open answer null for everything. An item card's title is an item (a crop, a material, a food, a product), never a facility name. If two cards overlap, read only the card in FRONT: the one whose title and coloured top are completely visible (the card behind shows only part of its title). Take every field from that one card, each line directly under that card's own title; never from the one partly covered. Read only text written on that card; never guess. item: the title. facility: the name written before '(Level N)' on the facility line. facility_level: that N. time: when the line under the icons says 'Time', the duration written after it exactly as written (for example '1m 48s' or '54s'); null when that line says 'Workload'. workload: when that line says 'Workload', the number written after it; null when it says 'Time'. environment: the single word written at the right end of the 'Recommended Environment' line, or null when the card has no line with those words ('Provides Energy', 'How to Obtain' and 'Home Processing' are other lines, not it).",
+        "schema": {"type": "object", "properties": {
+            "item": {"type": ["string", "null"]}, "facility": {"type": ["string", "null"]}, "facility_level": {"type": ["integer", "null"]},
+            "time": {"type": ["string", "null"]}, "workload": {"type": ["integer", "null"]}, "environment": {"type": ["string", "null"]},
+        }, "required": ["item", "facility", "facility_level", "time", "workload", "environment"]},
+        "crop": card_crop,
+        "key_field": "item",  # as `card` of another screen, the answer counts only when this is written
+        "validate": "card",   # validate_card, on the answer and on the follow-up's answer
+        "gate": "card",       # card_present: the model is only asked when a card's header is in the strip
+        "follow_up": {
+            "field": "behind",
+            "prompt": "This part of a game screen may show TWO overlapping item information cards (tall cards with an item name as title, 'Inventory:' and 'Homeland:' counts, a 'Unit Price' line and a facility line such as 'Simmering Pot (Level 2)'), one partly hidden behind the other. Only if there really are two cards, read the card BEHIND, the partly covered one: item, the visible part of its title; facility, the facility name on its facility line; facility_level, the N in '(Level N)' there; time, the text after 'Time' on it exactly as written. If there is only one card, or none, answer null for everything.",
+            "schema": {"type": "object", "properties": {
+                "item": {"type": ["string", "null"]}, "facility": {"type": ["string", "null"]}, "facility_level": {"type": ["integer", "null"]}, "time": {"type": ["string", "null"]},
+            }, "required": ["item", "facility", "facility_level", "time"]},
+            "crop": card_crop,
+        },
     },
     "unknown": {
         "prompt": "This is a screenshot from the game Aniimo. In one sentence, say what screen it shows and list any numbers with their labels.",
@@ -128,6 +165,8 @@ SCREEN_KINDS["facility"] = SCREEN_KINDS["facility_detail"]
 
 def screen_kind(path: Path) -> str:
     prefix = path.stem.split("-", 1)[0].lower()
+    if prefix == "item" and path.stem.lower().startswith("item_card-"):
+        return "item_card"
     return prefix if prefix in SCREEN_KINDS and prefix != "unknown" else "unknown"
 
 
@@ -140,20 +179,47 @@ def known_names(root: Path) -> dict:
     # Items: every recipe and ingredient in the CSVs, plus the level-up materials (byproducts such
     # as wood_block appear only as ingredients and in LEVEL_UP_COSTS).
     items = set(re.findall(r"\['([a-z0-9_]+)', \d+\]", config))
+    environments = set()  # the growing environments the data names (Cool, Warm, ...), to check an item card's line
     for csv in (root / "data").glob("*.csv"):
         lines = csv.read_text(encoding="utf-8").splitlines()
         if not lines:
             continue
         header = [h.strip() for h in lines[0].split(",")]
         columns = [i for i, h in enumerate(header) if h in ("name", "raw_materials")]
+        env_column = header.index("environment") if "environment" in header else None
         for line in lines[1:]:
+            if line.lstrip().startswith("#"):
+                continue
             cells = [c.strip() for c in line.split(",")]
             for i in columns:
                 if i < len(cells):
                     for token in re.split(r"[;+|& ]+", cells[i]):
                         if token and re.fullmatch(r"[a-z0-9_]+", token):
                             items.add(token)
-    return {"facilities": sorted(set(facilities)), "items": sorted(items)}
+            if env_column is not None and env_column < len(cells) and cells[env_column]:
+                environments.add(cells[env_column])
+    return {"facilities": sorted(set(facilities)), "items": sorted(items), "environments": sorted(environments)}
+
+
+def validate_card(fields: dict, names: dict) -> dict:
+    """Deterministic checks on an item card reading, because the 7b model reads the facility side
+    panel as a card when none is open (its 'item' is then a facility name, with an invented time) and
+    copies stray words ('Home Processing') into environment. A title that is a facility name means no
+    card: everything becomes null. An environment the data does not know becomes null."""
+    if not isinstance(fields, dict):
+        return fields
+    out = dict(fields)
+    item = out.get("item")
+    if isinstance(item, str) and slug(item) in {slug(f) for f in names.get("facilities", [])}:
+        out = {k: None for k in out}
+    env = out.get("environment")
+    if "environment" in out and isinstance(env, str) and slug(env) not in {slug(e) for e in names.get("environments", [])}:
+        out["environment"] = None
+    # A card shows either a Time or a Workload line, never both: a workload next to a time is another
+    # number from the card (the 'Provides Energy 45280' line, seen 2026-10-15), so it is dropped.
+    if out.get("time") and out.get("workload") is not None:
+        out["workload"] = None
+    return out
 
 
 def slug(text: str) -> str:
@@ -196,6 +262,16 @@ def image_payload(path: Path, crop=None) -> str:
     except Exception:  # no Pillow, or a file Pillow cannot open: send it as it is
         pass
     return base64.b64encode(data).decode("ascii")
+
+
+def open_image(path: Path):
+    """The frame as a Pillow image for the gates, or None without Pillow (the model is then always asked)."""
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            return im.convert("RGB")
+    except Exception:
+        return None
 
 
 def post_json(url: str, body: dict, timeout: float):
@@ -344,7 +420,112 @@ def attach_follow_up(fields: dict, follow: dict, answer) -> None:
     fields[follow["field"]] = answer if any(isinstance(v, int) and not isinstance(v, bool) for v in answer.values()) else None
 
 
-def read_all(paths: list[Path], host: str, model: str, ask=ask_model) -> list[dict]:
+ASK_ERRORS = (urllib.error.URLError, OSError, ValueError)
+
+
+VALIDATORS = {"card": validate_card}
+
+CARD_HEADER = (400, 180, 0.4)  # width, height (px) and fill a card's coloured header block must reach
+GATE_BLOCK = 8                 # the detector works on 8x8 blocks of the crop
+
+
+def card_present(crop) -> bool:
+    """Is an item card open in this (Pillow) image of the card strip? Looked for without the model:
+    the card's top is a block of saturated colour (blue, purple or orange, never the grid's green)
+    about 530x260 px on a 3440x1440 window, and nothing else in that strip comes close (measured on
+    the 61 saved frames on 2026-10-15: the nine cards gave blocks of at least 528x256 px, the rest at
+    most 408x8 or 112x232). The model otherwise invents a card from a tile or the side panel."""
+    from collections import deque
+    w, h = crop.size
+    sw, sh = max(1, w // GATE_BLOCK), max(1, h // GATE_BLOCK)
+    px = crop.convert("HSV").resize((sw, sh)).load()
+    on = [[(lambda hue, sat, val: sat > 110 and val > 120 and not 50 <= hue <= 115)(*px[x, y][:3]) for x in range(sw)] for y in range(sh)]
+    seen = [[False] * sw for _ in range(sh)]
+    min_w, min_h, min_fill = CARD_HEADER
+    for y in range(sh):
+        for x in range(sw):
+            if not on[y][x] or seen[y][x]:
+                continue
+            queue, cells = deque([(x, y)]), []
+            seen[y][x] = True
+            while queue:
+                cx, cy = queue.popleft()
+                cells.append((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if 0 <= nx < sw and 0 <= ny < sh and on[ny][nx] and not seen[ny][nx]:
+                        seen[ny][nx] = True
+                        queue.append((nx, ny))
+            xs, ys = [c[0] for c in cells], [c[1] for c in cells]
+            bw, bh = (max(xs) - min(xs) + 1) * GATE_BLOCK, (max(ys) - min(ys) + 1) * GATE_BLOCK
+            if bw >= min_w and bh >= min_h and len(cells) * GATE_BLOCK * GATE_BLOCK >= min_fill * bw * bh:
+                return True
+    return False
+
+
+GATES = {"card": card_present}
+
+
+def empty_answer(spec: dict) -> dict:
+    """All-null fields for a kind (what the model would answer when nothing is there)."""
+    fields = {k: None for k in spec["schema"].get("properties", {})}
+    if spec.get("follow_up"):
+        fields[spec["follow_up"]["field"]] = None
+    return fields
+
+
+def read_spec(spec: dict, ask, payload, names: dict | None = None, image=None) -> tuple[dict, dict]:
+    """One screen kind on one frame: the main question, its follow-up (merged under the follow-up's
+    field) and the extra kinds in `also` ({field: kind}), each read the same way on its own crop and
+    merged under its field (None when its key_field is not written, e.g. no item card is open).
+    `ask(prompt, schema, image_b64)` asks the model; `payload(crop)` gives the frame (or that part of
+    it) as base64; `names` (known_names) feeds the kind's validator, if it has one; `image` (the
+    frame as a Pillow image, when Pillow is there) lets a kind's gate look for its subject first and
+    skip the model when it is absent. Returns (fields, errors): a failed side question costs only its
+    field and is listed in errors by that field; a failed main question raises."""
+    gate = GATES.get(spec.get("gate")) if image is not None else None
+    if gate and not gate(image.crop(crop_box(image.size, spec["crop"])) if spec.get("crop") else image):
+        return empty_answer(spec), {}
+    check = VALIDATORS.get(spec.get("validate")) if names else None
+    clean = (lambda a: check(unnull(a), names)) if check else unnull
+    fields = clean(ask(spec["prompt"], spec["schema"], payload(spec.get("crop"))))
+    errors: dict = {}
+    if not isinstance(fields, dict):
+        return fields, errors
+    follow = spec.get("follow_up")
+    if follow and key_present(spec, fields):  # no card read: no point asking about a second one
+        try:
+            answer = clean(ask(follow["prompt"], follow["schema"], payload(follow.get("crop"))))
+        except ASK_ERRORS as e:
+            answer, errors[follow["field"]] = None, str(e)
+        attach_follow_up(fields, follow, answer)
+    elif follow:
+        fields[follow["field"]] = None
+    for field, kind in (spec.get("also") or {}).items():
+        extra_spec = SCREEN_KINDS[kind]
+        try:
+            extra, more = read_spec(extra_spec, ask, payload, names, image)
+        except ASK_ERRORS as e:
+            extra, more = None, {field: str(e)}
+        errors.update(more)
+        fields[field] = extra if isinstance(extra, dict) and key_present(extra_spec, extra) else None
+    return fields, errors
+
+
+def unnull(answer):
+    """The model sometimes writes the word 'null' as a string ("time": "null"); that means null."""
+    if isinstance(answer, dict):
+        return {k: (None if isinstance(v, str) and v.strip().lower() in ("null", "none") else v) for k, v in answer.items()}
+    return answer
+
+
+def key_present(spec: dict, fields: dict) -> bool:
+    """Did the model read the thing this kind is about? True when the kind has no key_field, else when
+    that field holds written text (an item card's title, for example)."""
+    key = spec.get("key_field")
+    return not key or bool(isinstance(fields.get(key), str) and fields[key].strip())
+
+
+def read_all(paths: list[Path], host: str, model: str, ask=ask_model, names: dict | None = None) -> list[dict]:
     screens = []
     for path in paths:
         kind = screen_kind(path)
@@ -352,15 +533,10 @@ def read_all(paths: list[Path], host: str, model: str, ask=ask_model) -> list[di
         started = time.time()
         entry = {"file": path.name, "kind": kind, "fields": None, "seconds": 0.0}
         try:
-            entry["fields"] = ask(host, model, spec["prompt"], spec["schema"], image_payload(path, spec.get("crop")))
-            follow = spec.get("follow_up")
-            if follow and isinstance(entry["fields"], dict):
-                try:  # a failed second question costs only its field, not the whole reading
-                    answer = ask(host, model, follow["prompt"], follow["schema"], image_payload(path, follow.get("crop")))
-                except (urllib.error.URLError, OSError, ValueError) as e:
-                    answer, entry["follow_up_error"] = None, str(e)
-                attach_follow_up(entry["fields"], follow, answer)
-        except (urllib.error.URLError, OSError, ValueError) as e:
+            entry["fields"], errors = read_spec(spec, lambda p, s, b: ask(host, model, p, s, b), lambda crop: image_payload(path, crop), names, open_image(path))
+            if errors:
+                entry["follow_up_error"] = "; ".join(f"{k}: {v}" for k, v in errors.items())
+        except ASK_ERRORS as e:
             entry["error"] = str(e)
         entry["seconds"] = round(time.time() - started, 1)
         screens.append(entry)
@@ -388,8 +564,9 @@ def main(argv: list[str] | None = None) -> int:
     if not paths:
         print(f"No images in {folder}. Put your game screenshots there (see docs/runbooks/screenshots.md).")
         return 1
-    screens = read_all(paths, args.host, args.model)
-    setup, actual, notes = merge_screens(screens, known_names(args.root))
+    names = known_names(args.root)
+    screens = read_all(paths, args.host, args.model, names=names)
+    setup, actual, notes = merge_screens(screens, names)
     reading = {
         "format": READING_FORMAT, "version": READING_VERSION,
         "readAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "model": args.model,

@@ -8,6 +8,9 @@ one JSON object per line:
    "fact": "unlock", "facility_level": 3, "rv_level": 14}        "can be upgraded to Lv.3 once the RV reaches Lv.14"
   {"t": "...Z", "frame": "...", "facility": "Chimney Kiln", "level": 2,
    "fact": "recipe", "recipe": "coarse_sifted_ore", "time": "2s"}   the recipe running in the facility's box
+  {"t": "...Z", "frame": "stock-....png", "facility": "Farmland", "fact": "card", "item": "rose",
+   "facility_level": 4, "time": "40m 0s", "time_seconds": 2400, "workload": null, "environment": "Cool"}
+                                                                   an item's information card
 
 This script compares them with the data and writes a short report:
 
@@ -19,9 +22,19 @@ This script compares them with the data and writes a short report:
            facility = disagree; anything else = unknown.
   time     the number in the recipe box is not understood yet (docs/design.md section 7), so
            times are listed in "Seen, not comparable" and never judged.
+  card     an item card names the facility and level that make the item, its time and, for a crop,
+           its environment: the row of that facility's CSV (or the seasonal file) is looked up by the
+           item name and each column the card shows is judged on its own. facility_level always;
+           production_time against the card's time in seconds where the CSV has that column (crops);
+           workload only when the card itself says "Workload N" (the processor CSVs hold a workload,
+           not seconds, so a processor card's "Time" is listed, never judged); environment when the
+           card shows one. One disagreeing column makes the card disagree; a card whose item is a row
+           of another facility's file disagrees too; an item that is no row anywhere is unknown.
+           A card that agrees for an item listed in data/unverified.csv confirms that row.
 
 Nothing is written to the overrides: a disagreement prints a ready-to-paste fragment for
-data/overrides/structure.json that you accept or reject.
+data/overrides/structure.json (unlocks) or row for data/overrides/values.csv (card columns) that you
+accept or reject.
 
 Usage (from the repository root):
   python scripts/verify_data.py [--root R] [--observations FILE] [--out-md FILE] [--out-json FILE] [--web-dir DIR]
@@ -64,7 +77,44 @@ def load_observations(path: Path) -> list[dict]:
             found.append(item)
         elif item.get("fact") == "recipe" and isinstance(item.get("recipe"), str) and item["recipe"]:
             found.append(item)
+        elif item.get("fact") == "card" and isinstance(item.get("item"), str) and item["item"]:
+            found.append(item)
     return found
+
+
+TIME_PART = re.compile(r"(\d+)\s*([hms])\b")
+
+
+def parse_seconds(text) -> int | None:
+    """Seconds from a time as the game writes it: '40m 0s' -> 2400, '1m 48s' -> 108, '54s' -> 54,
+    '1h 2m' -> 3720. None when no 'Nh', 'Nm' or 'Ns' part is found (a bare number is not a time)."""
+    if not isinstance(text, str):
+        return None
+    parts = TIME_PART.findall(text.lower())
+    if not parts:
+        return None
+    return sum(int(n) * {"h": 3600, "m": 60, "s": 1}[unit] for n, unit in parts)
+
+
+def load_item_rows(root: Path, files: dict[str, str]) -> tuple[dict[str, dict[str, dict]], dict[str, dict[str, dict]]]:
+    """{facility: {item name: its row}} from each facility's own CSV, and the same from the seasonal file."""
+    own, seasonal = {}, {}
+    for facility, file in files.items():
+        path = root / "data" / file
+        if path.is_file():
+            own[facility] = {row["name"]: row for row in read_rows(path) if row.get("name")}
+    season = root / "data" / SEASONAL_FILE
+    if season.is_file():
+        for row in read_rows(season):
+            if row.get("name") and row.get("facility"):
+                seasonal.setdefault(row["facility"], {})[row["name"]] = row
+    return own, seasonal
+
+
+def load_unverified(root: Path) -> list[dict]:
+    """The rows of data/unverified.csv: {name, facility}, the values upstream has not confirmed in game."""
+    path = root / "data" / "unverified.csv"
+    return [r for r in read_rows(path) if r.get("name")] if path.is_file() else []
 
 
 def load_facilities(root: Path) -> tuple[dict[str, str], dict[str, dict[int, int]]]:
@@ -136,8 +186,82 @@ def read_rows(path: Path) -> list[dict]:
         return [{(k or "").strip(): (v or "").strip() for k, v in row.items()} for row in reader]
 
 
+def whole(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def judge_card(obs: dict, files: dict[str, str], own_rows: dict[str, dict[str, dict]], seasonal_rows: dict[str, dict[str, dict]]) -> dict:
+    """The verdict for one item card: {obs, status, detail, columns: [{column, screen, data, status}],
+    proposals: [values.csv rows as dicts]}. Columns are judged one by one (see the module docstring);
+    a column the card did not show, or that the data holds in another unit, is listed as "listed"."""
+    facility, item = obs["facility"], obs["item"]
+    if facility not in files:
+        return {"obs": obs, "status": "unknown", "detail": "facility not in the table", "columns": [], "proposals": []}
+    row, file = None, files[facility]
+    if item in own_rows.get(facility, {}):
+        row = own_rows[facility][item]
+    elif item in seasonal_rows.get(facility, {}):
+        row, file = seasonal_rows[facility][item], SEASONAL_FILE
+    if row is None:
+        elsewhere = sorted([files[f] for f, rows in own_rows.items() if item in rows and f != facility]
+                           + [f"{SEASONAL_FILE} ({f})" for f, rows in seasonal_rows.items() if item in rows and f != facility])
+        if elsewhere:
+            return {"obs": obs, "status": "disagree", "detail": f"the data has {item} under {', '.join(elsewhere)}, not {file}", "columns": [], "proposals": []}
+        return {"obs": obs, "status": "unknown", "detail": f"{item} is not a row of {file} (maybe an ingredient, or a new recipe)", "columns": [], "proposals": []}
+
+    columns = [{"column": "facility", "screen": facility, "data": file, "status": "agree"}]
+
+    def compare(column: str, screen, data_text: str, same) -> None:
+        if screen is None:
+            columns.append({"column": column, "screen": None, "data": data_text, "status": "listed"})
+        elif same(screen, data_text):
+            columns.append({"column": column, "screen": screen, "data": data_text, "status": "agree"})
+        else:
+            columns.append({"column": column, "screen": screen, "data": data_text, "status": "disagree"})
+
+    level = obs.get("facility_level") if whole(obs.get("facility_level")) else None
+    compare("facility_level", level, row.get("facility_level", ""), lambda s, d: d.isdigit() and int(d) == s)
+    seconds = obs.get("time_seconds") if whole(obs.get("time_seconds")) else None
+    if row.get("production_time", "").strip():  # a crop or seasonal crop: the data holds seconds
+        compare("production_time", seconds, row["production_time"], lambda s, d: d.isdigit() and int(d) == s)
+    elif "workload" in row:  # a processor: the card's time is listed; only an explicit "Workload N" is judged
+        if obs.get("time"):
+            columns.append({"column": "time", "screen": obs["time"], "data": f"workload {row.get('workload', '')}", "status": "listed"})
+        workload = obs.get("workload") if whole(obs.get("workload")) else None
+        if workload is not None:
+            compare("workload", workload, row.get("workload", ""), lambda s, d: d.isdigit() and int(d) == s)
+    if "environment" in row:
+        env = obs.get("environment") if isinstance(obs.get("environment"), str) and obs["environment"].strip() else None
+        data_env = row.get("environment", "").strip()
+        if env is None and not data_env:
+            columns.append({"column": "environment", "screen": None, "data": "", "status": "agree"})  # no line on the card, none in the data
+        else:
+            compare("environment", env, data_env, lambda s, d: slug(s) == slug(d))
+
+    bad = [c for c in columns if c["status"] == "disagree"]
+    unread = [c for c in columns if c["status"] == "listed" and c["column"] != "time"]  # a processor's time is never judged
+    status = "disagree" if bad else "agree"
+    said = [f"{c['column']} {c['screen']} (data: {c['data'] or 'none'})" for c in columns if c["column"] != "facility" and c["status"] in ("agree", "disagree")]
+    said += [f"{c['column']} not read (data: {c['data'] or 'none'})" for c in unread]
+    detail = f"a row of {file}" + (f": {'; '.join(said)}" if said else "")
+    if bad:
+        detail = f"screen: " + "; ".join(f"{c['column']} {c['screen']}" for c in bad) + "; " + file + " says " + "; ".join(f"{c['data'] or 'none'}" for c in bad)
+    proposals = [{"file": file, "match": item, "column": c["column"], "value": str(c["screen"]), "upstream_value": c["data"],
+                  "verified_on": day(obs.get("t")), "note": f"seen on the item card in {obs.get('frame')}"} for c in bad]
+    if obs.get("behind"):
+        detail += " (read off a half-hidden card behind another: weaker)"
+    # complete: every column the data holds for this item was read off the card and agreed, and the card was in front
+    return {"obs": obs, "status": status, "detail": detail, "columns": columns, "proposals": proposals,
+            "complete": status == "agree" and not unread and not obs.get("behind")}
+
+
+def slug(text) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(text or "").lower()).strip("_")
+
+
 def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: dict[str, str],
-          own: dict[str, set[str]], seasonal: dict[str, set[str]]) -> list[dict]:
+          own: dict[str, set[str]], seasonal: dict[str, set[str]],
+          own_rows: dict[str, dict[str, dict]] | None = None, seasonal_rows: dict[str, dict[str, dict]] | None = None) -> list[dict]:
     """One verdict per observation: {obs, status: agree|disagree|unknown, detail, [table_rv]}."""
     out = []
     # The same unlock line seen with different numbers in different frames: the model misreads a
@@ -148,7 +272,9 @@ def judge(observations: list[dict], unlocks: dict[str, dict[int, int]], files: d
             readings.setdefault((obs["facility"], obs.get("facility_level")), set()).add(obs.get("rv_level"))
     for obs in observations:
         facility = obs["facility"]
-        if obs["fact"] == "unlock":
+        if obs["fact"] == "card":
+            out.append(judge_card(obs, files, own_rows or {}, seasonal_rows or {}))
+        elif obs["fact"] == "unlock":
             fl, rv = obs.get("facility_level"), obs.get("rv_level")
             table = unlocks.get(facility)
             seen = readings.get((facility, fl), set())
@@ -193,17 +319,35 @@ def table(headers: list[str], rows: list[list]) -> list[str]:
     return lines
 
 
-def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]] | None = None) -> str:
+def confirmed_unverified(verdicts: list[dict], unverified: list[dict]) -> list[dict]:
+    """For each row of data/unverified.csv: {name, facility, confirmed: [card verdicts that agree]}."""
+    out = []
+    for row in unverified:
+        name, facility = row.get("name", ""), row.get("facility", "")
+        seen = [v for v in verdicts if v["obs"]["fact"] == "card" and v["obs"]["item"] == name and slug(v["obs"]["facility"]) == slug(facility)]
+        out.append({"name": name, "facility": facility, "confirmed": [v for v in seen if v.get("complete")],
+                    "partial": [v for v in seen if not v.get("complete")]})
+    return out
+
+
+def override_row(p: dict) -> str:
+    """One data/overrides/values.csv line (file, match, column, value, upstream_value, verified_on, note)."""
+    return ", ".join(str(p[k]).replace(",", ";") for k in ("file", "match", "column", "value", "upstream_value", "verified_on", "note"))
+
+
+def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]] | None = None, unverified: list[dict] | None = None) -> str:
     counts = {s: sum(1 for v in verdicts if v["status"] == s) for s in ("agree", "disagree", "unknown")}
     frames = {v["obs"].get("frame") for v in verdicts}
     last = max((str(v["obs"].get("t") or "") for v in verdicts), default="")
+    cards = [v for v in verdicts if v["obs"]["fact"] == "card"]
+    panel = [v for v in verdicts if v["obs"]["fact"] != "card"]
     lines = ["# Game data check", "",
-             f"- Screens observed: {len(frames)} ({len(verdicts)} facts).",
+             f"- Screens observed: {len(frames)} ({len(verdicts)} facts: {len(panel)} from facility panels, {len(cards)} from item cards).",
              f"- Agree with the data: {counts['agree']}.",
              f"- Disagree with the data: {counts['disagree']}.",
              f"- Unknown (nothing to compare with): {counts['unknown']}.",
              f"- Last observation: {last or 'none yet'} (report written {updated}).", ""]
-    by = {s: [v for v in verdicts if v["status"] == s] for s in counts}
+    by = {s: [v for v in panel if v["status"] == s] for s in counts}
 
     def row(v):
         o = v["obs"]
@@ -214,7 +358,7 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
     lines += ["## Agree", ""] + (table(headers, [row(v) for v in by["agree"]]) if by["agree"] else ["Nothing yet."]) + [""]
     lines += ["## Disagree", ""]
     if not by["disagree"]:
-        lines += ["Nothing disagrees.", ""]
+        lines += ["Nothing disagrees." + (" (Item cards have their own section below.)" if cards else ""), ""]
     else:
         lines += ["Open the panel in game and read the line yourself before pasting anything: the model misreads a number that the "
                   "Batch button half hides (seen 2026-10-15, RV 12 read off a cut-off 13).", ""]
@@ -233,6 +377,53 @@ def render(verdicts: list[dict], updated: str, unlocks: dict[str, dict[int, int]
             lines += ["- Recipe placement is not an override (the CSV rows are upstream's). Check the panel in game, then fix the row in "
                       "data/overrides/values.csv or tell upstream.", ""]
     lines += ["## Unknown", ""] + (table(headers, [row(v) for v in by["unknown"]]) if by["unknown"] else ["Nothing here."]) + [""]
+
+    # Item cards: one row per card seen, judged column by column against the item's CSV row.
+    lines += ["## Item cards", "",
+              "An item's information card names the facility and level that make it, its time and, for a crop, its environment: "
+              "the facility_level, production_time and environment columns of that facility's CSV. A processor's CSV holds a workload, "
+              "not seconds, so on a processor's card the time is listed and not judged (only a card that itself says 'Workload N' is "
+              "compared with the workload column). Verdict: agree when every judged column agrees, disagree when one does not.", ""]
+    if not cards:
+        lines += ["No item card seen yet. Click an item on the Home Management screen while the watcher runs.", ""]
+    else:
+        def card_row(v):
+            o = v["obs"]
+            shown = o.get("time") or (f"Workload {o['workload']}" if o.get("workload") is not None else "")
+            return [o["item"], o["facility"], o.get("facility_level"), shown, o.get("environment") or "", v["status"], v["detail"], o.get("frame"), day(o.get("t"))]
+        lines += table(["Item", "Made by (card)", "Level", "Time", "Environment", "Verdict", "Detail", "Frame", "Seen"],
+                       [card_row(v) for v in cards]) + [""]
+        bad = [v for v in cards if v["status"] == "disagree"]
+        if bad:
+            lines += ["### Card disagreements", "",
+                      "Open the card in game and read the line yourself before pasting anything (two cards can overlap, and the model has "
+                      "mixed the front card with the one behind it). Each proposed line goes into data/overrides/values.csv; run "
+                      "`python scripts/apply_overrides.py --check` afterwards. Nothing is applied for you.", ""]
+        for v in bad:
+            o = v["obs"]
+            lines += [f"#### {o['item']} ({o['facility']})", "", f"- {v['detail']}", f"- Frame {o.get('frame')}, seen {day(o.get('t'))}."]
+            if v.get("proposals"):
+                lines += ["- Proposed row(s) for data/overrides/values.csv:", "", "```csv", "file, match, column, value, upstream_value, verified_on, note"]
+                lines += [override_row(p) for p in v["proposals"]] + ["```", ""]
+            else:
+                lines += ["- Placement is not an override (the CSV rows are upstream's). Check the card in game, then tell upstream.", ""]
+        lines += ["### Rows of data/unverified.csv", "",
+                  "Upstream marks these values as not yet confirmed in game. A card confirms a row when every column the data holds "
+                  "for it (level, time or workload, environment) was read off the card and agrees.", ""]
+        if unverified:
+            rows = []
+            for u in confirmed_unverified(verdicts, unverified):
+                if u["confirmed"]:
+                    hit = u["confirmed"][0]
+                    rows.append([u["name"], u["facility"], f"confirmed: {hit['detail']}", hit["obs"].get("frame"), day(hit["obs"].get("t"))])
+                elif u["partial"]:
+                    hit = u["partial"][0]
+                    rows.append([u["name"], u["facility"], f"seen, not confirmed ({hit['status']}): {hit['detail']}", hit["obs"].get("frame"), day(hit["obs"].get("t"))])
+                else:
+                    rows.append([u["name"], u["facility"], "not seen on a card yet", "", ""])
+            lines += table(["Item", "Facility", "Status", "Frame", "Seen"], rows) + [""]
+        else:
+            lines += ["data/unverified.csv is empty or missing.", ""]
     times = [v["obs"] for v in verdicts if v["obs"]["fact"] == "recipe" and v["obs"].get("time")]
     lines += ["## Seen, not comparable", "",
               "The time in a facility's recipe box is not understood yet (docs/design.md section 7), so it is listed and never judged.", ""]
@@ -246,19 +437,25 @@ def run(root: Path, observations: Path, out_md: Path, out_json: Path, web_json: 
     files, unlocks = load_facilities(root)
     unlocks = apply_structure_overrides(root, unlocks)
     own, seasonal = load_recipes(root, files)
-    verdicts = judge(load_observations(observations), unlocks, files, own, seasonal)
+    own_rows, seasonal_rows = load_item_rows(root, files)
+    unverified = load_unverified(root)
+    verdicts = judge(load_observations(observations), unlocks, files, own, seasonal, own_rows, seasonal_rows)
     updated = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now if now is not None else time.time()))
     try:
         report = out_md.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         report = out_md.name
+    cards = [v for v in verdicts if v["obs"]["fact"] == "card"]
     summary = {"format": REPORT_FORMAT, "version": 1, "updatedAt": updated, "observations": len(verdicts),
                "agree": sum(1 for v in verdicts if v["status"] == "agree"),
                "disagree": sum(1 for v in verdicts if v["status"] == "disagree"),
                "unknown": sum(1 for v in verdicts if v["status"] == "unknown"),
+               "cards": {"seen": len(cards), **{s: sum(1 for v in cards if v["status"] == s) for s in ("agree", "disagree", "unknown")},
+                         "unverified_confirmed": [u["name"] for u in confirmed_unverified(verdicts, unverified) if u["confirmed"]],
+                         "unverified_total": len(unverified)},
                "report": report}
     out_md.parent.mkdir(parents=True, exist_ok=True)
-    out_md.write_text(render(verdicts, updated, unlocks), encoding="utf-8")
+    out_md.write_text(render(verdicts, updated, unlocks, unverified), encoding="utf-8")
     text = json.dumps(summary)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(text, encoding="utf-8")

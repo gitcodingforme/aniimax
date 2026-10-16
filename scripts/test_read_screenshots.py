@@ -140,6 +140,133 @@ class ReadScreenshotsTest(unittest.TestCase):
         finally:
             rs.post_json = original
 
+    def test_item_card_files_are_their_own_kind(self):
+        self.assertEqual(rs.screen_kind(Path("item_card-stock-20261015-105144.png")), "item_card")
+        self.assertEqual(rs.screen_kind(Path("item-thing.png")), "unknown")
+
+    def test_card_crop_is_measured_from_the_window_height_and_needs_no_shrink(self):
+        self.assertEqual(rs.card_crop(3440, 1440), (1568, 0, 2792, 1440))
+        self.assertLessEqual(2792 - 1568, rs.MAX_SIDE, "the card strip is sent at full detail")
+        self.assertEqual(rs.card_crop(1920, 1080), (516, 0, 1434, 1080))
+
+    def test_known_names_include_the_environments(self):
+        names = rs.known_names(Path(__file__).resolve().parent.parent)
+        for env in ["Cool", "Warm", "Scorching", "Adequate"]:
+            self.assertIn(env, names["environments"])
+
+    def test_validate_card_drops_what_cannot_be_a_card(self):
+        names = {"facilities": ["Simmering Pot", "Farmland"], "items": ["rose"], "environments": ["Cool", "Warm"]}
+        panel_as_card = {"item": "Simmering Pot", "facility": "Simmering Pot", "facility_level": 1, "time": "40m 0s", "workload": None, "environment": None}
+        self.assertEqual(rs.validate_card(panel_as_card, names), {k: None for k in panel_as_card}, "a title that is a facility name means no card")
+        stray = {"item": "Plain Rice Porridge", "facility": "Simmering Pot", "facility_level": 1, "time": "1m 48s", "workload": None, "environment": "Home Processing"}
+        self.assertIsNone(rs.validate_card(stray, names)["environment"], "an environment the data does not know is dropped")
+        self.assertEqual(rs.validate_card({**stray, "environment": "cool"}, names)["environment"], "cool", "a known one is kept as read")
+        energy = {"item": "Moondew Radish Slices", "facility": "Blazing Stove", "facility_level": 1, "time": "2m 42s", "workload": 45280, "environment": None}
+        self.assertIsNone(rs.validate_card(energy, names)["workload"], "a card shows Time or Workload, never both: the number was Provides Energy")
+        keg = {"item": "Ginseng Water", "facility": "Bouncy Brew Keg", "facility_level": 3, "time": None, "workload": 162, "environment": None}
+        self.assertEqual(rs.validate_card(keg, names)["workload"], 162)
+        self.assertEqual(rs.unnull({"time": "null", "workload": None, "item": "Rose"}), {"time": None, "workload": None, "item": "Rose"})
+
+    def test_read_spec_reads_a_card_beside_a_panel_and_asks_about_a_second_card_only_when_one_is_read(self):
+        detail = rs.SCREEN_KINDS["facility_detail"]
+        card = rs.SCREEN_KINDS["item_card"]
+        names = {"facilities": ["Simmering Pot", "Farmland"], "items": ["rose", "rose_concentrate"], "environments": ["Cool"]}
+        panel = {"facility": "Simmering Pot", "level": 4, "tab": "Formula", "recipe_status": "not set", "recipe": None, "recipe_time": None, "recipes_per_level": [], "coins": "220 724"}
+        front = {"item": "Rose", "facility": "Farmland", "facility_level": 4, "time": "40m 0s", "workload": None, "environment": "Cool"}
+        behind = {"item": "ose Concentrate", "facility": "Simmering Pot", "facility_level": 2, "time": "1m 48s"}
+        answers = {id(detail["schema"]): panel, id(detail["follow_up"]["schema"]): {"facility_level": 5, "rv_level": 15},
+                   id(card["schema"]): front, id(card["follow_up"]["schema"]): behind}
+        asked = []
+
+        def fake_ask(prompt, schema, image_b64):
+            asked.append(id(schema))
+            return dict(answers[id(schema)])
+        fields, errors = rs.read_spec(detail, fake_ask, lambda crop: "img", names)
+        self.assertEqual(errors, {})
+        self.assertEqual(fields["facility"], "Simmering Pot")
+        self.assertEqual(fields["upgrade_note"], {"facility_level": 5, "rv_level": 15})
+        self.assertEqual(fields["card"], {**front, "behind": behind}, "the card and the one behind it ride along under `card`")
+        self.assertEqual(len(asked), 4)
+        # no card open: the card answer is all null, so `card` is None and the second-card question is not asked
+        answers[id(card["schema"])] = {k: None for k in front}
+        asked.clear()
+        fields, _ = rs.read_spec(detail, fake_ask, lambda crop: "img", names)
+        self.assertIsNone(fields["card"])
+        self.assertEqual(len(asked), 3)
+        # the side panel read as a card is caught by the validator, with the same effect
+        answers[id(card["schema"])] = {**front, "item": "Simmering Pot", "facility": "Simmering Pot"}
+        fields, _ = rs.read_spec(detail, fake_ask, lambda crop: "img", names)
+        self.assertIsNone(fields["card"])
+        # a failed card question costs only that field
+        def flaky(prompt, schema, image_b64):
+            if schema is card["schema"]:
+                raise ValueError("the model did not answer with JSON")
+            return dict(answers[id(schema)])
+        fields, errors = rs.read_spec(detail, flaky, lambda crop: "img", names)
+        self.assertEqual(fields["facility"], "Simmering Pot")
+        self.assertIsNone(fields["card"])
+        self.assertIn("did not answer", errors["card"])
+        # a stock screen reads its counts and the same card
+        answers[id(rs.SCREEN_KINDS["stock"]["schema"])] = {"items": [{"name": "Rose", "inventory": 0, "homeland": 520, "owned": None}]}
+        answers[id(card["schema"])] = front
+        fields, _ = rs.read_spec(rs.SCREEN_KINDS["stock"], fake_ask, lambda crop: "img", names)
+        self.assertEqual(fields["items"][0]["homeland"], 520)
+        self.assertEqual(fields["card"]["item"], "Rose")
+        setup, _, _ = rs.merge_screens([{"file": "stock-1.png", "kind": "stock", "fields": fields}], names)
+        self.assertEqual(setup["levelUpStock"], {"rose": 520}, "the stock reading still feeds the setup")
+
+    def test_scoring_an_item_card_reading_counts_the_card_behind_too(self):
+        screens = [{"file": "item_card-a.png", "kind": "item_card", "seconds": 5.0,
+                    "fields": {"item": "Rose", "facility": "Farmland", "facility_level": 4, "time": "40m 0s", "workload": None, "environment": "Cool",
+                               "behind": {"item": "Rose Concentrate", "facility": "Simmering Pot", "facility_level": 3, "time": "1m 48s"}}}]
+        expected = {"item_card-a.png": {"item": "Rose", "facility": "Farmland", "facility_level": 4, "time": "40m 0s", "workload": None, "environment": "Cool",
+                                        "behind": {"item": "Rose Concentrate", "facility": "Simmering Pot", "facility_level": 2, "time": "1m 48s"}}}
+        rows = rs.score(screens, expected)
+        self.assertEqual((rows[0]["correct"], rows[0]["total"]), (9, 10))
+        self.assertEqual(rows[0]["wrong"], {"behind.facility_level": (3, 2)})
+
+    def test_card_present_sees_a_card_header_and_nothing_else(self):
+        try:
+            from PIL import Image, ImageDraw
+        except ImportError:
+            self.skipTest("Pillow is not installed")
+        strip = Image.new("RGB", (1224, 1440), (120, 190, 90))  # the grid green
+        draw = ImageDraw.Draw(strip)
+        draw.rectangle((50, 300, 400, 340), fill=(70, 120, 230))     # a Level N Facility heading: too small
+        draw.rectangle((700, 100, 1224, 150), fill=(240, 150, 60))   # the Season Recipe bar: too flat
+        draw.rectangle((60, 600, 620, 640), fill=(30, 160, 80))      # a green bar
+        self.assertFalse(rs.card_present(strip))
+        draw.rectangle((600, 120, 1130, 390), fill=(150, 90, 220))   # a purple card header, 530x270
+        self.assertTrue(rs.card_present(strip))
+        green_card = Image.new("RGB", (1224, 1440), (250, 250, 250))
+        ImageDraw.Draw(green_card).rectangle((600, 120, 1130, 390), fill=(90, 200, 90))
+        self.assertFalse(rs.card_present(green_card), "a green block is the grid, not a card")
+        real = Path(__file__).resolve().parent.parent / "screenshots" / "auto"
+        for name, want in [("stock-20261015-105144.png", True), ("facility-20261015-105113.png", False)]:
+            if (real / name).is_file():
+                image = rs.open_image(real / name)
+                self.assertEqual(rs.card_present(image.crop(rs.crop_box(image.size, rs.card_crop))), want, name)
+
+    def test_the_card_gate_skips_the_model_when_no_header_is_there(self):
+        try:
+            from PIL import Image, ImageDraw
+        except ImportError:
+            self.skipTest("Pillow is not installed")
+        asked = []
+
+        def fake_ask(prompt, schema, image_b64):
+            asked.append(prompt[:30])
+            return {"item": "Rose", "facility": "Farmland", "facility_level": 4, "time": "40m 0s", "workload": None, "environment": "Cool"}
+        spec = rs.SCREEN_KINDS["item_card"]
+        plain = Image.new("RGB", (1720, 720), (120, 190, 90))
+        fields, errors = rs.read_spec(spec, fake_ask, lambda crop: "img", image=plain)
+        self.assertEqual(fields, {"item": None, "facility": None, "facility_level": None, "time": None, "workload": None, "environment": None, "behind": None})
+        self.assertEqual(asked, [])
+        ImageDraw.Draw(plain).rectangle((820, 90, 1340, 360), fill=(70, 120, 230))
+        fields, _ = rs.read_spec(spec, fake_ask, lambda crop: "img", image=plain)
+        self.assertEqual(fields["item"], "Rose")
+        self.assertEqual(len(asked), 2, "the card question and the one about a second card")
+
 
 if __name__ == "__main__":
     unittest.main()

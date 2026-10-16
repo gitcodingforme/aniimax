@@ -20,7 +20,10 @@ How it works, every --interval seconds:
   6. for a facility panel, also note what the game shows about that facility (the RV level its next
      level needs, the recipe that is running and its time) in screenshots/observations.jsonl
      (kept across --fresh), compare those facts with the fork's data (scripts/verify_data.py) and
-     rewrite screenshots/verification.md (and web/verification.json).
+     rewrite screenshots/verification.md (and web/verification.json);
+  7. for an item's information card (open beside a facility panel, or on its own as a "stock"
+     screen), note the facility and level that make the item, its time or workload and its
+     environment the same way: a "card" fact, judged against that item's CSV row.
 
 Usage (from the repository root):
   python scripts/watch_game.py                    watch until Ctrl+C
@@ -49,6 +52,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import read_screenshots as rs  # noqa: E402  (prompts, model calls, merging)
+import verify_data  # noqa: E402  (the data check, and the game's time format)
 
 KINDS = ["rv", "home", "facility", "modules", "aniimo", "stock"]
 CLASSIFY_PROMPT = (
@@ -73,6 +77,8 @@ FP_SIZE = (96, 54)
 FP_LEVEL = 24     # a pixel counts as changed when its grey value moved by more than this (0-255)
 COIN_KINDS = ("rv", "home", "facility")  # screens whose reading can carry the Home Coins number
 OBSERVATION_FORMAT = "aniimax-observations"
+FACTS = ("unlock", "recipe", "card")  # what the observation log holds (see verify_data.py)
+CARD_KINDS = ("facility", "stock")    # screens whose reading can carry an item card under `card`
 COIN_POINTS = 2000  # how many points coins.json keeps for the chart
 FILE_TIME = re.compile(r"^[a-z]+-(\d{8})-(\d{6})")  # <kind>-YYYYMMDD-HHMMSS, local time, as save_frame names frames
 
@@ -315,7 +321,7 @@ class Watcher:
                 item = json.loads(line)
             except ValueError:
                 continue
-            if isinstance(item, dict) and isinstance(item.get("t"), str) and isinstance(item.get("facility"), str) and item.get("fact") in ("unlock", "recipe"):
+            if isinstance(item, dict) and isinstance(item.get("t"), str) and isinstance(item.get("facility"), str) and item.get("fact") in FACTS:
                 self.observations.append(item)
         return len(self.observations)
 
@@ -369,19 +375,16 @@ class Watcher:
     def observation_key(item: dict) -> tuple:
         if item["fact"] == "unlock":
             return (item["facility"], "unlock", item.get("facility_level"), item.get("rv_level"))
+        if item["fact"] == "card":  # every value: a differing re-reading of one card shows up as a second fact
+            return (item["facility"], "card", item.get("item"), item.get("facility_level"), item.get("time_seconds"), item.get("workload"), item.get("environment"))
         # not the time: it may be a countdown, and a new value every frame would swell the counts
         return (item["facility"], "recipe", item.get("recipe"))
 
-    def log_observations(self, entry: dict, source: str) -> int:
-        """Append what a facility panel shows to the observation log, then refresh the verification.
-        The model sometimes invents a panel (a facility that does not exist, a recipe that is not an
-        item), so a frame only counts when its facility is a known facility and, if a recipe is set,
-        the recipe is a known item; otherwise nothing is logged and a note says why. Facts already
-        in the log (same facility, fact and values) are not added again. Returns how many were added."""
-        if entry.get("kind") != "facility" or not isinstance(entry.get("fields"), dict):
-            return 0
-        fields, frame = entry["fields"], entry.get("file") or source
-        notes: list[str] = []
+    def panel_facts(self, fields: dict, frame: str, t: str, notes: list[str]) -> list[dict]:
+        """The facts a facility panel shows: its unlock line and its set recipe. The model sometimes
+        invents a panel (a facility that does not exist, a recipe that is not an item), so the panel
+        only counts when its facility is a known facility and, if a recipe is set, the recipe is a
+        known item; otherwise nothing comes back and a note says why."""
         facility = rs.match_name(fields.get("facility"), self.names["facilities"], notes, f"{frame} facility")
         recipe = None
         if facility and fields.get("recipe_status") == "set":
@@ -393,12 +396,10 @@ class Watcher:
         if not facility:
             if not notes:
                 notes.append(f"{frame}: no facility name in the panel")
-            self.observation_notes.extend(notes + [f"{frame}: nothing logged (the panel was not trusted)"])
-            print(f"{time.strftime('%H:%M:%S')} observations skipped: {'; '.join(notes)}")
-            self.write_observations()
-            return 0
+            notes.append(f"{frame}: nothing logged (the panel was not trusted)")
+            return []
         level = fields.get("level") if isinstance(fields.get("level"), int) and not isinstance(fields.get("level"), bool) else None
-        base = {"t": self.point_time(source), "frame": frame, "facility": facility, "level": level}
+        base = {"t": t, "frame": frame, "facility": facility, "level": level}
         found = []
         note = fields.get("upgrade_note")
         if isinstance(note, dict):
@@ -407,16 +408,69 @@ class Watcher:
                 found.append({**base, "fact": "unlock", "facility_level": fl, "rv_level": rv})
         if recipe:
             found.append({**base, "fact": "recipe", "recipe": recipe, "time": str(fields.get("recipe_time") or "").strip() or None})
+        return found
+
+    def card_facts(self, fields: dict, frame: str, t: str, notes: list[str]) -> list[dict]:
+        """The facts an item's information card shows (`card` of a stock or facility reading, and the
+        card half hidden behind it under `behind`): the item, the facility and level that make it, its
+        time (and that time in seconds) or workload, and its environment. A card counts only when the
+        item is a known item and the facility a known facility; otherwise a note says why."""
+        found = []
+        card = fields.get("card")
+        for which, read in (("card", card), ("card behind", (card or {}).get("behind") if isinstance(card, dict) else None)):
+            if not isinstance(read, dict):
+                continue
+            item = rs.match_name(read.get("item"), self.names["items"], notes, f"{frame} {which} item")
+            facility = rs.match_name(read.get("facility"), self.names["facilities"], notes, f"{frame} {which} facility")
+            if not item or not facility:
+                if read.get("item") in (None, "") and read.get("facility") in (None, ""):
+                    notes.append(f"{frame}: the {which} had no readable title or facility line")
+                notes.append(f"{frame}: {which} not logged (item or facility not known)")
+                continue
+            whole = lambda v: v if isinstance(v, int) and not isinstance(v, bool) and v > 0 else None  # noqa: E731
+            time_text = str(read.get("time") or "").strip() or None
+            env = str(read.get("environment") or "").strip() or None
+            fact = {"t": t, "frame": frame, "facility": facility, "fact": "card", "item": item,
+                    "facility_level": whole(read.get("facility_level")), "time": time_text,
+                    "time_seconds": verify_data.parse_seconds(time_text), "workload": whole(read.get("workload")), "environment": env}
+            if which == "card behind":
+                # The model copies the front card's facility line onto the half-hidden one (seen 2026-10-15:
+                # Dried Ginseng given Ginseng Water's Bouncy Brew Keg Lv.3), so such a reading is dropped;
+                # the rest is kept but marked, and the report treats it as a weaker sighting.
+                front = found[0] if found else None
+                if front and (front["facility"], front["facility_level"]) == (facility, fact["facility_level"]):
+                    notes.append(f"{frame}: card behind ({item}) not logged (its facility line repeats the front card's, probably copied)")
+                    continue
+                fact["behind"] = True
+            found.append(fact)
+        return found
+
+    def log_observations(self, entry: dict, source: str) -> int:
+        """Append what a facility panel and an item card show to the observation log, then refresh
+        the verification. Facts already in the log (same facility, fact and values) are not added
+        again. Returns how many were added."""
+        if entry.get("kind") not in CARD_KINDS or not isinstance(entry.get("fields"), dict):
+            return 0
+        fields, frame, t = entry["fields"], entry.get("file") or source, self.point_time(source)
+        notes: list[str] = []
+        found = self.panel_facts(fields, frame, t, notes) if entry["kind"] == "facility" else []
+        found += self.card_facts(fields, frame, t, notes)
+        if notes:
+            self.observation_notes.extend(notes)
+            print(f"{time.strftime('%H:%M:%S')} observations skipped: {'; '.join(notes)}")
         seen = {self.observation_key(o) for o in self.observations}
         added = [o for o in found if self.observation_key(o) not in seen]
         if not added:
+            if notes:
+                self.write_observations()  # the notes reach the disk even when nothing was logged
             return 0
         self.observations_path.parent.mkdir(parents=True, exist_ok=True)
         needs_newline = self.observations_path.is_file() and self.observations_path.stat().st_size > 0 and not self.observations_path.read_bytes().endswith(b"\n")
         with self.observations_path.open("a", encoding="utf-8") as f:
             f.write(("\n" if needs_newline else "") + "".join(json.dumps(o) + "\n" for o in added))
         self.observations.extend(added)
-        print(f"{time.strftime('%H:%M:%S')} observed {len(added)} fact{'s' if len(added) != 1 else ''} about {facility}")
+        about = ", ".join(dict.fromkeys(o.get("item") or o["facility"] for o in added))
+        print(f"{time.strftime('%H:%M:%S')} observed {len(added)} fact{'s' if len(added) != 1 else ''} about {about}")
         self.write_observations()
         self.verify()
         return len(added)
@@ -431,7 +485,6 @@ class Watcher:
         """Compare the observations with the data (verify_data.py) and write verification.md/.json.
         Any problem here is printed, never raised: a bug in the check must not stop the watcher."""
         try:
-            import verify_data
             web_json = self.web_dir / "verification.json" if self.web_dir and self.web_dir.is_dir() else None
             return verify_data.run(self.root, self.observations_path, self.out_dir.parent / "verification.md",
                                    self.out_dir.parent / "verification.json", web_json)
@@ -463,19 +516,15 @@ class Watcher:
                 print(f"{time.strftime('%H:%M:%S')} other screen (not read)")
                 return None
             entry["kind"] = kind
-            # A facility panel is read with the detailed prompt on a full-detail crop of the panel (and a
-            # second, smaller question for its grey upgrade line), but stays a "facility" screen so the
-            # merge and the site's diff work unchanged.
+            # A facility panel is read with the detailed prompt on a full-detail crop of the panel (a
+            # second, smaller question for its grey upgrade line, and a third for an item card open
+            # beside it), but stays a "facility" screen so the merge and the site's diff work unchanged.
+            # A stock screen is read for its counts and, on the card crop, for the card's facility line.
             spec = rs.SCREEN_KINDS["facility_detail" if kind == "facility" else kind]
-            entry["fields"] = self.ask(spec["prompt"], spec["schema"], encode(image, rs.MAX_SIDE, spec.get("crop")))
-            follow = spec.get("follow_up")
-            if follow and isinstance(entry["fields"], dict):
-                try:  # a failed second question costs only its field, not the coins, level and reading
-                    answer = self.ask(follow["prompt"], follow["schema"], encode(image, rs.MAX_SIDE, follow.get("crop")))
-                except (urllib.error.URLError, OSError, ValueError) as e:
-                    answer, entry["follow_up_error"] = None, str(e)
-                    print(f"{time.strftime('%H:%M:%S')} {kind}: the upgrade-line question failed: {e}")
-                rs.attach_follow_up(entry["fields"], follow, answer)
+            entry["fields"], errors = rs.read_spec(spec, self.ask, lambda crop: encode(image, rs.MAX_SIDE, crop), self.names, image)
+            if errors:  # a failed side question costs only its field, not the coins, level and reading
+                entry["follow_up_error"] = "; ".join(f"{k}: {v}" for k, v in errors.items())
+                print(f"{time.strftime('%H:%M:%S')} {kind}: a side question failed: {entry['follow_up_error']}")
         except (urllib.error.URLError, OSError, ValueError) as e:
             entry["error"] = str(e)
             entry["raw"] = getattr(e, "content", "")  # the model's whole answer, saved beside the frame
