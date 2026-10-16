@@ -241,8 +241,11 @@ function makeContext() {
 function startEnvironment(t, { storage = memoryStorage() } = {}) {
     const errors = [];
     const warnings = [];
-    t.mock.method(console, 'error', (...args) => { errors.push(args); });
-    t.mock.method(console, 'warn', (...args) => { warnings.push(args); });
+    // Node's own warnings (Node 22 prints "ExperimentalWarning: The MockTimers API..." through
+    // console.error) are not a card's errors.
+    const fromNode = (args) => args.some((a) => /ExperimentalWarning|--trace-warnings/.test(String(a)));
+    t.mock.method(console, 'error', (...args) => { if (!fromNode(args)) errors.push(args); });
+    t.mock.method(console, 'warn', (...args) => { if (!fromNode(args)) warnings.push(args); });
     // daily's card sets an interval to turn lines overdue; the mock keeps it from holding the process.
     t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'], now: NOW });
     t.after(installGlobals({ localStorage: storage, document: fakeDocument() }));
