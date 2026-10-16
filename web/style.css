@@ -23,9 +23,13 @@
     --radius: 12px;
     --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: "Courier New", Courier, monospace;
+    /* Native controls (select lists, date pickers, scrollbars) follow the theme. */
+    color-scheme: dark;
 }
 
+/* The `light` class sits on <html> (set before first paint by a script in index.html). */
 .light {
+    color-scheme: light;
     --bg: #f5f4ef;
     --surface: #ffffff;
     --surface-2: #f0eee8;
@@ -1112,7 +1116,7 @@ footer {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.25rem 1.5rem 1.5rem;
+    padding: 1.5rem;
     margin-bottom: 1.25rem;
 }
 
@@ -1126,7 +1130,7 @@ footer {
 
 .card h3 {
     font-weight: 600;
-    margin-top: 1.25rem;
+    margin: 1.25rem 0 0.5rem;
 }
 
 .card-head {
@@ -1155,8 +1159,13 @@ footer {
 .config-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.35rem 0.75rem;
     flex-wrap: wrap;
+}
+
+.config-actions .toggle-button {
+    max-width: 100%;
+    text-align: left;
 }
 
 .share-config-result {
@@ -2885,9 +2894,12 @@ tr:hover .skip-row,
 }
 
 /* Fork: History card */
-.history-card h3 {
-    font-size: 1rem;
-    margin: 1.25rem 0 0.5rem;
+/* Snapshot, pace and reminder tables are plain <table>s with many columns: scroll them
+   sideways inside the card instead of widening the page. */
+#history-pace,
+#history-list,
+#reminders-rows {
+    overflow-x: auto;
 }
 .history-chart svg {
     width: 100%;
@@ -2906,10 +2918,6 @@ tr:hover .skip-row,
 }
 
 /* Fork: Reminders card */
-.reminders-card h3 {
-    font-size: 1rem;
-    margin: 1.25rem 0 0.5rem;
-}
 .reminder-option {
     display: block;
     margin: 0.35rem 0;
@@ -2926,4 +2934,96 @@ tr:hover .skip-row,
 .checklist-row.done span {
     text-decoration: line-through;
     opacity: 0.6;
+}
+
+/* ========================================
+   Phones: no sideways page scroll, touch-size controls, no zoom-on-focus
+   ======================================== */
+@media (max-width: 600px) {
+    .header-buttons {
+        flex-wrap: wrap;
+        gap: 0 1rem;
+    }
+
+    .header-buttons .toggle-button {
+        align-self: center;
+    }
+
+    .card-head {
+        gap: 0.35rem 1rem;
+    }
+
+    /* Buttons and summaries: at least 40px tall to tap. */
+    .toggle-button,
+    .collapse-toggle,
+    .add-tier-btn,
+    .skip-add-btn,
+    .tier-remove-btn,
+    .close-button {
+        min-height: 40px;
+    }
+
+    .close-button {
+        min-width: 40px;
+    }
+
+    .add-tier-btn {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    details.explain summary {
+        padding: 0.65rem 0;
+    }
+
+    .tabs label {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+    }
+
+    .reminder-option,
+    .special-option,
+    .checklist-row {
+        padding: 0.5rem 0;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-width: 1.2rem;
+        min-height: 1.2rem;
+    }
+
+    /* Tiny round buttons keep their look but get a larger invisible tap area. */
+    .skip-chip button,
+    .skip-row {
+        position: relative;
+    }
+
+    .skip-chip button::after,
+    .skip-row::after {
+        content: "";
+        position: absolute;
+        inset: -0.65rem;
+    }
+
+    /* 16px or larger, or phones zoom the page when a field is focused. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    select:not([multiple]):not([size]),
+    textarea:not([hidden]):not([cols]) {
+        font-size: 16px;
+    }
+
+    .reminder-option select {
+        max-width: 100%;
+    }
+
+    .reminder-option input[type="checkbox"] {
+        vertical-align: middle;
+    }
+
+    /* Popups. */
+    .modal-header {
+        padding: 0.75rem 1rem;
+    }
 }
